@@ -1,6 +1,7 @@
+mod configuration;
+
 use clap::Parser;
 use memmap2::Mmap;
-use std::io::{Error, Result};
 use std::fs::File;
 
 /// Display executable file information
@@ -13,77 +14,117 @@ struct Arguments {
 }
 
 #[derive(Debug)]
-struct Mapfile<'a> {
-    filename: &'a str,
+enum ExeType {
+    MachO32,
+    MachO64,
+//     UNIVBIN,   
+//     ELF,
+    NOPE,
+}
+
+trait ExeFormat {
+    fn format(&self);
+    fn to_string(&self) -> String;
+    fn exe_type(&self) -> ExeType;
+}
+
+
+struct NotExecutable {
+    filename: String,
+    msg: String,
+}
+
+impl ExeFormat for NotExecutable{
+    fn format(&self) {
+    }
+    fn to_string(&self) -> String {
+        format!("Not an Executable: {}: {}", self.filename, self.msg)
+    }
+    fn exe_type(&self) -> ExeType {
+        ExeType::NOPE
+    }
+}
+
+struct ExecutableMach32 {
+    filename: String,
     mmap: Mmap,
 }
 
-impl<'a> Mapfile<'a> {
-    fn new(filename: &'a str) -> Result<Self> {
-
-
-        let file = File::open(filename)?;
-        let mmap = unsafe { Mmap::map(&file)? };
-
-        Ok(Self{filename: filename, 
-                mmap: mmap
-                }
-            )
-        }
+impl ExeFormat for ExecutableMach32 {
+    fn format(&self) {
     }
-    
-#[derive(Debug)]
-enum ExeType {
-    MachO32,
-    MachO64,   
-    UNIVBIN,   
-    ELF,   
+    fn to_string(&self) -> String {
+        format!("Mach-O 32: {:30} {:?}", self.filename, self.mmap)
+    }
+    fn exe_type(&self) -> ExeType {
+        ExeType::MachO32
+    }
 }
 
-impl ExeType {
-    fn set(mmap: &Mmap) -> Result<Self> {
+struct ExecutableMach64 {
+    filename: String,
+    mmap: Mmap,
+}
 
-        if mmap.len() < 4 {
-            return Err(Error::other(format!("File too short: {}", mmap.len())))
-        }
-
-        let raw_type = unsafe{ *(mmap.as_ptr() as *const u32) };
-        match raw_type {
-            0xfeedfacf => Ok(ExeType::MachO64),
-            0xfeedface => Ok(ExeType::MachO32),
-            0xcafebabe => Ok(ExeType::UNIVBIN),
-            0x7f454c46 => Ok(ExeType::ELF),
-            v => Err(Error::other(format!("Invalid magic number: {:x}", v))),
-        }
-
+impl ExeFormat for ExecutableMach64 {
+    fn format(&self) {
     }
+    fn to_string(&self) -> String {
+        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
+    }
+    fn exe_type(&self) -> ExeType {
+        ExeType::MachO64
+    }
+}
+
+fn new_executable(fname: & str) -> Box<dyn ExeFormat> {
+
+    let fd = match File::open(fname) {
+        Ok(v) => v,
+        Err(e) => return Box::new(NotExecutable{filename: fname.to_string(),
+                                                msg: e.to_string()})
+    };
+
+    let mmap = match unsafe { Mmap::map(&fd) } {
+        Ok(v) => v,
+        Err(e) => return Box::new(NotExecutable{filename:  fname.to_string(),
+                                                msg: e.to_string()})
+    };
+
+    if mmap.len() < 4 {
+        return Box::new(NotExecutable{filename: fname.to_string(),
+                                      msg: format!("Not large enough: {}", mmap.len())})
+    };
+
+    let raw_type = unsafe{ *(mmap.as_ptr() as *const u32) };
+    match raw_type {
+        0xfeedface => Box::new(ExecutableMach32{filename: fname.to_string(), mmap: mmap}),
+        0xfeedfacf => Box::new(ExecutableMach64{filename: fname.to_string(), mmap: mmap}),
+        // 0xcafebabe => ExeType::UNIVBIN,
+        // 0xbebafeca => ExeType::UNIVBIN,
+        // 0x7f454c46 => ExeType::ELF,
+        v => Box::new(NotExecutable{filename: fname.to_string(),
+                                    msg: format!("Invalid magic number: {:x}", v)}),
+    }
+
 }
 
 fn main() {
 
     // Process the arguments
-    let args = Arguments::parse();
-    
-    // Map the executable
-    
-    // let mapped_file = Mapfile::new(&args.exe_filename).expect("Unable to map file: ");
-    let mapped_file = match Mapfile::new(&args.exe_filename[0]) {
-        Ok(v) => v,
-        Err(e) => panic!("Unable to map file: {}", e.to_string())
-    };
-    println!("{:?}", mapped_file);
+    let args : Arguments = Arguments::parse();
 
-    // Dump the executable
+    // Load the configuration
+    let config = configuration::Configuration::new();
+    println!("{:?}", config);
 
-    println!("{} {:?}", mapped_file.filename, mapped_file.mmap);
+    // Map all executables
 
-    // Get the executable type
+    let exe_vec : Vec<_>= args.exe_filename
+                                .iter()
+                                .map(|fname| new_executable(fname))
+                                .collect();
 
-    let exe_type = match ExeType::set(&mapped_file.mmap) {
-        Ok(v) => v,
-        Err(e) => panic!("Bad magic number: {}", e.to_string())
-    };
-
-    println!("{:?}", exe_type);
+    exe_vec.iter().for_each(|e| println!("{}", e.to_string()));
 
 }
