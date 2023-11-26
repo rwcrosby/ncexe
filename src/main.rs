@@ -1,4 +1,5 @@
 mod configuration;
+mod curses;
 
 use clap::Parser;
 use memmap2::Mmap;
@@ -26,6 +27,7 @@ trait ExeFormat {
     fn format(&self);
     fn to_string(&self) -> String;
     fn exe_type(&self) -> ExeType;
+    fn filename(&self) -> &str;
 }
 
 
@@ -43,6 +45,9 @@ impl ExeFormat for NotExecutable{
     fn exe_type(&self) -> ExeType {
         ExeType::NOPE
     }
+    fn filename(&self) -> &str {
+        &self.filename
+    }
 }
 
 struct ExecutableMach32 {
@@ -59,6 +64,9 @@ impl ExeFormat for ExecutableMach32 {
     fn exe_type(&self) -> ExeType {
         ExeType::MachO32
     }
+    fn filename(&self) -> &str {
+        &self.filename
+    }
 }
 
 struct ExecutableMach64 {
@@ -74,6 +82,9 @@ impl ExeFormat for ExecutableMach64 {
     }
     fn exe_type(&self) -> ExeType {
         ExeType::MachO64
+    }
+    fn filename(&self) -> &str {
+        &self.filename
     }
 }
 
@@ -93,13 +104,13 @@ fn new_executable(fname: & str) -> Box<dyn ExeFormat> {
 
     if mmap.len() < 4 {
         return Box::new(NotExecutable{filename: fname.to_string(),
-                                      msg: format!("Not large enough: {}", mmap.len())})
+                                      msg: format!("Too small: {}", mmap.len())})
     };
 
     let raw_type = unsafe{ *(mmap.as_ptr() as *const u32) };
     match raw_type {
-        0xfeedface => Box::new(ExecutableMach32{filename: fname.to_string(), mmap: mmap}),
-        0xfeedfacf => Box::new(ExecutableMach64{filename: fname.to_string(), mmap: mmap}),
+        0xfeedface => Box::new(ExecutableMach32{filename: fname.to_string(), mmap}),
+        0xfeedfacf => Box::new(ExecutableMach64{filename: fname.to_string(), mmap}),
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
         // 0x7f454c46 => ExeType::ELF,
@@ -126,5 +137,10 @@ fn main() {
                                 .collect();
 
     exe_vec.iter().for_each(|e| println!("{}", e.to_string()));
+
+    let exe_win = curses::ExeWin::new();
+
+    exe_win.show(&exe_vec);
+    // curses::testwin();
 
 }
