@@ -1,4 +1,5 @@
 mod configuration;
+mod scrollwindow;
 mod curses;
 
 use clap::Parser;
@@ -23,14 +24,17 @@ enum ExeType {
     NOPE,
 }
 
-trait ExeFormat {
+// trait ValRequireTrait<T: ValTrait = Self>: ValTrait<T> {}
+
+trait ExeFormat : std::fmt::Debug
+{
     fn format(&self);
     fn to_string(&self) -> String;
     fn exe_type(&self) -> ExeType;
     fn filename(&self) -> &str;
 }
 
-
+#[derive(Debug)]
 struct NotExecutable {
     filename: String,
     msg: String,
@@ -50,6 +54,8 @@ impl ExeFormat for NotExecutable{
     }
 }
 
+
+#[derive(Debug)]
 struct ExecutableMach32 {
     filename: String,
     mmap: Mmap,
@@ -69,6 +75,7 @@ impl ExeFormat for ExecutableMach32 {
     }
 }
 
+#[derive(Debug)]
 struct ExecutableMach64 {
     filename: String,
     mmap: Mmap,

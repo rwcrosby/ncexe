@@ -1,31 +1,46 @@
 use pancurses;
-use pancurses::{Input};
 
 use crate::ExeFormat;
+use crate::scrollwindow::ScrollWindow;
 
 // File list window
+#[derive(Debug)]
 pub struct ExeWin {
-    win: pancurses::Window,
+    win : pancurses::Window,
 }
 
 impl ExeWin {
 
     pub fn new() -> ExeWin {
-        let win = ExeWin{win: pancurses::initscr()};
+        
+        let win = ExeWin{ win: pancurses::initscr()};
 
         pancurses::noecho();
         win.win.keypad(true);
-
+        
         win
     }
 
     pub fn show(&self, exe_vec:  &Vec<Box<dyn ExeFormat>>) {
+
         self.win.draw_box(0, 0);
         let title = " File List ";
         let y = (self.win.get_max_x() - title.len() as i32) / 2;
         self.win.mv(0, y);
         self.win.printw(title);
+
+        let mut sw = Box::new(ScrollWindow::new(3, 10, &self.win));
+
+        for exe in exe_vec {
+            sw.add_line(exe)
+        }
+
+        sw.show();
+
+    }
         
+/* 
+    
         let start_x = 2;
         let start_y = 2;
 
@@ -82,20 +97,22 @@ impl ExeWin {
         }
 
     }
+    */
 
 }
 
 impl Drop for ExeWin {
     fn drop (&mut self) {
+        println!("Ending ncurses");
         pancurses::endwin();
     }
 }
 
 #[test]
-pub fn testwin() {
+pub fn curses_test_1() {
 
     let w = ExeWin::new();
-    w.win.printw("Hello World");
+    w.win.printw("Curses test 1");
     w.win.getch();
     
 }
