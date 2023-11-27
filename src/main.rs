@@ -1,10 +1,12 @@
 mod configuration;
-mod scrollwindow;
-mod curses;
+mod file_list_window;
+mod main_window; 
 
 use clap::Parser;
 use memmap2::Mmap;
 use std::fs::File;
+
+use main_window::MainWindow;
 
 /// Display executable file information
 #[derive(Parser,Default,Debug)]
@@ -20,7 +22,7 @@ enum ExeType {
     MachO32,
     MachO64,
 //     UNIVBIN,   
-//     ELF,
+    ELF,
     NOPE,
 }
 
@@ -28,7 +30,6 @@ enum ExeType {
 
 trait ExeFormat : std::fmt::Debug
 {
-    fn format(&self);
     fn to_string(&self) -> String;
     fn exe_type(&self) -> ExeType;
     fn filename(&self) -> &str;
@@ -41,8 +42,6 @@ struct NotExecutable {
 }
 
 impl ExeFormat for NotExecutable{
-    fn format(&self) {
-    }
     fn to_string(&self) -> String {
         format!("Not an Executable: {}: {}", self.filename, self.msg)
     }
@@ -62,8 +61,6 @@ struct ExecutableMach32 {
 }
 
 impl ExeFormat for ExecutableMach32 {
-    fn format(&self) {
-    }
     fn to_string(&self) -> String {
         format!("Mach-O 32: {:30} {:?}", self.filename, self.mmap)
     }
@@ -82,13 +79,29 @@ struct ExecutableMach64 {
 }
 
 impl ExeFormat for ExecutableMach64 {
-    fn format(&self) {
-    }
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
     }
     fn exe_type(&self) -> ExeType {
         ExeType::MachO64
+    }
+    fn filename(&self) -> &str {
+        &self.filename
+    }
+}
+
+#[derive(Debug)]
+struct ExecutableELF {
+    filename: String,
+    mmap: Mmap,
+}
+
+impl ExeFormat for ExecutableELF {
+    fn to_string(&self) -> String {
+        format!("ELF: {:30} {:?}", self.filename, self.mmap)
+    }
+    fn exe_type(&self) -> ExeType {
+        ExeType::ELF
     }
     fn filename(&self) -> &str {
         &self.filename
@@ -120,7 +133,8 @@ fn new_executable(fname: & str) -> Box<dyn ExeFormat> {
         0xfeedfacf => Box::new(ExecutableMach64{filename: fname.to_string(), mmap}),
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
-        // 0x7f454c46 => ExeType::ELF,
+        0x7f454c46 => Box::new(ExecutableELF{filename: fname.to_string(), mmap}),
+        0x464c457f => Box::new(ExecutableELF{filename: fname.to_string(), mmap}),
         v => Box::new(NotExecutable{filename: fname.to_string(),
                                     msg: format!("Invalid magic number: {:x}", v)}),
     }
@@ -137,7 +151,6 @@ fn main() {
     println!("{:?}", config);
 
     // Map all executables
-
     let exe_vec : Vec<_>= args.exe_filename
                                 .iter()
                                 .map(|fname| new_executable(fname))
@@ -145,9 +158,7 @@ fn main() {
 
     exe_vec.iter().for_each(|e| println!("{}", e.to_string()));
 
-    let exe_win = curses::ExeWin::new();
-
-    exe_win.show(&exe_vec);
-    // curses::testwin();
+    // Process the main window
+    MainWindow::new().show(&exe_vec);
 
 }
