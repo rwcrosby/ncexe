@@ -3,7 +3,9 @@ use pancurses;
 use crate::ExeFormat;
 use crate::file_list_window::FileListWindow;
 
+// ------------------------------------------------------------------------
 // File list window
+
 #[derive(Debug)]
 pub struct MainWindow {
     win : pancurses::Window,
@@ -45,6 +47,8 @@ impl Drop for MainWindow {
         println!("Ending ncurses");
     }
 }
+
+// ------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,9 @@
+use core::fmt::Debug;
 use pancurses::{Input, Window};
 
 use crate::ExeFormat;
 
-use core::fmt::Debug;
+// ------------------------------------------------------------------------
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -16,6 +17,8 @@ pub struct FileListWindow<'a> {
     win : &'a Window,
 
 }
+
+// ------------------------------------------------------------------------
 
 impl<'a> FileListWindow<'a> {
 
@@ -70,8 +73,8 @@ impl<'a> FileListWindow<'a> {
 
         loop {
 
-            w.mvprintw(0, 0, format!("x_start: {} x_len: {} y_start: {} y_len: {}", self.x_start, self.x_len, self.y_start, self.y_len));
-            w.mvprintw(1, 0, format!("file_inx:{} lines.len{} win_idx: {}", file_idx, self.lines.len(), win_idx));
+            // w.mvprintw(0, 0, format!("x_start: {} x_len: {} y_start: {} y_len: {}", self.x_start, self.x_len, self.y_start, self.y_len));
+            // w.mvprintw(1, 0, format!("file_inx:{} lines.len{} win_idx: {}", file_idx, self.lines.len(), win_idx));
 
             match w.getch() {
                Some(Input::Character(c)) => 
@@ -153,6 +156,8 @@ impl<'a> FileListWindow<'a> {
     }
 
 }
+
+// ------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

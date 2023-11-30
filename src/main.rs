@@ -1,31 +1,47 @@
-mod configuration;
-mod file_list_window;
-mod main_window; 
-
 use clap::Parser;
 use memmap2::Mmap;
 use std::fs::File;
 
+mod configuration;
+mod file_list_window;
+mod main_window; 
+
 use main_window::MainWindow;
 
+use std::path::PathBuf;
+
+// ------------------------------------------------------------------------
 /// Display executable file information
+/// 
 #[derive(Parser,Default,Debug)]
 struct Arguments {
 
     /// Name of the executable file(s)
     #[arg(required=true)]
-    exe_filename: Vec<String>
+    exe_filename: Vec<String>,
+
+    /// Sets a custom config file
+    #[arg(short, long, value_name = "FILE")]
+    config: Option<PathBuf>,            
+
+    /// Show non-executable files in the list
+    #[arg(short, long, default_value_t=false)]
+    show_notexe: bool,
+
 }
+
+// ------------------------------------------------------------------------
 
 #[derive(Debug)]
 enum ExeType {
     MachO32,
     MachO64,
-//     UNIVBIN,   
+    //     UNIVBIN,   
     ELF,
     NOPE,
 }
 
+// ------------------------------------------------------------------------
 // trait ValRequireTrait<T: ValTrait = Self>: ValTrait<T> {}
 
 trait ExeFormat : std::fmt::Debug
@@ -34,6 +50,8 @@ trait ExeFormat : std::fmt::Debug
     fn exe_type(&self) -> ExeType;
     fn filename(&self) -> &str;
 }
+
+// ------------------------------------------------------------------------
 
 #[derive(Debug)]
 struct NotExecutable {
@@ -52,7 +70,6 @@ impl ExeFormat for NotExecutable{
         &self.filename
     }
 }
-
 
 #[derive(Debug)]
 struct ExecutableMach32 {
@@ -108,6 +125,8 @@ impl ExeFormat for ExecutableELF {
     }
 }
 
+// ------------------------------------------------------------------------
+
 fn new_executable(fname: & str) -> Box<dyn ExeFormat> {
 
     let fd = match File::open(fname) {
@@ -141,13 +160,17 @@ fn new_executable(fname: & str) -> Box<dyn ExeFormat> {
 
 }
 
+// ------------------------------------------------------------------------
+
 fn main() {
 
     // Process the arguments
     let args : Arguments = Arguments::parse();
 
+    println!("Args: {:?}", args);
+
     // Load the configuration
-    let config = configuration::Configuration::new();
+    let config = configuration::Configuration::new(&args).unwrap();
     println!("{:?}", config);
 
     // Map all executables
