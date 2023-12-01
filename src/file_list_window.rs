@@ -190,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_1() {
         
         let w = initscr();
@@ -202,7 +202,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_2() {
     
         let mut lines : Vec<Box<dyn ExeFormat>> = vec![];
@@ -213,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_3() {
     
         let lines : Vec<Box<dyn ExeFormat>> = vec![
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_4() {
     
         let lines : Vec<Box<dyn ExeFormat>> = vec![

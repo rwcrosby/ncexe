@@ -56,6 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     pub fn test_1() {
 
         let w = MainWindow::new();

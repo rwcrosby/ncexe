@@ -25,8 +25,8 @@ struct Arguments {
     config: Option<PathBuf>,            
 
     /// Show non-executable files in the list
-    #[arg(short, long, default_value_t=false)]
-    show_notexe: bool,
+    #[arg(short, long)]
+    show_notexe: Option<bool>,
 
 }
 
