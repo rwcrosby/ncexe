@@ -1,15 +1,22 @@
+//! Configuration object creation
+//! 
+//! The configuration object is used throughout and is intended to be the 
+//! single source of configuration information
+
 use serde::Deserialize;
 use std::{env, path::PathBuf};
 
 use crate::Arguments;
 
 // ------------------------------------------------------------------------
+/// Configuration items
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub struct Configuration {
+    /// Theme to apply to screen, not yet implemented
     theme: String,
-    show_notexe: bool,
+    /// Show non-executable files is the file list window?
+    pub show_notexe: bool,
 }
 
 // ------------------------------------------------------------------------
@@ -21,14 +28,22 @@ struct YamlConfig {
 }
 
 // ------------------------------------------------------------------------
+/// - Priority for configuration file:
+///     1. Standard location `~/.config/ncexe.yaml`
+///     2. File pointed to by the `NCEXE_CONFIG` environment variable
+///     3. File pointed to by the `--config` command line argument
 
 impl<'a> Configuration {
+
+    /// Create a new configuratio object from
+    /// - The default configuration file at ~/.config/ncexe.yaml
     pub fn new(args: &Arguments) -> Result<Box<Configuration>, String> {
         
         // Select a configuration file
         
         let cfile : PathBuf;
         
+
         cfile  = match &args.config {
             Some(v) => v.to_path_buf(),
             None => {
@@ -48,7 +63,7 @@ impl<'a> Configuration {
             Err(_) => {
                 println!("Config file <{}> not found", cfile.display().to_string());
                 Box::new(Configuration{theme: "No config file".to_string(),
-                                          show_notexe : true})
+                                          show_notexe : false})
             }
         };
 
@@ -93,46 +108,40 @@ mod tests {
     #[test]
     fn test_1() {
 
-
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
-
 
         let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: None}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
-
-        assert!(*cfg == Configuration{theme: "From goodconfig.yaml".to_string(), show_notexe: false});
+        env::remove_var("NCEXE_CONFIG");
+        assert!(*cfg == Configuration{theme: "From goodconfig.yaml".to_string(), show_notexe: true});
 
     }
 
     #[test]
     fn test_2() {
 
-
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(false)}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(true)}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
-
-        assert!(*cfg == Configuration{theme: "From goodconfig.yaml".to_string(), show_notexe: false});
+        assert!(*cfg == Configuration{theme: "No config file".to_string(), show_notexe: true});
 
     }
 
     #[test]
     fn test_3() {
 
-
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
-
 
         let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(true)}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
-
+        env::remove_var("NCEXE_CONFIG");
         assert!(*cfg == Configuration{theme: "From goodconfig.yaml".to_string(), show_notexe: true});
 
     }

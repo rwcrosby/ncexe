@@ -1,3 +1,5 @@
+//! Curses based executable display
+
 use clap::Parser;
 use memmap2::Mmap;
 use std::fs::File;
@@ -32,7 +34,7 @@ struct Arguments {
 
 // ------------------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ExeType {
     MachO32,
     MachO64,
@@ -171,12 +173,13 @@ fn main() {
 
     // Load the configuration
     let config = configuration::Configuration::new(&args).unwrap();
-    println!("{:?}", config);
 
     // Map all executables
     let exe_vec : Vec<_>= args.exe_filename
                                 .iter()
                                 .map(|fname| new_executable(fname))
+                                .filter(|exe| config.show_notexe || 
+                                              exe.exe_type() != ExeType::NOPE)
                                 .collect();
 
     exe_vec.iter().for_each(|e| println!("{}", e.to_string()));
