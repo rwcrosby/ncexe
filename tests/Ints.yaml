@@ -1,0 +1,23 @@
+---
+fields:
+- size: 1
+  type: !Int
+  name: 8 bit integer
+- size: 2
+  type: !Int
+  name: 16 bit integer (big-endian)
+- size: 2
+  type: !Int
+  name: 16 bit integer (little-endian)
+- size: 4
+  type: !Int
+  name: 32 bit integer (big-endian)
+- size: 4
+  type: !Int
+  name: 32 bit integer (little-endian)
+- size: 8
+  type: !Int
+  name: 64 bit integer (big-endian)
+- size: 8
+  type: !Int
+  name: 64 bit integer (little-endian)

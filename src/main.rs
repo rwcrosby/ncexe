@@ -6,6 +6,7 @@ use std::fs::File;
 
 mod configuration;
 mod file_list_window;
+mod formatter; 
 mod main_window; 
 
 use main_window::MainWindow;
@@ -14,7 +15,7 @@ use std::path::PathBuf;
 
 // ------------------------------------------------------------------------
 /// Display executable file information
-/// 
+
 #[derive(Parser,Default,Debug)]
 struct Arguments {
 

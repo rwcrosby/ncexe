@@ -7,34 +7,34 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'ncmacho'",
+            "name": "Debug executable 'ncexe'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=ncmacho",
-                    "--package=ncmacho"
+                    "--bin=ncexe",
+                    "--package=ncexe"
                 ],
                 "filter": {
-                    "name": "ncmacho",
+                    "name": "ncexe",
                     "kind": "bin"
                 }
             },
-            "args": ["target/debug/ncmacho"],
+            "args": ["target/debug/ncexe"],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'ncmacho'",
+            "name": "Debug unit tests in executable 'ncexe'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=ncmacho",
-                    "--package=ncmacho"
+                    "--bin=ncexe",
+                    "--package=ncexe"
                 ],
                 "filter": {
-                    "name": "ncmacho",
+                    "name": "ncexe",
                     "kind": "bin"
                 }
             },
@@ -50,7 +50,7 @@
                     "test",
                     "--no-run",
                     "--test=bytes",
-                    "--package=ncmacho"
+                    "--package=ncexe"
                 ],
                 "filter": {
                     "name": "bytes",
