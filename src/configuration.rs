@@ -105,7 +105,15 @@ mod tests {
     use super::*;
     use crate::Arguments;
 
+    // Need to guarantee that the tests run sequentially because of the environment variable usage
+
     #[test]
+    fn tests() {
+        test_1();
+        test_2();
+        test_3();
+    }
+
     fn test_1() {
 
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
@@ -120,7 +128,6 @@ mod tests {
 
     }
 
-    #[test]
     fn test_2() {
 
         let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(true)}; 
@@ -131,7 +138,6 @@ mod tests {
 
     }
 
-    #[test]
     fn test_3() {
 
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
