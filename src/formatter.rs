@@ -92,52 +92,7 @@ fn ignore_2_string(_data: &[u8]) -> String {
 
 // ------------------------------------------------------------------------
 
-fn derive_fmt_fn(y_field: &YamlField) -> Result<DataToString, String> {
-    match y_field.field_type {
-        FieldType::BeInt => match y_field.size {
-            1 => Ok(u8_2_string),
-            2 => Ok(be_u16_2_string),
-            4 => Ok(be_u32_2_string),
-            8 => Ok(be_u64_2_string),
-            s => Err(format!("Bad integer length: {}", s)),
-        },
-        FieldType::LeInt => match y_field.size {
-            1 => Ok(u8_2_string),
-            2 => Ok(le_u16_2_string),
-            4 => Ok(le_u32_2_string),
-            8 => Ok(le_u64_2_string),
-            s => Err(format!("Bad integer length: {}", s)),
-        },
-        FieldType::Binary => Ok(binary_2_string),
-        FieldType::Hex => Ok(hex_2_string),
-        FieldType::Char => Ok(char_2_string),
-        FieldType::Ignore => Ok(ignore_2_string),
-    }
-}
-
-// ------------------------------------------------------------------------
-
 impl Formatter {
-
-    fn make_formatter(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<Formatter>, String> {
-
-        let mut fmt: Box<Formatter> = Box::new(Formatter {
-            fields: vec![],
-            len: 0,
-        });
-
-        for yfld in y_fields.drain(..) {
-            let size = yfld.size;
-            let fmt_fn = derive_fmt_fn(&yfld)?;
-            fmt.fields.push(Box::new(Field {y_field: yfld,
-                                            offset: fmt.len as isize,
-                                            fmt_fn,
-            }));
-            fmt.len += size;
-        }
-
-        Ok(fmt)
-    }
 
     pub fn from_str(yaml_str: &str) -> Result<Box<Formatter>, String> {
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_str(yaml_str)
@@ -174,6 +129,50 @@ impl Formatter {
 
         Ok(fmt_str)
     }
+
+    fn make_formatter(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<Formatter>, String> {
+
+        let mut fmt: Box<Formatter> = Box::new(Formatter {
+            fields: vec![],
+            len: 0,
+        });
+
+        for yfld in y_fields.drain(..) {
+            let size = yfld.size;
+            let fmt_fn = Formatter::derive_fmt_fn(&yfld)?;
+            fmt.fields.push(Box::new(Field {y_field: yfld,
+                                            offset: fmt.len as isize,
+                                            fmt_fn,
+            }));
+            fmt.len += size;
+        }
+
+        Ok(fmt)
+    }
+
+    fn derive_fmt_fn(y_field: &YamlField) -> Result<DataToString, String> {
+        match y_field.field_type {
+            FieldType::BeInt => match y_field.size {
+                1 => Ok(u8_2_string),
+                2 => Ok(be_u16_2_string),
+                4 => Ok(be_u32_2_string),
+                8 => Ok(be_u64_2_string),
+                s => Err(format!("Bad integer length: {}", s)),
+            },
+            FieldType::LeInt => match y_field.size {
+                1 => Ok(u8_2_string),
+                2 => Ok(le_u16_2_string),
+                4 => Ok(le_u32_2_string),
+                8 => Ok(le_u64_2_string),
+                s => Err(format!("Bad integer length: {}", s)),
+            },
+            FieldType::Binary => Ok(binary_2_string),
+            FieldType::Hex => Ok(hex_2_string),
+            FieldType::Char => Ok(char_2_string),
+            FieldType::Ignore => Ok(ignore_2_string),
+        }
+    }
+
 }
 
 // ------------------------------------------------------------------------
@@ -251,28 +250,12 @@ cf fc 32 23 00 ff
         );
     }
 
-    /*
-        #[test]
-        fn formatter_from_string() {
+    #[test]
+    #[should_panic(expected="No such file or directory (os error 2)")]
+    fn missing_fmt_file() {
 
-            let f = Formatter::new("tests/SampleFormat.yaml").unwrap();
+        let _f = Formatter::from_file("missingfile.yaml").unwrap();
 
-            let ptr : [u8; 9] = hex!("31 32 33 34 35 0f 00 00 00");
+    }
 
-            let fstr = f.format(&ptr as *const u8);
-
-            println!("{}", fstr);
-
-            // assert!(f.format(&ptr as *const u8) == "Blah\nBlah\n");
-            assert!(fstr == "00110001 00110010 00110011 00110100 00110101\n15\n");
-        }
-
-        #[test]
-        #[should_panic(expected="No such file or directory (os error 2)")]
-        fn missing_fmt_file() {
-
-            let _f = Formatter::new("missingfile.yaml").unwrap();
-
-        }
-    */
 }
