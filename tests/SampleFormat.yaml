@@ -1,9 +1,8 @@
 ---
 
-fields:
-  - size: 5
-    name: Bilbo
-    type: !Binary
-  - size: 4
-    name: Frodo
-    type: !Int
+- size: 5
+  name: Bilbo
+  type: !Binary
+- size: 4
+  name: Frodo
+  type: !BeInt
