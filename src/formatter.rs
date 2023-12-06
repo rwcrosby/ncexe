@@ -2,9 +2,21 @@
 /// Format a block of memory into a window
 use serde::Deserialize;
 
+use crate::ExeType;
+
 // ------------------------------------------------------------------------
 
-struct Formatter {
+pub trait Formatter: std::fmt::Debug {
+
+    fn to_string(&self) -> String;
+    fn exe_type(&self) -> ExeType;
+    fn filename(&self) -> &str;
+
+}
+
+// ------------------------------------------------------------------------
+
+struct FormatBlock {
     fields: Vec<Box<Field>>,
     len: usize,
 }
@@ -92,27 +104,25 @@ fn ignore_2_string(_data: &[u8]) -> String {
 
 // ------------------------------------------------------------------------
 
-impl Formatter {
+impl FormatBlock {
 
-    pub fn from_str(yaml_str: &str) -> Result<Box<Formatter>, String> {
+    pub fn from_str(yaml_str: &str) -> Result<Box<FormatBlock>, String> {
+
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_str(yaml_str)
-            .or_else(|e| return Err(e.to_string()))
-            .unwrap();
-
-        Formatter::make_formatter(&mut y_fields)
+            .map_err(|e| e.to_string())?;
+        
+        FormatBlock::make_format_block(&mut y_fields)
     }
-
-    pub fn from_file(filename: &str) -> Result<Box<Formatter>, String> {
+    
+    pub fn from_file(filename: &str) -> Result<Box<FormatBlock>, String> {
         let fd = std::fs::File::open(filename)
-            .or_else(|e| return Err(e.to_string()))
-            .unwrap();
-
+            .map_err(|e| e.to_string())?;
+        
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_reader(fd)
-            .or_else(|e| return Err(e.to_string()))
-            .unwrap();
+            .map_err(|e| e.to_string())?;
 
 
-        Formatter::make_formatter(&mut y_fields)
+        FormatBlock::make_format_block(&mut y_fields)
     }
 
     pub fn to_string(&self, data: *const u8, offset: isize, len: usize) -> Result<String, String> {
@@ -130,16 +140,16 @@ impl Formatter {
         Ok(fmt_str)
     }
 
-    fn make_formatter(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<Formatter>, String> {
+    fn make_format_block(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<FormatBlock>, String> {
 
-        let mut fmt: Box<Formatter> = Box::new(Formatter {
+        let mut fmt: Box<FormatBlock> = Box::new(FormatBlock {
             fields: vec![],
             len: 0,
         });
 
         for yfld in y_fields.drain(..) {
             let size = yfld.size;
-            let fmt_fn = Formatter::derive_fmt_fn(&yfld)?;
+            let fmt_fn = FormatBlock::derive_fmt_fn(&yfld)?;
             fmt.fields.push(Box::new(Field {y_field: yfld,
                                             offset: fmt.len as isize,
                                             fmt_fn,
@@ -202,14 +212,14 @@ mod tests {
 
     #[test]
     fn good_fmt_file() {
-        let f = Formatter::from_file("tests/SampleFormat.yaml").unwrap();
+        let f = FormatBlock::from_file("tests/SampleFormat.yaml").unwrap();
 
         assert!(f.len == 9);
     }
 
     #[test]
     fn ints_from_file() {
-        let f = Formatter::from_file("tests/Ints.yaml").unwrap();
+        let f = FormatBlock::from_file("tests/Ints.yaml").unwrap();
         let fstr = f.to_string(&INTS as *const u8, 0, INTS.len()).unwrap();
         println!("{}", fstr);
         assert!(
@@ -239,7 +249,7 @@ mod tests {
 
     #[test]
     fn strs_from_str() {
-        let f = Formatter::from_str(YAMLSTRING).unwrap();
+        let f = FormatBlock::from_str(YAMLSTRING).unwrap();
         let fstr = f.to_string(&STR as *const u8, 0, STR.len()).unwrap();
         println!("{}", fstr);
         assert!(
@@ -254,7 +264,7 @@ cf fc 32 23 00 ff
     #[should_panic(expected="No such file or directory (os error 2)")]
     fn missing_fmt_file() {
 
-        let _f = Formatter::from_file("missingfile.yaml").unwrap();
+        let _f = FormatBlock::from_file("missingfile.yaml").unwrap();
 
     }
 

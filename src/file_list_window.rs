@@ -1,11 +1,11 @@
 use core::fmt::Debug;
 use pancurses::{Input, Window};
 
-use crate::ExeFormat;
+use crate::ExeType;
+use crate::Formatter;
 
 // ------------------------------------------------------------------------
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct FileListWindow<'a> {
 
@@ -13,7 +13,7 @@ pub struct FileListWindow<'a> {
     x_len: i32,
     y_start: i32,
     y_len: i32,
-    lines : Vec<&'a Box<dyn ExeFormat>>,
+    lines : Vec<&'a Box<dyn Formatter + 'a>>,
     win : &'a Window,
 
 }
@@ -30,7 +30,7 @@ impl<'a> FileListWindow<'a> {
         FileListWindow { x_start, x_len, y_start, y_len, lines: vec![], win}
     }
 
-    pub fn add_line(&mut self, line : &'a Box<dyn ExeFormat> ) {
+    pub fn add_line(&mut self, line : &'a Box<dyn Formatter + '_> ) {
         self.lines.push(line);
     }
 
@@ -73,17 +73,10 @@ impl<'a> FileListWindow<'a> {
 
         loop {
 
-            // w.mvprintw(0, 0, format!("x_start: {} x_len: {} y_start: {} y_len: {}", self.x_start, self.x_len, self.y_start, self.y_len));
-            // w.mvprintw(1, 0, format!("file_inx:{} lines.len{} win_idx: {}", file_idx, self.lines.len(), win_idx));
+            w.mvprintw(0, 0, format!("x_start: {} x_len: {} y_start: {} y_len: {}", self.x_start, self.x_len, self.y_start, self.y_len));
+            w.mvprintw(1, 0, format!("file_inx: {} lines.len: {} win_idx: {}", file_idx, self.lines.len(), win_idx));
 
             match w.getch() {
-               Some(Input::Character(c)) => 
-                    if c == 'q' || c == '\u{1b}' { 
-                        break; 
-                    } else { 
-                        println!("{:?}", c)
-                    }
-
                 Some(Input::KeyDown) => 
 
                     if file_idx < self.lines.len() - 1 {
@@ -123,20 +116,40 @@ impl<'a> FileListWindow<'a> {
                             top_idx -= 1;
                             self.write_lines(top_idx, &invis);
                             
+                        }
+
+                        file_idx -= 1;
+                        highlight(win_idx, file_idx)
+
                     }
 
-                    file_idx -= 1;
-                    highlight(win_idx, file_idx)
+                Some(Input::KeyEnter) => 
 
-                }
+                    if self.lines[file_idx].exe_type() != ExeType::NOPE { 
 
-                Some(_) => (),
-                None => ()
+                        w.mvprintw(0, 0, self.lines[file_idx].to_string());
+                        
+                    } else {
+                        w.mvprintw(0, 0, self.lines[file_idx].to_string());
+
+                    }
+
+                Some(Input::Character(c)) => 
+
+                    match c {
+                        'q' | '\u{1b}'  => break,
+                        '\n' =>  
+                            if self.lines[file_idx].exe_type() != ExeType::NOPE { 
+                                w.mvprintw(0, 0, self.lines[file_idx].to_string());
+                            },
+                        _ => ()
+                    }
+
+                _ => ()
+
             };
 
         }
-
-        println!("Ending file_list_window::show");
 
     }
 
@@ -166,7 +179,7 @@ mod tests {
     use crate::ExeType;
     use super::*;
 
-    impl ExeFormat for std::string::String {
+    impl Formatter for std::string::String {
         fn to_string(&self) -> String {
             ToString::to_string(self)
         }
@@ -174,7 +187,7 @@ mod tests {
         fn filename(&self) -> &str {""} 
     }
 
-    fn window_test(lines: &Vec<Box<dyn ExeFormat>>) {
+    fn window_test(lines: &Vec<Box<dyn Formatter>>) {
 
         let w = initscr();
         noecho();
@@ -205,7 +218,7 @@ mod tests {
     #[ignore]
     fn test_2() {
     
-        let mut lines : Vec<Box<dyn ExeFormat>> = vec![];
+        let mut lines : Vec<Box<dyn Formatter>> = vec![];
         (0..10).for_each(|i| lines.push(Box::new(format!("Line {}", i))));
 
         window_test(&lines);
@@ -216,7 +229,7 @@ mod tests {
     #[ignore]
     fn test_3() {
     
-        let lines : Vec<Box<dyn ExeFormat>> = vec![
+        let lines : Vec<Box<dyn Formatter>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 12".to_string()),
@@ -234,7 +247,7 @@ mod tests {
     #[ignore]
     fn test_4() {
     
-        let lines : Vec<Box<dyn ExeFormat>> = vec![
+        let lines : Vec<Box<dyn Formatter>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 1".to_string()),
