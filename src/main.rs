@@ -4,8 +4,10 @@
 //! https://gist.github.com/rust-play/1752b69650f04d9db975db82ff348a3f
 
 use clap::Parser;
+// use file_list_window::FileListWindow;
 use memmap2::Mmap;
 use std::fs::File;
+use std::fmt;
 use std::path::PathBuf;
 
 mod configuration;
@@ -15,6 +17,7 @@ mod formatter;
 mod macho32;
 mod macho64;
 mod main_window;
+mod window;
 
 use formatter::Formatter;
 use main_window::MainWindow;
@@ -46,7 +49,22 @@ enum ExeType {
     ELF,
     NOPE,
     //     UNIVBIN,
+    //     PE,
 }
+
+impl fmt::Display for ExeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{}",
+            match self {
+                Self::MachO64 => "Mach-O 64 Bit",
+                Self::MachO32 => "Mach-O 32 Bit",
+                Self::ELF => "ELF",
+                Self::NOPE => "Not Executable",
+        })
+    }
+}
+
+const ETYPELENGTH : usize = "Portable Executable".len();
 
 // ------------------------------------------------------------------------
 
@@ -66,6 +84,9 @@ impl Formatter for NotExecutable<'_> {
     fn filename(&self) -> &str {
         self.filename
     }
+
+    fn show(&self, _mw : &MainWindow) {}
+
 }
 
 // ------------------------------------------------------------------------
@@ -116,6 +137,7 @@ fn new_executable(filename: &str) -> Box<dyn Formatter + '_> {
 // ------------------------------------------------------------------------
 
 fn main() {
+
     // Process the arguments
     let args: Arguments = Arguments::parse();
 
@@ -125,11 +147,25 @@ fn main() {
     let config = configuration::Configuration::new(&args).unwrap();
 
     // Build the list of executable objects
-    let exe_vec: Vec<_> = args.exe_filename
+    let executables: Vec<_> = args.exe_filename
         .iter()
         .map(|fname| new_executable(fname))
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
-    MainWindow::new().show(&exe_vec);
+    // Process depending on how many files are of interest
+
+    if executables.len() == 0 || 
+        (executables.len() == 1 && executables[0].exe_type() == ExeType::NOPE) {
+        panic!("No executable files of interest found");
+    }
+
+    let mw = MainWindow::new();
+
+    if executables.len() == 1 {
+        executables[0].show(&mw)
+    } else {
+        file_list_window::show(&executables, &mw)
+    }
+
 }

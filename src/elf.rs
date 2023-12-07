@@ -4,6 +4,7 @@ use memmap2::Mmap;
 
 use crate::ExeType;
 use crate::Formatter;
+use crate::MainWindow;
 
 #[derive(Debug)]
 pub struct ELFFormatter<'a> {
@@ -24,6 +25,8 @@ impl Formatter for ELFFormatter<'_> {
     fn filename(&self) -> &str {
         self.filename
     }
+
+    fn show(&self, _mw : &MainWindow) {}
 
 }
 

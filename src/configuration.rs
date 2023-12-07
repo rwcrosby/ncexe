@@ -61,7 +61,7 @@ impl<'a> Configuration {
         let mut config = match std::fs::symlink_metadata(&cfile) {
             Ok(_) => load_config_file(&cfile)?,
             Err(_) => {
-                println!("Config file <{}> not found", cfile.display().to_string());
+                eprintln!("Config file <{}> not found", cfile.display().to_string());
                 Box::new(Configuration{theme: "No config file".to_string(),
                                           show_notexe : false})
             }

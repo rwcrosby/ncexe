@@ -3,14 +3,17 @@
 use serde::Deserialize;
 
 use crate::ExeType;
+use crate::MainWindow;
 
 // ------------------------------------------------------------------------
 
 pub trait Formatter: std::fmt::Debug {
 
-    fn to_string(&self) -> String;
+    fn to_string(&self) -> String { String::from("") }
     fn exe_type(&self) -> ExeType;
-    fn filename(&self) -> &str;
+    fn len(&self) -> usize { 0 }
+    fn filename(&self) -> &str {""}
+    fn show(&self, mw : &MainWindow);
 
 }
 
@@ -28,6 +31,8 @@ struct YamlField {
     #[serde(rename = "type")]
     field_type: FieldType,
 }
+
+// ------------------------------------------------------------------------
 
 struct Field {
     y_field: Box<YamlField>,

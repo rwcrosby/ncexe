@@ -5,6 +5,7 @@ use memmap2::Mmap;
 
 use crate::ExeType;
 use crate::Formatter;
+use crate::MainWindow;
 
 #[derive(Debug)]
 pub struct Macho32Formatter<'a> {
@@ -25,6 +26,8 @@ impl Formatter for Macho32Formatter<'_> {
     fn filename(&self) -> &str {
         self.filename
     }
+
+    fn show(&self, _mw : &MainWindow) {}
 
 }
 
