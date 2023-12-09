@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+gettext-rs = "^0"
 clap = { version = "^4.4.8", features = ["derive"]}
 dirs = "^5.0"
 hex-literal = "^0"

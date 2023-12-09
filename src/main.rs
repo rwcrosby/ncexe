@@ -2,6 +2,9 @@
 //!
 //! Some playing with lifetimes
 //! https://gist.github.com/rust-play/1752b69650f04d9db975db82ff348a3f
+//! 
+//! Keyboard mapping in tmux:
+//! https://stackoverflow.com/questions/18600188/home-end-keys-do-not-work-in-tmux
 
 use clap::Parser;
 // use file_list_window::FileListWindow;

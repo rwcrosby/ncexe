@@ -9,40 +9,40 @@ pub struct ExeWindow<'a> {
     /// Reference to the main window
     main_window : &'a MainWindow,
 
-    /// Reference to the this window
+    /// This window's curses window
     pub win : pancurses::Window,
 
     /// User requested dimensions of the writable area
-    pub desired_canvas_cols : i32, 
-    pub desired_canvas_lines : i32,
+    pub desired_canvas_cols : usize, 
+    pub desired_canvas_lines : usize,
 
     /// Available dimensions of the writable area
-    pub avail_canvas_cols : i32, 
-    pub avail_canvas_lines : i32,
+    pub avail_canvas_cols : usize, 
+    pub avail_canvas_lines : usize,
 
 }
 
-pub const LMARGIN : i32 = 2;
-pub const RMARGIN : i32 = 2;
-pub const TMARGIN : i32 = 2;
-pub const BMARGIN : i32 = 1;
+pub const LMARGIN : usize = 2;
+pub const RMARGIN : usize = 2;
+pub const TMARGIN : usize = 2;
+pub const BMARGIN : usize = 1;
 
 impl<'a> ExeWindow<'a> {
 
-    pub fn new( desired_canvas_cols : i32,
-                desired_canvas_lines : i32,
+    pub fn new( desired_canvas_cols : usize,
+                desired_canvas_lines : usize,
                 title : &str,
                 main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>, String> {
 
         let mw = &main_window.win;
 
         // Figure out the x dimensions to use for the window
-        let mw_cols = mw.get_max_x();
+        let mw_cols = mw.get_max_x() as usize;
 
         let des_win_cols = desired_canvas_cols + LMARGIN + RMARGIN; 
         let mut avail_canvas_cols = mw_cols - LMARGIN - RMARGIN;
 
-        let mut beg_col : i32 = 0;
+        let mut beg_col  = 0;
         let mut cols = mw_cols;
 
         if des_win_cols < mw_cols {
@@ -53,12 +53,12 @@ impl<'a> ExeWindow<'a> {
 
         // Figure out the y dimensions to use for the window
         
-        let mw_lines = mw.get_max_y();
+        let mw_lines = mw.get_max_y() as usize;
 
         let des_win_lines = desired_canvas_lines + TMARGIN + BMARGIN; 
         let mut avail_canvas_lines = mw_lines - TMARGIN - BMARGIN;
         
-        let mut beg_line : i32 = 0;
+        let mut beg_line = 0;
         let mut lines = mw_lines;
         
         if des_win_lines < mw_lines {
@@ -72,7 +72,12 @@ impl<'a> ExeWindow<'a> {
         let win = Box::new(ExeWindow{   main_window, 
                                         desired_canvas_cols, desired_canvas_lines,
                                         avail_canvas_cols, avail_canvas_lines,
-                                        win : mw.subwin(lines, cols, beg_line, beg_col)
+                                        win : mw.subwin(
+                                            lines as i32, 
+                                            cols as i32, 
+                                            beg_line as i32, 
+                                            beg_col as i32
+                                        )
                                             .map_err(|e| format!("Create subwin error {}", e))? } );
 
         let w = &win.win;
@@ -82,14 +87,13 @@ impl<'a> ExeWindow<'a> {
         w.draw_box(0, 0);
         w.keypad(true);
 
-
         // Show the title
 
         let display_title = format!(" {} ", title);
 
-        if display_title.len() as i32 <=  cols - LMARGIN - RMARGIN {
-            let y = (cols - display_title.len() as i32) / 2;
-            w.mvprintw(0, y, display_title);
+        if display_title.len() <=  cols - LMARGIN - RMARGIN {
+            let y = (cols - display_title.len()) / 2;
+            w.mvprintw(0, y as i32, display_title);
         }
 
         Ok(win)
@@ -108,10 +112,11 @@ mod tests {
     #[test]
     pub fn window_test_1() {
         let w = MainWindow::new();
-        w.win.printw("Curses test 1");
+        w.win.printw("Curses test 1 <\u{21d1}>");
         w.win.getch();
+        w.win.keypad(true);
         
-        let sw = ExeWindow::new(10, 10, "Blahx", &w).unwrap();
+        let sw = ExeWindow::new(10, 10, "Blah", &w).unwrap();
 
         sw.win.mvaddstr(2, 1, "x");
         let x = sw.win.mvaddstr(20, 1, "x");

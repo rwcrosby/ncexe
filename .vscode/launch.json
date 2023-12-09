@@ -19,8 +19,39 @@
                     "kind": "bin"
                 }
             },
-            "args": ["target/debug/ncexe"],
-            "cwd": "${workspaceFolder}"
+            "args": ["target/debug/ncexe", 
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe",
+            "target/release/ncexe"],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal",
+            "env": {
+                "TERM": "xterm-256color"
+            }
         },
         {
             "type": "lldb",

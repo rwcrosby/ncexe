@@ -27,6 +27,10 @@ impl Formatter for Macho32Formatter<'_> {
         self.filename
     }
 
+    fn len(&self) -> usize {
+        self.mmap.len()
+    }
+
     fn show(&self, _mw : &MainWindow) {}
 
 }

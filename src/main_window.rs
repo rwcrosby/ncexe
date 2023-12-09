@@ -1,5 +1,7 @@
 use pancurses;
 
+use gettextrs;
+
 // use crate::file_list_window::FileListWindow;
 // use crate::Formatter;
 
@@ -16,6 +18,8 @@ impl MainWindow {
         let win = MainWindow {
             win: pancurses::initscr(),
         };
+
+        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
 
         pancurses::noecho();
         win.win.keypad(true);
