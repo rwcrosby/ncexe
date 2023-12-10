@@ -52,7 +52,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
 
     #[cfg(debug_assertions)]
     {
-        pw.mvaddstr(0, 0,
+        pw.mvaddstr(0, 0, 
             format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
                 line_len,
                 w.avail_canvas_lines, w.avail_canvas_cols,
@@ -84,6 +84,17 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         )
     };
 
+    // Create key handler closures
+
+    let key_up_handler = key_up_generator(&w, &executables, highlight, fmt_line );
+    let key_down_handler = key_down_generator(&w, &executables, highlight, fmt_line );
+    let key_pgup_handler = key_pgup_generator(&w, &executables, highlight, fmt_line );
+    let key_pgdown_handler = key_pgdown_generator(&w, &executables, highlight, fmt_line );
+    let key_home_handler = key_home_generator(&w, &executables, highlight, fmt_line );
+    let key_end_handler = key_end_generator(&w, &executables, highlight, fmt_line );
+
+    // Do it!
+
     let mut win_idx: usize = 0;
     let mut top_idx: usize = 0;
 
@@ -94,8 +105,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         #[cfg(debug_assertions)]
         {
             pw.mvprintw(pw.get_max_y() - 1, 0,
-                format!(
-                    "e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}",
+                format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}",
                     executables.len(),
                     w.avail_canvas_lines,
                     top_idx,
@@ -108,114 +118,13 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         indicate_more_down(&w, top_idx, executables.len());
 
         match pw.getch() {
-            
-            Some(Input::KeyUp) => {
 
-                if win_idx > 0 {
-                    highlight(win_idx, false);
-                    win_idx -= 1;
-                } else if top_idx > 0 {
-                    top_idx -= 1;
-                    write_lines(
-                        &w, 
-                        &executables[top_idx..top_idx + w.avail_canvas_lines], 
-                        &fmt_line
-                    );
-                }
-
-                highlight(win_idx, true)
-
-            }
-
-            Some(Input::KeyDown) => {
-
-                if win_idx < w.avail_canvas_lines - 1 {
-                    highlight(win_idx, false);
-                    win_idx += 1;
-                } else if top_idx + (w.avail_canvas_lines) < executables.len()  {
-                    top_idx += 1;
-                    write_lines(
-                        &w, 
-                        &executables[top_idx..top_idx + w.avail_canvas_lines], 
-                        &fmt_line
-                    );
-                }
-
-                highlight(win_idx, true)
-
-            }
-
-            Some(Input::KeyPPage) => {
-
-                if top_idx > 0 {
-
-                    if top_idx  > w.avail_canvas_lines {
-                        top_idx -= w.avail_canvas_lines;
-                    } else {
-                        top_idx = 0;
-                        
-                    }
-
-                    write_lines(&w, &executables[top_idx..(top_idx + w.avail_canvas_lines as usize)], &fmt_line);
-                    win_idx = 0;
-
-                } else {
-                    highlight(win_idx, false);
-                    win_idx = 0;
-                }
-
-                highlight(win_idx, true);
-
-            }
-
-            Some(Input::KeyNPage) => {
-
-                if w.avail_canvas_lines as usize + top_idx < executables.len() {
-
-                    if top_idx + w.avail_canvas_lines as usize * 2 > executables.len() {
-                        top_idx = executables.len() - w.avail_canvas_lines as usize;
-                    } else {
-                        top_idx += w.avail_canvas_lines as usize;
-                    }
-                    
-                    write_lines(&w, &executables[top_idx..(top_idx + w.avail_canvas_lines as usize)], &fmt_line);
-                    win_idx = 0;
-
-                } else {
-                    highlight(win_idx, false);
-                    win_idx = w.avail_canvas_lines - 1;
-                }
-
-                highlight(win_idx, true);
-
-            }
-
-            Some(Input::KeyHome) => {
-
-                if top_idx != 0 {
-                    top_idx = 0;
-                    write_lines(&w, &executables[0..w.avail_canvas_lines as usize], &fmt_line);
-                }
-                if win_idx != 0 {
-                    highlight(win_idx, false);
-                    win_idx = 0;
-                    highlight(win_idx, true);
-                }
-            }
-
-            Some(Input::KeyEnd) => {
-
-                if top_idx + w.avail_canvas_lines as usize != executables.len() {
-                    top_idx = executables.len() - w.avail_canvas_lines as usize;
-                    write_lines(&w, &executables[top_idx..], &fmt_line);
-                }
-                if win_idx != w.avail_canvas_lines - 1 {
-                    highlight(win_idx, false);
-                    win_idx = w.avail_canvas_lines - 1;
-                    highlight(win_idx, true);
-                }
-            }
-
+            Some(Input::KeyUp) => key_up_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyDown) => key_down_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyPPage) => key_pgup_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyNPage) => key_pgdown_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyHome) => key_home_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx),
 
             Some(Input::Character(c)) => match c {
                 'q' | '\u{1b}' => break,
@@ -228,8 +137,6 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         }
 
     }
-
-    // pw.getch();
 
 }
 
@@ -288,6 +195,188 @@ fn write_lines<F>(
             fmt_fn(exe),
         );
     };
+
+}
+
+// ------------------------------------------------------------------------
+
+fn key_up_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if *win_idx > 0 {
+            highlight_fn(*win_idx, false);
+            *win_idx -= 1;
+        } else if *top_idx > 0 {
+            *top_idx -= 1;
+            write_lines(
+                &w, 
+                &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
+                &fmt_fn
+            );
+        }
+
+        highlight_fn(*win_idx, true);
+
+    }
+}
+
+// ------------------------------------------------------------------------
+
+fn key_down_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if *win_idx < w.avail_canvas_lines - 1 {
+            highlight_fn(*win_idx, false);
+            *win_idx += 1;
+        } else if *top_idx + (w.avail_canvas_lines) < exes.len()  {
+            *top_idx += 1;
+            write_lines(
+                &w, 
+                &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
+                &fmt_fn
+            );
+        }
+
+        highlight_fn(*win_idx, true)
+
+    }
+}
+
+// ------------------------------------------------------------------------
+
+fn key_pgup_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if *top_idx > 0 {
+
+            if *top_idx  > w.avail_canvas_lines {
+                *top_idx -= w.avail_canvas_lines;
+            } else {
+                *top_idx = 0;
+                
+            }
+
+            write_lines(&w, &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], &fmt_fn);
+            *win_idx = 0;
+
+        } else {
+            highlight_fn(*win_idx, false);
+            *win_idx = 0;
+        }
+
+        highlight_fn(*win_idx, true);
+
+    }
+}
+
+// ------------------------------------------------------------------------
+
+fn key_pgdown_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if w.avail_canvas_lines + *top_idx < exes.len() {
+
+            if *top_idx + w.avail_canvas_lines as usize * 2 > exes.len() {
+                *top_idx = exes.len() - w.avail_canvas_lines;
+            } else {
+                *top_idx += w.avail_canvas_lines;
+            }
+            
+            write_lines(&w, &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], &fmt_fn);
+            *win_idx = 0;
+
+        } else {
+            highlight_fn(*win_idx, false);
+            *win_idx = w.avail_canvas_lines - 1;
+        }
+
+        highlight_fn(*win_idx, true);
+
+    }
+}
+
+// ------------------------------------------------------------------------
+
+fn key_home_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if *top_idx != 0 {
+            *top_idx = 0;
+            write_lines(&w, &exes[0..w.avail_canvas_lines], &fmt_fn);
+        }
+        if *win_idx != 0 {
+            highlight_fn(*win_idx, false);
+            *win_idx = 0;
+            highlight_fn(*win_idx, true);
+        }
+    }
+
+}
+
+// ------------------------------------------------------------------------
+
+fn key_end_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    highlight_fn : impl Fn(usize, bool) + 'a,
+    fmt_fn : impl Fn(&ExeItem) -> String + 'a,
+) -> impl Fn(&mut usize, &mut usize)  + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | {
+
+        if *top_idx + w.avail_canvas_lines != exes.len() {
+            *top_idx = exes.len() - w.avail_canvas_lines;
+            write_lines(&w, &exes[*top_idx..], &fmt_fn);
+        }
+        if *win_idx != w.avail_canvas_lines - 1 {
+            highlight_fn(*win_idx, false);
+            *win_idx = w.avail_canvas_lines - 1;
+            highlight_fn(*win_idx, true);
+        }
+
+    }
 
 }
 
