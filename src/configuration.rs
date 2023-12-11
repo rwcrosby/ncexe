@@ -68,8 +68,8 @@ impl<'a> Configuration {
         };
 
 
-        if args.show_notexe.is_some() {
-                config.show_notexe = args.show_notexe.unwrap();
+        if args.show_notexe {
+                config.show_notexe = true;
         };
  
         Ok(config)
@@ -119,7 +119,7 @@ mod tests {
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: None}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: false}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
@@ -130,7 +130,7 @@ mod tests {
 
     fn test_2() {
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(true)}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: true}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
@@ -143,7 +143,7 @@ mod tests {
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: Some(true)}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: true}; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);

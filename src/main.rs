@@ -6,8 +6,13 @@
 //! Keyboard mapping in tmux:
 //! https://stackoverflow.com/questions/18600188/home-end-keys-do-not-work-in-tmux
 
+//! TODO: Color support
+//! TODO: Improved error handling
+//! TODO: Terminal resizing
+//! TODO: show-notexe flag
+//!         12/11/23 - Will be set to true is any config item is true, false otherwise
+
 use clap::Parser;
-// use file_list_window::FileListWindow;
 use memmap2::Mmap;
 use std::fs::File;
 use std::fmt;
@@ -39,8 +44,8 @@ struct Arguments {
     config: Option<PathBuf>,
 
     /// Show non-executable files in the list
-    #[arg(short, long)]
-    show_notexe: Option<bool>,
+    #[clap(short, long, action)]
+    show_notexe: bool,
 }
 
 // ------------------------------------------------------------------------
@@ -144,7 +149,7 @@ fn main() {
     // Process the arguments
     let args: Arguments = Arguments::parse();
 
-    // println!("Args: {:?}", args);
+    println!("Args: {:?}", args);
 
     // Load the configuration
     let config = configuration::Configuration::new(&args).unwrap();

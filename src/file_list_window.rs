@@ -61,7 +61,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         );
     }
 
-    // Closures to reset a line's attributes
+    // Line closured
 
     let highlight = |win_idx, highlight| {
         pw.mvchgat(
