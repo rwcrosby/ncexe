@@ -8,9 +8,11 @@
 
 //! TODO: Color support
 //! TODO: Improved error handling
+//!       12/11/23 - Implement `anyhow``
 //! TODO: Terminal resizing
-//! TODO: show-notexe flag
-//!         12/11/23 - Will be set to true is any config item is true, false otherwise
+
+//! FIXED: show-notexe flag
+//!        12/11/23 - Will be set to true is any config item is true, false otherwise
 
 use clap::Parser;
 use memmap2::Mmap;

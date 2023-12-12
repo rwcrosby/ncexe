@@ -40,6 +40,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
         .unwrap();
 
     let pw = &w.win;
+    let mpw = &mw.win;
 
     // TODO Shorten filenames
     if w.avail_canvas_cols < w.desired_canvas_cols {
@@ -103,16 +104,15 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
 
     loop {
         #[cfg(debug_assertions)]
-        {
-            pw.mvprintw(pw.get_max_y() - 1, 0,
-                format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}",
-                    executables.len(),
-                    w.avail_canvas_lines,
-                    top_idx,
-                    win_idx
-                ),
-            );
-        }
+        pw.mvprintw(pw.get_max_y() - 1, 0,
+            format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
+                executables.len(),
+                w.avail_canvas_lines,
+                top_idx,
+                win_idx,
+                pw.get_max_yx()
+            ),
+        );
 
         indicate_more_up(&w, top_idx);
         indicate_more_down(&w, top_idx, executables.len());
@@ -125,6 +125,41 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
             Some(Input::KeyNPage) => key_pgdown_handler(&mut win_idx, &mut top_idx),
             Some(Input::KeyHome) => key_home_handler(&mut win_idx, &mut top_idx),
             Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx),
+
+            Some(Input::KeyResize) => {
+                // Will the existing window fit on the screen, if so jut move it
+
+                let (old_flw_y, old_flw_x) = pw.get_beg_yx();
+                let (mut new_flw_y, mut new_flw_x) = (old_flw_y, old_flw_x);
+                let (old_flw_l, old_flw_c) = pw.get_max_yx();
+
+                let (new_mw_l, new_mw_c) = mpw.get_max_yx();
+
+                if  new_mw_l >= old_flw_l {
+                    new_flw_y = (new_mw_l - old_flw_l) / 2;
+                }
+
+                if  new_mw_c >= old_flw_c {
+                    new_flw_x = (new_mw_c - old_flw_c) / 2;
+                }
+
+                pw.mvwin(new_flw_y as i32, new_flw_x as i32);
+
+                #[cfg(debug_assertions)]
+                pw.mvprintw(0, 0,
+                    format!("new mw {}/{}, old flw {}/{} {}/{}, new flw {}/{}",
+                            new_mw_l, new_mw_c,
+                            old_flw_l, old_flw_c,
+                            old_flw_y, old_flw_x,
+                            new_flw_y, new_flw_x)
+                );
+
+                // Clean up the screen
+                mpw.touch();
+                mpw.refresh();
+                // pw.refresh(); // Don't need this, pw.getch() forces a refresh
+
+            }
 
             Some(Input::Character(c)) => match c {
                 'q' | '\u{1b}' => break,

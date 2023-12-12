@@ -72,13 +72,12 @@ impl<'a> ExeWindow<'a> {
         let win = Box::new(ExeWindow{   main_window, 
                                         desired_canvas_cols, desired_canvas_lines,
                                         avail_canvas_cols, avail_canvas_lines,
-                                        win : mw.subwin(
+                                        win : pancurses::newwin(
                                             lines as i32, 
                                             cols as i32, 
                                             beg_line as i32, 
                                             beg_col as i32
-                                        )
-                                            .map_err(|e| format!("Create subwin error {}", e))? } );
+                                        )} );
 
         let w = &win.win;
 
