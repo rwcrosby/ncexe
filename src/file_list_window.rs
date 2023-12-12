@@ -1,4 +1,5 @@
 use pancurses::{Input, A_NORMAL, A_REVERSE};
+use std::error;
 
 use crate::main_window::MainWindow;
 use crate::window;
@@ -9,7 +10,7 @@ type ExeList<'a> = Vec<ExeItem<'a>>;
 
 // ------------------------------------------------------------------------
 
-pub fn show(executables: &ExeList, mw: &MainWindow) {
+pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error::Error>> {
 
     // Setup the line info and header
 
@@ -30,23 +31,19 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
 
     let line_len = hdr_line.len();
 
-    // This might panic on a curses error
     let w = window::ExeWindow::new(
         line_len, 
         executables.len(), 
         "Files Selected", 
         mw
-    )
-        .unwrap();
+    )?;
 
     let pw = &w.win;
     let mpw = &mw.win;
 
     // TODO Shorten filenames
     if w.avail_canvas_cols < w.desired_canvas_cols {
-        if max_name_len < 20 {
-            panic!("Window too narrow");
-        }
+        return Err(format!("Window too narrow, need {} columns, only have {}", w.desired_canvas_cols, w.avail_canvas_cols).into());
     }
 
     pw.mvaddstr(1, 2, hdr_line);
@@ -110,9 +107,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
                 w.avail_canvas_lines,
                 top_idx,
                 win_idx,
-                pw.get_max_yx()
-            ),
-        );
+                pw.get_max_yx()));
 
         indicate_more_up(&w, top_idx);
         indicate_more_down(&w, top_idx, executables.len());
@@ -127,6 +122,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
             Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx),
 
             Some(Input::KeyResize) => {
+
                 // Will the existing window fit on the screen, if so jut move it
 
                 let (old_flw_y, old_flw_x) = pw.get_beg_yx();
@@ -157,7 +153,6 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
                 // Clean up the screen
                 mpw.touch();
                 mpw.refresh();
-                // pw.refresh(); // Don't need this, pw.getch() forces a refresh
 
             }
 
@@ -171,7 +166,9 @@ pub fn show(executables: &ExeList, mw: &MainWindow) {
 
         }
 
-    }
+    };
+
+    Ok(())
 
 }
 
@@ -429,12 +426,12 @@ mod tests {
         fn exe_type(&self) -> ExeType {
             ExeType::NOPE
         }
-        fn show(&self, _mw: &MainWindow) {}
+        fn show(&self, _mw: &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
     }
 
     fn window_test(lines: &ExeList) {
         let w = MainWindow::new();
-        show(lines, &w);
+        show(lines, &w).unwrap();
     }
 
     #[test]

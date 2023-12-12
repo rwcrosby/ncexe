@@ -3,6 +3,8 @@
 //! The configuration object is used throughout and is intended to be the 
 //! single source of configuration information
 
+use std::error;
+use std::fs::File;
 use serde::Deserialize;
 use std::{env, path::PathBuf};
 
@@ -37,7 +39,7 @@ impl<'a> Configuration {
 
     /// Create a new configuratio object from
     /// - The default configuration file at ~/.config/ncexe.yaml
-    pub fn new(args: &Arguments) -> Result<Box<Configuration>, String> {
+    pub fn new(args: &Arguments) -> Result<Box<Configuration>, Box<dyn error::Error>> {
         
         // Select a configuration file
         
@@ -79,18 +81,11 @@ impl<'a> Configuration {
 
 // ------------------------------------------------------------------------
 
-fn load_config_file(cfile: &PathBuf) -> Result<Box<Configuration>, String> {
+fn load_config_file(cfile: &PathBuf) -> Result<Box<Configuration>, Box<dyn error::Error>> {
 
-    let fd = match std::fs::File::open(cfile) {
-        Ok(fd) => fd,
-        Err(e) => return Err(e.to_string()),
-    };
+    let fd = File::open(cfile)?;
 
-    // TODO handle the result
-    let config_from_yaml : YamlConfig = match serde_yaml::from_reader(fd) {
-        Ok(cy) => cy,
-        Err(e) => return Err(e.to_string()),
-    };
+    let config_from_yaml : YamlConfig = serde_yaml::from_reader(fd)?;
 
     Ok(Box::new(Configuration { theme: config_from_yaml.theme, 
                                 show_notexe: config_from_yaml.show_notexe }))

@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 //! Functions to manage curses windows
 
+use std::error;
+
 use crate::main_window::MainWindow;
 
 #[derive(Debug)]
@@ -32,7 +34,7 @@ impl<'a> ExeWindow<'a> {
     pub fn new( desired_canvas_cols : usize,
                 desired_canvas_lines : usize,
                 title : &str,
-                main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>, String> {
+                main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>, Box<dyn error::Error>> {
 
         let mw = &main_window.win;
 

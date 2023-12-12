@@ -1,6 +1,7 @@
 //! Formatter for the MacOS Mach-O format
 
 use memmap2::Mmap;
+use std::error;
 
 use crate::ExeType;
 use crate::Formatter;
@@ -26,7 +27,7 @@ impl Formatter for ELFFormatter<'_> {
         self.filename
     }
 
-    fn show(&self, _mw : &MainWindow) {}
+    fn show(&self, _mw : &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
 
 }
 

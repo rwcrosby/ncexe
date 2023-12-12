@@ -10,12 +10,14 @@
 //! TODO: Improved error handling
 //!       12/11/23 - Implement `anyhow``
 //! TODO: Terminal resizing
+//!       12/11/23 - Setup to handle resize without file list window size change
 
 //! FIXED: show-notexe flag
 //!        12/11/23 - Will be set to true is any config item is true, false otherwise
 
 use clap::Parser;
 use memmap2::Mmap;
+use std::error;
 use std::fs::File;
 use std::fmt;
 use std::path::PathBuf;
@@ -95,8 +97,6 @@ impl Formatter for NotExecutable<'_> {
         self.filename
     }
 
-    fn show(&self, _mw : &MainWindow) {}
-
 }
 
 // ------------------------------------------------------------------------
@@ -146,7 +146,7 @@ fn new_executable(filename: &str) -> Box<dyn Formatter + '_> {
 
 // ------------------------------------------------------------------------
 
-fn main() {
+fn main() -> Result<(), Box<dyn error::Error>> {
 
     // Process the arguments
     let args: Arguments = Arguments::parse();

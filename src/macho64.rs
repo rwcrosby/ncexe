@@ -5,7 +5,6 @@ use memmap2::Mmap;
 
 use crate::ExeType;
 use crate::Formatter;
-use crate::MainWindow;
 
 #[derive(Debug)]
 pub struct Macho64Formatter<'a> {
@@ -30,9 +29,6 @@ impl Formatter for Macho64Formatter<'_> {
     fn len(&self) -> usize {
         self.mmap.len()
     }
-
-    fn show(&self, _mw : &MainWindow) {}
-
 
 }
 

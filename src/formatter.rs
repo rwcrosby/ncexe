@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 /// Format a block of memory into a window
 use serde::Deserialize;
+use std::error;
 
 use crate::ExeType;
 use crate::MainWindow;
@@ -13,7 +14,7 @@ pub trait Formatter: std::fmt::Debug {
     fn exe_type(&self) -> ExeType;
     fn len(&self) -> usize { 0 }
     fn filename(&self) -> &str {""}
-    fn show(&self, mw : &MainWindow);
+    fn show(&self, _mw : &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
 
 }
 
@@ -111,7 +112,7 @@ fn ignore_2_string(_data: &[u8]) -> String {
 
 impl FormatBlock {
 
-    pub fn from_str(yaml_str: &str) -> Result<Box<FormatBlock>, String> {
+    pub fn from_str(yaml_str: &str) -> Result<Box<FormatBlock>, Box<dyn error::Error>> {
 
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_str(yaml_str)
             .map_err(|e| e.to_string())?;
@@ -119,7 +120,7 @@ impl FormatBlock {
         FormatBlock::make_format_block(&mut y_fields)
     }
     
-    pub fn from_file(filename: &str) -> Result<Box<FormatBlock>, String> {
+    pub fn from_file(filename: &str) -> Result<Box<FormatBlock>, Box<dyn error::Error>> {
         let fd = std::fs::File::open(filename)
             .map_err(|e| e.to_string())?;
         
@@ -130,9 +131,9 @@ impl FormatBlock {
         FormatBlock::make_format_block(&mut y_fields)
     }
 
-    pub fn to_string(&self, data: *const u8, offset: isize, len: usize) -> Result<String, String> {
+    pub fn to_string(&self, data: *const u8, offset: isize, len: usize) -> Result<String, Box<dyn error::Error>>  {
         if offset + len as isize > self.len as isize {
-            return Err(String::from("Data block not large enough"));
+            return Err(String::from("Data block not large enough").into());
         }
 
         let fmt_str: String = self.fields.iter().fold("".to_string(), |fstr, field| {
@@ -145,9 +146,9 @@ impl FormatBlock {
         Ok(fmt_str)
     }
 
-    fn make_format_block(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<FormatBlock>, String> {
+    fn make_format_block(y_fields: &mut Vec<Box<YamlField>>) -> Result<Box<FormatBlock>, Box<dyn error::Error>> {
 
-        let mut fmt: Box<FormatBlock> = Box::new(FormatBlock {
+        let mut fmt = Box::new(FormatBlock {
             fields: vec![],
             len: 0,
         });
@@ -165,21 +166,21 @@ impl FormatBlock {
         Ok(fmt)
     }
 
-    fn derive_fmt_fn(y_field: &YamlField) -> Result<DataToString, String> {
+    fn derive_fmt_fn(y_field: &YamlField) -> Result<DataToString, Box<dyn error::Error>> {
         match y_field.field_type {
             FieldType::BeInt => match y_field.size {
                 1 => Ok(u8_2_string),
                 2 => Ok(be_u16_2_string),
                 4 => Ok(be_u32_2_string),
                 8 => Ok(be_u64_2_string),
-                s => Err(format!("Bad integer length: {}", s)),
+                s => Err(format!("Bad integer length: {}", s).into()),
             },
             FieldType::LeInt => match y_field.size {
                 1 => Ok(u8_2_string),
                 2 => Ok(le_u16_2_string),
                 4 => Ok(le_u32_2_string),
                 8 => Ok(le_u64_2_string),
-                s => Err(format!("Bad integer length: {}", s)),
+                s => Err(format!("Bad integer length: {}", s).into()),
             },
             FieldType::Binary => Ok(binary_2_string),
             FieldType::Hex => Ok(hex_2_string),
