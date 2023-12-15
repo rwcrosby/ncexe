@@ -3,8 +3,10 @@
 use serde::Deserialize;
 use std::error;
 
+use crate::EmptyResult;
 use crate::ExeType;
 use crate::MainWindow;
+use crate::color::ColorSet;
 
 // ------------------------------------------------------------------------
 
@@ -14,7 +16,14 @@ pub trait Formatter: std::fmt::Debug {
     fn exe_type(&self) -> ExeType;
     fn len(&self) -> usize { 0 }
     fn filename(&self) -> &str {""}
-    fn show(&self, _mw : &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
+
+    fn show(&self, 
+            _mw : &MainWindow,
+            _colors: &ColorSet)
+        -> EmptyResult
+    { 
+        Ok(())
+    }
 
 }
 

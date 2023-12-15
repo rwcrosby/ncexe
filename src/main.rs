@@ -37,6 +37,10 @@ use formatter::Formatter;
 use main_window::MainWindow;
 
 // ------------------------------------------------------------------------
+// Useful types
+pub type EmptyResult = Result<(), Box<dyn error::Error>>;
+
+// ------------------------------------------------------------------------
 /// Display executable file information
 
 #[derive(Parser, Default, Debug)]
@@ -177,7 +181,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let colours = color::Colors::new()?;
 
     if executables.len() == 1 {
-        executables[0].show(&mw)
+        executables[0].show(&mw, &colours.set("header"))
     } else {
         file_list_window::show(&executables, &mw, &config, &colours.set("file_list"))
     }

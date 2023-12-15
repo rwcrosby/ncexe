@@ -1,11 +1,9 @@
 //! Formatter for the MacOS Mach-O format
 
 use memmap2::Mmap;
-use std::error;
 
 use crate::ExeType;
 use crate::Formatter;
-use crate::MainWindow;
 
 #[derive(Debug)]
 pub struct ELFFormatter<'a> {
@@ -30,8 +28,6 @@ impl Formatter for ELFFormatter<'_> {
     fn len(&self) -> usize {
         self.mmap.len()
     }
-
-    fn show(&self, _mw : &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
 
 }
 

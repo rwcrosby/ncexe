@@ -37,6 +37,8 @@ pub fn show(
 
     let line_len = hdr_line.len();
 
+    // Create the window
+                
     let w = window::ExeWindow::new(
         line_len, 
         executables.len(), 
@@ -55,16 +57,16 @@ pub fn show(
 
     pw.mvaddstr(1, 2, hdr_line);
 
-    // #[cfg(debug_assertions)]
-    // {
-    //     pw.mvaddstr(0, 0, 
-    //         format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
-    //             line_len,
-    //             w.avail_canvas_lines, w.avail_canvas_cols,
-    //             pw.get_max_y(), pw.get_max_x()
-    //         ),
-    //     );
-    // }
+    #[cfg(debug_assertions)]
+    {
+        pw.mvaddstr(0, 0, 
+            format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
+                line_len,
+                w.avail_canvas_lines, w.avail_canvas_cols,
+                pw.get_max_y(), pw.get_max_x()
+            ),
+        );
+    }
 
     // Line handling closures
 
@@ -108,14 +110,14 @@ pub fn show(
     highlight(0, true);
 
     loop {
-        // #[cfg(debug_assertions)]
-        // pw.mvprintw(pw.get_max_y() - 1, 0,
-        //     format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
-        //         executables.len(),
-        //         w.avail_canvas_lines,
-        //         top_idx,
-        //         win_idx,
-        //         pw.get_max_yx()));
+        #[cfg(debug_assertions)]
+        pw.mvprintw(pw.get_max_y() - 1, 0,
+            format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
+                executables.len(),
+                w.avail_canvas_lines,
+                top_idx,
+                win_idx,
+                pw.get_max_yx()));
 
         indicate_more_up(&w, top_idx);
         indicate_more_down(&w, top_idx, executables.len());
@@ -434,7 +436,7 @@ fn key_end_generator<'a>
 mod tests {
 
     use super::*;
-    use crate::MainWindow;
+    use crate::{MainWindow, EmptyResult};
     use crate::{ExeType, NotExecutable};
     use pancurses::{endwin, initscr};
 
@@ -442,7 +444,14 @@ mod tests {
         fn exe_type(&self) -> ExeType {
             ExeType::NOPE
         }
-        fn show(&self, _mw: &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
+        fn show(
+            &self, 
+            _mw: &MainWindow,
+            _colors: &ColorSet
+        ) -> EmptyResult 
+        { 
+            Ok(()) 
+        }
     }
 
     fn window_test(_lines: &ExeList) {
