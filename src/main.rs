@@ -7,11 +7,12 @@
 //! https://stackoverflow.com/questions/18600188/home-end-keys-do-not-work-in-tmux
 
 //! TODO: Color support
-//! TODO: Improved error handling
-//!       12/11/23 - Implement `anyhow``
+//!       12/15/23 - Initial support in file_list_window
 //! TODO: Terminal resizing
 //!       12/11/23 - Setup to handle resize without file list window size change
 
+//! FIXED: Improved error handling
+//!        12/11/23 - Setup for error trait
 //! FIXED: show-notexe flag
 //!        12/11/23 - Will be set to true is any config item is true, false otherwise
 
@@ -22,6 +23,7 @@ use std::fs::File;
 use std::fmt;
 use std::path::PathBuf;
 
+mod color;
 mod configuration;
 mod elf;
 mod file_list_window;
@@ -38,7 +40,7 @@ use main_window::MainWindow;
 /// Display executable file information
 
 #[derive(Parser, Default, Debug)]
-struct Arguments {
+pub struct Arguments {
     /// Name of the executable file(s)
     #[arg(required = true)]
     exe_filename: Vec<String>,
@@ -55,7 +57,7 @@ struct Arguments {
 // ------------------------------------------------------------------------
 
 #[derive(Debug, PartialEq)]
-enum ExeType {
+pub enum ExeType {
     MachO32,
     MachO64,
     ELF,
@@ -164,7 +166,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .collect();
 
     // Process depending on how many files are of interest
-
     if executables.len() == 0 || 
         (executables.len() == 1 && executables[0].exe_type() == ExeType::NOPE) {
         panic!("No executable files of interest found");
@@ -172,10 +173,13 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     let mw = MainWindow::new();
 
+    // Get color informatino
+    let colours = color::Colors::new()?;
+
     if executables.len() == 1 {
         executables[0].show(&mw)
     } else {
-        file_list_window::show(&executables, &mw)
+        file_list_window::show(&executables, &mw, &config, &colours.set("file_list"))
     }
 
 }

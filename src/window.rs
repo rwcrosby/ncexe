@@ -3,13 +3,13 @@
 
 use std::error;
 
-use crate::main_window::MainWindow;
+use crate::{main_window::MainWindow, color::ColorSet};
 
 #[derive(Debug)]
 pub struct ExeWindow<'a> {
 
     /// Reference to the main window
-    main_window : &'a MainWindow,
+    pub main_window : &'a MainWindow,
 
     /// This window's curses window
     pub win : pancurses::Window,
@@ -34,6 +34,7 @@ impl<'a> ExeWindow<'a> {
     pub fn new( desired_canvas_cols : usize,
                 desired_canvas_lines : usize,
                 title : &str,
+                colors : &ColorSet,
                 main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>, Box<dyn error::Error>> {
 
         let mw = &main_window.win;
@@ -85,15 +86,19 @@ impl<'a> ExeWindow<'a> {
 
         // Configure the new window
 
-        w.draw_box(0, 0);
         w.keypad(true);
-
+        
         // Show the title
-
+        
+        w.bkgd(pancurses::COLOR_PAIR(colors.frame as u32));
+        w.attrset(pancurses::COLOR_PAIR(colors.frame as u32));
+        w.draw_box(0, 0);
+        
         let display_title = format!(" {} ", title);
-
+        
         if display_title.len() <=  cols - LMARGIN - RMARGIN {
             let y = (cols - display_title.len()) / 2;
+            w.attrset(pancurses::COLOR_PAIR(colors.title as u32));
             w.mvprintw(0, y as i32, display_title);
         }
 
@@ -117,7 +122,9 @@ mod tests {
         w.win.getch();
         w.win.keypad(true);
         
-        let sw = ExeWindow::new(10, 10, "Blah", &w).unwrap();
+        let cs = ColorSet{frame: 100, title: 150, text: 200};
+
+        let sw = ExeWindow::new(10, 10, "Blah", &cs, &w ).unwrap();
 
         sw.win.mvaddstr(2, 1, "x");
         let x = sw.win.mvaddstr(20, 1, "x");

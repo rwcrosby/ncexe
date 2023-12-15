@@ -1,6 +1,6 @@
 use pancurses;
 
-use gettextrs;
+// use gettextrs;
 
 // use crate::file_list_window::FileListWindow;
 // use crate::Formatter;
@@ -19,10 +19,13 @@ impl MainWindow {
             win: pancurses::initscr(),
         };
 
-        gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+        // gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
+
 
         pancurses::noecho();
         win.win.keypad(true);
+
+        win.win.refresh();
 
         win
     }

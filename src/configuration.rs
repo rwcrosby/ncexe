@@ -13,7 +13,7 @@ use crate::Arguments;
 // ------------------------------------------------------------------------
 /// Configuration items
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Configuration {
     /// Theme to apply to screen, not yet implemented
     theme: String,
@@ -77,6 +77,7 @@ impl<'a> Configuration {
         Ok(config)
 
     }
+
 }
 
 // ------------------------------------------------------------------------

@@ -1,6 +1,8 @@
-use pancurses::{Input, A_NORMAL, A_REVERSE};
+use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
 use std::error;
 
+use crate::configuration::Configuration;
+use crate::color::ColorSet;
 use crate::main_window::MainWindow;
 use crate::window;
 use crate::{Formatter, ETYPELENGTH};
@@ -10,7 +12,11 @@ type ExeList<'a> = Vec<ExeItem<'a>>;
 
 // ------------------------------------------------------------------------
 
-pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error::Error>> {
+pub fn show(
+    executables: &ExeList, 
+    mw: &MainWindow,
+    _config: &Box<Configuration>,
+    colors: &ColorSet) -> Result<(), Box<dyn error::Error>> {
 
     // Setup the line info and header
 
@@ -35,7 +41,8 @@ pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error:
         line_len, 
         executables.len(), 
         "Files Selected", 
-        mw
+        colors,
+        mw, 
     )?;
 
     let pw = &w.win;
@@ -48,18 +55,18 @@ pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error:
 
     pw.mvaddstr(1, 2, hdr_line);
 
-    #[cfg(debug_assertions)]
-    {
-        pw.mvaddstr(0, 0, 
-            format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
-                line_len,
-                w.avail_canvas_lines, w.avail_canvas_cols,
-                pw.get_max_y(), pw.get_max_x()
-            ),
-        );
-    }
+    // #[cfg(debug_assertions)]
+    // {
+    //     pw.mvaddstr(0, 0, 
+    //         format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
+    //             line_len,
+    //             w.avail_canvas_lines, w.avail_canvas_cols,
+    //             pw.get_max_y(), pw.get_max_x()
+    //         ),
+    //     );
+    // }
 
-    // Line closured
+    // Line handling closures
 
     let highlight = |win_idx, highlight| {
         pw.mvchgat(
@@ -67,7 +74,7 @@ pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error:
             window::LMARGIN as i32,
             w.avail_canvas_cols as i32,
             if highlight { A_REVERSE } else { A_NORMAL },
-            0,
+            colors.text as i16,
         );
     };
 
@@ -96,18 +103,19 @@ pub fn show(executables: &ExeList, mw: &MainWindow) -> Result<(), Box<dyn error:
     let mut win_idx: usize = 0;
     let mut top_idx: usize = 0;
 
-    write_lines(&w, &executables[0..w.avail_canvas_lines as usize], &fmt_line);
+    pw.attrset(COLOR_PAIR(colors.text as u32));
+    write_lines(&w.win, &executables[0..w.avail_canvas_lines], &fmt_line);
     highlight(0, true);
 
     loop {
-        #[cfg(debug_assertions)]
-        pw.mvprintw(pw.get_max_y() - 1, 0,
-            format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
-                executables.len(),
-                w.avail_canvas_lines,
-                top_idx,
-                win_idx,
-                pw.get_max_yx()));
+        // #[cfg(debug_assertions)]
+        // pw.mvprintw(pw.get_max_y() - 1, 0,
+        //     format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
+        //         executables.len(),
+        //         w.avail_canvas_lines,
+        //         top_idx,
+        //         win_idx,
+        //         pw.get_max_yx()));
 
         indicate_more_up(&w, top_idx);
         indicate_more_down(&w, top_idx, executables.len());
@@ -213,26 +221,25 @@ fn indicate_more_down(
 
 // ------------------------------------------------------------------------
 
-fn write_lines<F>(
-    win: &window::ExeWindow,
+fn write_lines(
+    pw: &pancurses::Window,
     exe_list: &[ExeItem],
-    fmt_fn: F,
-) where
-    F: Fn(&ExeItem) -> String,
+    fmt_fn: impl Fn(&ExeItem) -> String,
+)
 {
     for (idx, exe) in exe_list.iter().enumerate()  {
-        win.win.mvprintw(
+        pw.mvprintw(
             (idx + window::TMARGIN) as i32,
             window::LMARGIN as i32,
             fmt_fn(exe),
         );
+        pw.refresh();
     };
-
 }
 
 // ------------------------------------------------------------------------
 
-fn key_up_generator<'a>
+fn key_up_generator<'a> 
 (
     w: &'a window::ExeWindow,
     exes: &'a[ExeItem],
@@ -249,7 +256,7 @@ fn key_up_generator<'a>
         } else if *top_idx > 0 {
             *top_idx -= 1;
             write_lines(
-                &w, 
+                &w.win, 
                 &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
                 &fmt_fn
             );
@@ -279,7 +286,7 @@ fn key_down_generator<'a>
         } else if *top_idx + (w.avail_canvas_lines) < exes.len()  {
             *top_idx += 1;
             write_lines(
-                &w, 
+                &w.win, 
                 &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
                 &fmt_fn
             );
@@ -312,7 +319,12 @@ fn key_pgup_generator<'a>
                 
             }
 
-            write_lines(&w, &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], &fmt_fn);
+            write_lines(
+                &w.win, 
+                &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], 
+                &fmt_fn
+            );
+
             *win_idx = 0;
 
         } else {
@@ -346,7 +358,11 @@ fn key_pgdown_generator<'a>
                 *top_idx += w.avail_canvas_lines;
             }
             
-            write_lines(&w, &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], &fmt_fn);
+            write_lines(
+                &w.win, 
+                &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], 
+                &fmt_fn);
+
             *win_idx = 0;
 
         } else {
@@ -374,7 +390,7 @@ fn key_home_generator<'a>
 
         if *top_idx != 0 {
             *top_idx = 0;
-            write_lines(&w, &exes[0..w.avail_canvas_lines], &fmt_fn);
+            write_lines(&w.win, &exes[0..w.avail_canvas_lines], &fmt_fn);
         }
         if *win_idx != 0 {
             highlight_fn(*win_idx, false);
@@ -400,7 +416,7 @@ fn key_end_generator<'a>
 
         if *top_idx + w.avail_canvas_lines != exes.len() {
             *top_idx = exes.len() - w.avail_canvas_lines;
-            write_lines(&w, &exes[*top_idx..], &fmt_fn);
+            write_lines(&w.win, &exes[*top_idx..], &fmt_fn);
         }
         if *win_idx != w.avail_canvas_lines - 1 {
             highlight_fn(*win_idx, false);
@@ -429,9 +445,9 @@ mod tests {
         fn show(&self, _mw: &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
     }
 
-    fn window_test(lines: &ExeList) {
-        let w = MainWindow::new();
-        show(lines, &w).unwrap();
+    fn window_test(_lines: &ExeList) {
+        let _w = MainWindow::new();
+        // show(lines, &w ).unwrap();
     }
 
     #[test]
