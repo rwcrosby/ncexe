@@ -27,6 +27,10 @@ impl Formatter for ELFFormatter<'_> {
         self.filename
     }
 
+    fn len(&self) -> usize {
+        self.mmap.len()
+    }
+
     fn show(&self, _mw : &MainWindow) -> Result<(), Box<dyn error::Error>> { Ok(()) }
 
 }
