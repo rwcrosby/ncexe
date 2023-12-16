@@ -31,8 +31,8 @@ pub const BMARGIN : usize = 1;
 
 impl<'a> ExeWindow<'a> {
 
-    pub fn new( desired_canvas_cols : usize,
-                desired_canvas_lines : usize,
+    pub fn new( desired_canvas_lines : usize,
+                desired_canvas_cols : usize,
                 title : &str,
                 colors : &ColorSet,
                 main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>> {

@@ -4,11 +4,13 @@
     ],
     "rust-analyzer.showUnlinkedFileNotification": false,
     "yaml.customTags": [
-        "!BeInt",
-        "!LeInt",
+        "!Be",
+        "!Le",
+        "!Bytes",
+        "!Ignore",
         "!Hex",
         "!Binary",
-        "!Char"
-    
+        "!Char",
+        "!Int"
     ]
 }

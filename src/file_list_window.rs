@@ -1,13 +1,12 @@
 use anyhow::{bail, Result};
 use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
 
-use crate::configuration::Configuration;
-use crate::color::ColorSet;
+use crate::color::Colors;
 use crate::main_window::MainWindow;
 use crate::window;
-use crate::{Formatter, ETYPELENGTH};
+use crate::{Formatter, FormatExe, ETYPELENGTH};
 
-type ExeItem<'a> = Box<dyn Formatter + 'a>;
+type ExeItem<'a> = Box<dyn FormatExe + 'a>;
 type ExeList<'a> = Vec<ExeItem<'a>>;
 
 // ------------------------------------------------------------------------
@@ -15,8 +14,8 @@ type ExeList<'a> = Vec<ExeItem<'a>>;
 pub fn show(
     executables: &ExeList, 
     mw: &MainWindow,
-    _config: &Box<Configuration>,
-    colors: &ColorSet) -> Result<()> {
+    _fmt: &Formatter,
+    colors: &Colors) -> Result<()> {
 
     // Setup the line info and header
 
@@ -37,13 +36,15 @@ pub fn show(
 
     let line_len = hdr_line.len();
 
+    let color_set = colors.set("file_list");
+
     // Create the window
                 
     let w = window::ExeWindow::new(
-        line_len, 
         executables.len(), 
+        line_len, 
         "Files Selected", 
-        colors,
+        color_set,
         mw, 
     )?;
 
@@ -78,7 +79,7 @@ pub fn show(
             window::LMARGIN as i32,
             w.avail_canvas_cols as i32,
             if highlight { A_REVERSE } else { A_NORMAL },
-            colors.text as i16,
+            color_set.text as i16,
         );
     };
 
@@ -107,7 +108,7 @@ pub fn show(
     let mut win_idx: usize = 0;
     let mut top_idx: usize = 0;
 
-    pw.attrset(COLOR_PAIR(colors.text as u32));
+    pw.attrset(COLOR_PAIR(color_set.text as u32));
     write_lines(&w.win, &executables[0..w.avail_canvas_lines], &fmt_line);
     highlight(0, true);
 
@@ -442,14 +443,15 @@ mod tests {
     use crate::{ExeType, NotExecutable};
     use pancurses::{endwin, initscr};
 
-    impl Formatter for std::string::String {
+    impl FormatExe for std::string::String {
         fn exe_type(&self) -> ExeType {
             ExeType::NOPE
         }
         fn show(
             &self, 
             _mw: &MainWindow,
-            _colors: &ColorSet
+            _fmt: &Formatter,
+            _colors: &Colors
         ) -> Result<()> 
         { 
             Ok(()) 
@@ -474,7 +476,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_2() {
-        let mut lines: Vec<Box<dyn Formatter>> = vec![];
+        let mut lines: Vec<Box<dyn FormatExe>> = vec![];
         (0..10).for_each(|i| {
             lines.push(Box::new(NotExecutable {
                 filename: "Blah",
@@ -488,7 +490,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_3() {
-        let lines: Vec<Box<dyn Formatter>> = vec![
+        let lines: Vec<Box<dyn FormatExe>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 12".to_string()),
@@ -504,7 +506,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_4() {
-        let lines: Vec<Box<dyn Formatter>> = vec![
+        let lines: Vec<Box<dyn FormatExe>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 1".to_string()),

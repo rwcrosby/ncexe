@@ -1,21 +1,27 @@
 #![allow(dead_code)]
 //! Formatter for the MacOS Mach-O format
 
+use std::ops::Deref;
+
+use anyhow::Context;
+
 use anyhow::Result;
 use memmap2::Mmap;
+use pancurses::COLOR_PAIR;
 
-use crate::color::ColorSet;
+use crate::color::Colors;
 use crate::ExeType;
-use crate::Formatter;
-use crate::formatter::FormatBlock;
+use crate::FormatExe;
+use crate::formatter::Formatter;
 use crate::window;
+use crate::main_window::MainWindow;
 
 // ------------------------------------------------------------------------
 
 impl Macho64Formatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn Formatter + '_> {
+            mmap : Mmap) -> Box<dyn FormatExe + '_> {
 
         Box::new(Macho64Formatter{filename, mmap})
 
@@ -31,7 +37,7 @@ pub struct Macho64Formatter<'a> {
     mmap: Mmap,
 }
 
-impl Formatter for Macho64Formatter<'_> {
+impl FormatExe for Macho64Formatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -51,16 +57,20 @@ impl Formatter for Macho64Formatter<'_> {
 
     fn show(
         &self, 
-        mw : &crate::main_window::MainWindow,
-        colors: &ColorSet
+        mw : &MainWindow,
+        fmt: &Formatter,
+        colors: &Colors
     ) -> Result<()> {
         
         // Load the format specification
 
-        let _fb = FormatBlock::from_str(HEADER)?;
+        let fb = fmt.from_str(HEADER)
+          .context("Macho-O 64 Header")?;
 
-        let lines = 1;
-        let cols = 1;
+        let lines = fb.fields.len();
+        let cols = fb.max_text_len + 3 + fb.max_value_len;
+
+        let color_set = colors.set("header");
 
         // Create the window
                     
@@ -68,13 +78,34 @@ impl Formatter for Macho64Formatter<'_> {
             lines, 
             cols, 
             "Mach-O 64 Bit Header", 
-            colors,
+            color_set,
             mw, 
         )?;
 
-        let _pw = &w.win;
+        let pw = &w.win;
         let _mpw = &mw.win;
 
+        // Display the fields
+
+        for (idx, fld) in fb.fields.iter().enumerate() {
+
+            let df = &self.mmap.deref()
+                [fld.offset as usize..fld.offset as usize + fld.y_field.size];
+
+            pw.mv((idx + window::TMARGIN) as i32, 
+                  window::LMARGIN as i32);
+
+            pw.attrset(COLOR_PAIR(color_set.text as u32));
+            pw.addstr(format!("{fname:>nl$.nl$} : ", 
+                              nl = fb.max_text_len,
+                              fname=fld.y_field.name));
+
+            pw.attrset(COLOR_PAIR(color_set.value as u32));
+            pw.addstr((fld.fmt_fn)(df));
+
+        };
+
+        pw.getch();
 
         Ok(())
 
@@ -88,28 +119,36 @@ const HEADER: &str = "
 ---
 
 - name: Magic Number 
-  type: !Hex
+  format: !Hex
+  type: !Le
   size: 4
 - name: CPU Type 
-  type: !Hex
+  format: !Hex
+  type: !Le
   size: 4
-  - name: Magic Number 
-  type: !Hex
+- name: CPU Sub-Type 
+  format: !Hex
+  type: !Le
   size: 4
 - name: File Type 
-  type: !Hex
+  type: !Le
+  format: !Hex
   size: 4
 - name: Load Commands
-  type: !BeInt
+  type: !Le
+  format: !Int
   size: 4
 - name: Load Command Length
-  type: !BeInt
+  type: !Le
+  format: !Int
   size: 4
 - name: Flags
-  type: !Binary
+  type: !Le
+  format: !Binary
   size: 4
 - name: Reserved
-  type: !Char
+  type: !Ignore
+  format: !Char
   size: 4
 
 ";

@@ -199,6 +199,7 @@ fn solarize_colors<'a> ()
     ]));
 
     Ok(solarize_map)
+    
 
 }
 

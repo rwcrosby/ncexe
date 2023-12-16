@@ -2,7 +2,9 @@
 
 - size: 5
   name: Bilbo
-  type: !Binary
+  type: !Bytes
+  format: !Binary
 - size: 4
   name: Frodo
-  type: !BeInt
+  type: !Be
+  format: !Int

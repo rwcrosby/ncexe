@@ -3,7 +3,7 @@
 use memmap2::Mmap;
 
 use crate::ExeType;
-use crate::Formatter;
+use crate::FormatExe;
 
 #[derive(Debug)]
 pub struct ELFFormatter<'a> {
@@ -11,7 +11,7 @@ pub struct ELFFormatter<'a> {
     mmap: Mmap,
 }
 
-impl Formatter for ELFFormatter<'_> {
+impl FormatExe for ELFFormatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -34,7 +34,7 @@ impl Formatter for ELFFormatter<'_> {
 impl ELFFormatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn Formatter + '_> {
+            mmap : Mmap) -> Box<dyn FormatExe + '_> {
 
         Box::new(ELFFormatter{filename, mmap})
 

@@ -10,9 +10,14 @@
 //!       12/15/23 - Initial support in file_list_window
 //! TODO: Terminal resizing
 //!       12/11/23 - Setup to handle resize without file list window size change
+//! TODO: Link file_list to header window
+//! TODO: Margins by window
 
+//! FIXED: Endian support with Hex and Binary output
+//!        12/17/23 Implemented
 //! FIXED: Improved error handling
 //!        12/11/23 - Setup for error trait
+//!        12/16/23 - Implented anyhow crate
 //! FIXED: show-notexe flag
 //!        12/11/23 - Will be set to true is any config item is true, false otherwise
 
@@ -33,7 +38,8 @@ mod macho64;
 mod main_window;
 mod window;
 
-use formatter::Formatter;
+use color::Colors;
+use formatter::{Formatter, FormatExe};
 use main_window::MainWindow;
 
 // ------------------------------------------------------------------------
@@ -88,7 +94,7 @@ struct NotExecutable<'a> {
     msg: String,
 }
 
-impl Formatter for NotExecutable<'_> {
+impl FormatExe for NotExecutable<'_> {
     fn to_string(&self) -> String {
         format!("Not an Executable: {}: {}", self.filename, self.msg)
     }
@@ -103,7 +109,7 @@ impl Formatter for NotExecutable<'_> {
 
 // ------------------------------------------------------------------------
 
-fn new_executable(filename: &str) -> Box<dyn Formatter + '_> {
+fn new_executable(filename: &str) -> Box<dyn FormatExe + '_> {
     let fd = match File::open(filename) {
         Ok(v) => v,
         Err(e) => {
@@ -153,10 +159,8 @@ fn main() -> Result<()> {
     // Process the arguments
     let args: Arguments = Arguments::parse();
 
-    // println!("Args: {:?}", args);
-
     // Load the configuration
-    let config = configuration::Configuration::new(&args).unwrap();
+    let config = configuration::Configuration::new(&args)?;
 
     // Build the list of executable objects
     let executables: Vec<_> = args.exe_filename
@@ -165,21 +169,25 @@ fn main() -> Result<()> {
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
-    // Process depending on how many files are of interest
     if executables.len() == 0 || 
         (executables.len() == 1 && executables[0].exe_type() == ExeType::NOPE) {
         panic!("No executable files of interest found");
     }
 
+    // Initialize curses
     let mw = MainWindow::new();
 
-    // Get color informatino
-    let colours = color::Colors::new()?;
+    // Get color information
+    let colours = Colors::new()?;
 
+    // Get format mapper
+    let formatter = Formatter::new();
+
+    // Display file info
     if executables.len() == 1 {
-        executables[0].show(&mw, &colours.set("header"))
+        executables[0].show(&mw, &formatter, &colours)
     } else {
-        file_list_window::show(&executables, &mw, &config, &colours.set("file_list"))
+        file_list_window::show(&executables, &mw, &formatter, &colours)
     }
 
 }

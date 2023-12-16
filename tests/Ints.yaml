@@ -1,23 +1,30 @@
 ---
 
 - size: 1
-  type: !BeInt
+  type: !Be
+  format: !Int
   name: 8 bit integer
 - size: 2
-  type: !BeInt
+  type: !Be
+  format: !Int
   name: 16 bit integer (big-endian)
 - size: 2
-  type: !LeInt
+  type: !Le
+  format: !Int
   name: 16 bit integer (little-endian)
 - size: 4
-  type: !BeInt
+  type: !Be
+  format: !Int
   name: 32 bit integer (big-endian)
 - size: 4
-  type: !LeInt
+  type: !Le
+  format: !Int
   name: 32 bit integer (little-endian)
 - size: 8
-  type: !BeInt
+  type: !Be
+  format: !Int
   name: 64 bit integer (big-endian)
 - size: 8
-  type: !LeInt
+  type: !Le
   name: 64 bit integer (little-endian)
+  format: !Int

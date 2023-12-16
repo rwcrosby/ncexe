@@ -4,7 +4,7 @@
 use memmap2::Mmap;
 
 use crate::ExeType;
-use crate::Formatter;
+use crate::FormatExe;
 
 #[derive(Debug)]
 pub struct Macho32Formatter<'a> {
@@ -12,7 +12,7 @@ pub struct Macho32Formatter<'a> {
     mmap: Mmap,
 }
 
-impl Formatter for Macho32Formatter<'_> {
+impl FormatExe for Macho32Formatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O32: {:30} {:?}", self.filename, self.mmap)
@@ -35,7 +35,7 @@ impl Formatter for Macho32Formatter<'_> {
 impl Macho32Formatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn Formatter + '_> {
+            mmap : Mmap) -> Box<dyn FormatExe + '_> {
 
         Box::new(Macho32Formatter{filename, mmap})
 

@@ -53,7 +53,7 @@ pub fn transmute() {
 }
 
 #[test]
-// raw_points seem to be the way to go, no data movement, just reference to the memory
+// raw_pointer seem to be the way to go, no data movement, just reference to the memory
 // read_unaligned moves the data
 pub fn raw_pointer() {
     
