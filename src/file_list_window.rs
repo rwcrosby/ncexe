@@ -1,5 +1,5 @@
+use anyhow::{bail, Result};
 use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
-use std::error;
 
 use crate::configuration::Configuration;
 use crate::color::ColorSet;
@@ -16,7 +16,7 @@ pub fn show(
     executables: &ExeList, 
     mw: &MainWindow,
     _config: &Box<Configuration>,
-    colors: &ColorSet) -> Result<(), Box<dyn error::Error>> {
+    colors: &ColorSet) -> Result<()> {
 
     // Setup the line info and header
 
@@ -52,7 +52,9 @@ pub fn show(
 
     // TODO Shorten filenames
     if w.avail_canvas_cols < w.desired_canvas_cols {
-        return Err(format!("Window too narrow, need {} columns, only have {}", w.desired_canvas_cols, w.avail_canvas_cols).into());
+        bail!("Window too narrow, need {} columns, only have {}", 
+              w.desired_canvas_cols, 
+              w.avail_canvas_cols);
     }
 
     pw.mvaddstr(1, 2, hdr_line);
@@ -436,7 +438,7 @@ fn key_end_generator<'a>
 mod tests {
 
     use super::*;
-    use crate::{MainWindow, EmptyResult};
+    use crate::MainWindow;
     use crate::{ExeType, NotExecutable};
     use pancurses::{endwin, initscr};
 
@@ -448,7 +450,7 @@ mod tests {
             &self, 
             _mw: &MainWindow,
             _colors: &ColorSet
-        ) -> EmptyResult 
+        ) -> Result<()> 
         { 
             Ok(()) 
         }

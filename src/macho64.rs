@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 //! Formatter for the MacOS Mach-O format
 
+use anyhow::Result;
 use memmap2::Mmap;
 
 use crate::color::ColorSet;
 use crate::ExeType;
 use crate::Formatter;
+use crate::formatter::FormatBlock;
 use crate::window;
 
 // ------------------------------------------------------------------------
@@ -51,9 +53,11 @@ impl Formatter for Macho64Formatter<'_> {
         &self, 
         mw : &crate::main_window::MainWindow,
         colors: &ColorSet
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
         
         // Load the format specification
+
+        let _fb = FormatBlock::from_str(HEADER)?;
 
         let lines = 1;
         let cols = 1;
@@ -77,3 +81,35 @@ impl Formatter for Macho64Formatter<'_> {
     }
 
 }
+
+// ------------------------------------------------------------------------
+
+const HEADER: &str = "
+---
+
+- name: Magic Number 
+  type: !Hex
+  size: 4
+- name: CPU Type 
+  type: !Hex
+  size: 4
+  - name: Magic Number 
+  type: !Hex
+  size: 4
+- name: File Type 
+  type: !Hex
+  size: 4
+- name: Load Commands
+  type: !BeInt
+  size: 4
+- name: Load Command Length
+  type: !BeInt
+  size: 4
+- name: Flags
+  type: !Binary
+  size: 4
+- name: Reserved
+  type: !Char
+  size: 4
+
+";

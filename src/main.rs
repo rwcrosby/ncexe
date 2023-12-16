@@ -16,11 +16,11 @@
 //! FIXED: show-notexe flag
 //!        12/11/23 - Will be set to true is any config item is true, false otherwise
 
+use anyhow::Result;
 use clap::Parser;
 use memmap2::Mmap;
-use std::error;
-use std::fs::File;
 use std::fmt;
+use std::fs::File;
 use std::path::PathBuf;
 
 mod color;
@@ -35,10 +35,6 @@ mod window;
 
 use formatter::Formatter;
 use main_window::MainWindow;
-
-// ------------------------------------------------------------------------
-// Useful types
-pub type EmptyResult = Result<(), Box<dyn error::Error>>;
 
 // ------------------------------------------------------------------------
 /// Display executable file information
@@ -152,12 +148,12 @@ fn new_executable(filename: &str) -> Box<dyn Formatter + '_> {
 
 // ------------------------------------------------------------------------
 
-fn main() -> Result<(), Box<dyn error::Error>> {
+fn main() -> Result<()> {
 
     // Process the arguments
     let args: Arguments = Arguments::parse();
 
-    println!("Args: {:?}", args);
+    // println!("Args: {:?}", args);
 
     // Load the configuration
     let config = configuration::Configuration::new(&args).unwrap();

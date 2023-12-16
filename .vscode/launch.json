@@ -7,7 +7,29 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'ncexe'",
+            "name": "Debug executable 'ncexe' - Single parm",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ncexe",
+                    "--package=ncexe"
+                ],
+                "filter": {
+                    "name": "ncexe",
+                    "kind": "bin"
+                }
+            },
+            "args": ["target/debug/ncexe"],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal",
+            "env": {
+                "TERM": "xterm-256color"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'ncexe' - Multiple parms",
             "cargo": {
                 "args": [
                     "build",
@@ -20,7 +42,13 @@
                 }
             },
             "args": ["target/debug/ncexe", 
-                    "target/release/ncexe"],
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe"],
             "cwd": "${workspaceFolder}",
             "console": "externalTerminal",
             "env": {

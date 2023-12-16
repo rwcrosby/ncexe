@@ -5,9 +5,10 @@
 //! 
 //! https://ethanschoonover.com/solarized/
 
+use anyhow::{anyhow, bail, Context, Result};
 use hex;
 use pancurses;
-use std::{error, collections::HashMap};
+use std::collections::HashMap;
 
 // ------------------------------------------------------------------------
 /// Color numbers for the various parts of the window
@@ -17,7 +18,8 @@ pub struct ColorSet {
     pub frame: usize,
     pub title: usize,
     pub text: usize,
-
+    pub value: usize,
+    
 }
 
 // ------------------------------------------------------------------------
@@ -32,10 +34,10 @@ pub struct Colors<'a> {
 
 impl<'a> Colors<'a> {
 
-    pub fn new() -> Result<Box<Colors<'a>>, Box<dyn error::Error>> {
+    pub fn new() -> Result<Box<Colors<'a>>> {
 
         if !pancurses::has_colors() {
-            return Err("Colors not supported".into());
+            bail!{"Colors not supported"};
         }
 
         pancurses::start_color();
@@ -50,23 +52,16 @@ impl<'a> Colors<'a> {
         Ok(
             Box::new(
                 Colors{map: 
-                    HashMap::from([("file_list", solarize_color_pairs_1()?)])}))
+                    HashMap::from([
+                        ("file_list", solarize_color_pairs_1()?),
+                        ("header", solarize_color_pairs_2()?),
+                    ])}))
 
     }
 
     pub fn set(&self, name: &str) -> &ColorSet {
         &self.map[name]
     }
-
-}
-
-// ------------------------------------------------------------------------
-
-fn colour_to_6cube(v: usize) -> usize {
-
-    if v < 48       { 0 }
-    else if v < 114 { 1 }
-    else              { (v - 35) / 40 }
 
 }
 
@@ -83,14 +78,37 @@ fn colour_dist( r1: usize, g1: usize, b1: usize, r2: usize, g2: usize, b2: usize
 }
 
 // ------------------------------------------------------------------------
+
+fn colour_to_6cube(v: usize) -> usize {
+
+    if v < 48       { 0 }
+    else if v < 114 { 1 }
+    else              { (v - 35) / 40 }
+
+}
+
+// ------------------------------------------------------------------------
+
+fn init_color_pair(pair_no: usize, fgr_no: u8, bkgr_no: u8 ) 
+    -> Result<usize> {
+
+    match pancurses::init_pair(pair_no as i16, fgr_no as i16, bkgr_no as i16) {
+        pancurses::OK => Ok(pair_no),
+        _ => Err(anyhow!("init_pair failed"))
+    }
+
+}
+
+// ------------------------------------------------------------------------
 /// From: https://github.com/tmux/tmux/blob/master/colour.c
 
-fn rgb_to_xterm256(rgb_str: &str) -> Result<u8, Box<dyn error::Error>> {
+fn rgb_to_xterm256(rgb_str: &str) -> Result<u8> {
 
     const Q2C: [usize; 6] = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ];
 
 
-    let hexstr = hex::decode(rgb_str)?;
+    let hexstr = hex::decode(rgb_str)
+        .context(anyhow!("Bad rgb string {}", rgb_str))?;
     let r = hexstr[0] as usize;
     let g = hexstr[1] as usize;
     let b = hexstr[2] as usize;
@@ -127,7 +145,7 @@ fn rgb_to_xterm256(rgb_str: &str) -> Result<u8, Box<dyn error::Error>> {
 // ------------------------------------------------------------------------
 
 fn solarize_color_pairs_1 ()
-    -> Result<Box<ColorSet>, Box<dyn error::Error>> {
+    -> Result<Box<ColorSet>> {
 
     let sc = solarize_colors()?;
 
@@ -135,14 +153,30 @@ fn solarize_color_pairs_1 ()
     let title = init_color_pair(2, sc["green"], sc["base3"])?;
     let text = init_color_pair(3, sc["red"], sc["base3"])?;
 
-    Ok(Box::new(ColorSet{frame, title, text}))
+    Ok(Box::new(ColorSet{frame, title, text, value: 0}))
+
+}
+
+// ------------------------------------------------------------------------
+
+fn solarize_color_pairs_2 ()
+    -> Result<Box<ColorSet>> {
+
+    let sc = solarize_colors()?;
+
+    let frame = init_color_pair(4, sc["violet"], sc["base2"])?;
+    let title = init_color_pair(5, sc["cyan"], sc["base2"])?;
+    let text = init_color_pair(6, sc["blue"], sc["base2"])?;
+    let value = init_color_pair(7, sc["green"], sc["base2"])?;
+
+    Ok(Box::new(ColorSet{frame, title, text, value}))
 
 }
 
 // ------------------------------------------------------------------------
 
 fn solarize_colors<'a> () 
-    -> Result<Box<HashMap<&'a str, u8>>, Box<dyn error::Error>>
+    -> Result<Box<HashMap<&'a str, u8>>>
 {
 
     let solarize_map = Box::new(HashMap::from([
@@ -165,19 +199,6 @@ fn solarize_colors<'a> ()
     ]));
 
     Ok(solarize_map)
-
-}
-
-
-// ------------------------------------------------------------------------
-
-fn init_color_pair(pair_no: usize, fgr_no: u8, bkgr_no: u8 ) 
-    -> Result<usize, Box<dyn error::Error>> {
-
-    match pancurses::init_pair(pair_no as i16, fgr_no as i16, bkgr_no as i16) {
-        pancurses::OK => Ok(pair_no),
-        _ => Err("init_pair failed".into())
-    }
 
 }
 

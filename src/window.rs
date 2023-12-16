@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 //! Functions to manage curses windows
 
-use std::error;
+use anyhow::Result;
 
 use crate::{main_window::MainWindow, color::ColorSet};
 
@@ -35,7 +35,7 @@ impl<'a> ExeWindow<'a> {
                 desired_canvas_lines : usize,
                 title : &str,
                 colors : &ColorSet,
-                main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>, Box<dyn error::Error>> {
+                main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>> {
 
         let mw = &main_window.win;
 
@@ -122,7 +122,7 @@ mod tests {
         w.win.getch();
         w.win.keypad(true);
         
-        let cs = ColorSet{frame: 100, title: 150, text: 200};
+        let cs = ColorSet{frame: 100, title: 150, text: 200, value: 225};
 
         let sw = ExeWindow::new(10, 10, "Blah", &cs, &w ).unwrap();
 
