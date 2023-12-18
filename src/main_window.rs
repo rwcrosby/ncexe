@@ -19,14 +19,9 @@ impl MainWindow {
             win: pancurses::initscr(),
         };
 
-        // gettextrs::setlocale(gettextrs::LocaleCategory::LcAll, "");
-
-
         pancurses::noecho();
         win.win.keypad(true);
-
         win.win.refresh();
-
         win
     }
 

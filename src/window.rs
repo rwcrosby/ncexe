@@ -117,18 +117,24 @@ mod tests {
 
     #[test]
     pub fn window_test_1() {
+
         let w = MainWindow::new();
+        
         w.win.printw("Curses test 1 <\u{21d1}>");
         w.win.getch();
-        w.win.keypad(true);
-        
-        let cs = ColorSet{frame: 100, title: 150, text: 200, value: 225};
+
+        pancurses::init_pair(128, 10, 240);
+        pancurses::init_pair(129, 20, 230);
+        pancurses::init_pair(130, 30, 220);
+        pancurses::init_pair(131, 40, 210);
+
+        let cs = ColorSet{frame: 128, title: 129, text: 130, value: 131};
 
         let sw = ExeWindow::new(10, 10, "Blah", &cs, &w ).unwrap();
 
         sw.win.mvaddstr(2, 1, "x");
-        let x = sw.win.mvaddstr(20, 1, "x");
-        sw.win.mvaddstr(0, 0, format!("{}", x));
+        let x = sw.win.mvaddstr(20, 1, "Overflow");
+        sw.win.mvaddstr(3, 1, format!("{}", x));
 
         sw.win.getch();
         

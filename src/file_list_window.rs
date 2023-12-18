@@ -1,9 +1,9 @@
 use anyhow::{bail, Result};
-use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
+use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR, A_COLOR};
 
 use crate::color::Colors;
 use crate::main_window::MainWindow;
-use crate::window;
+use crate::{window, ExeType};
 use crate::{Formatter, FormatExe, ETYPELENGTH};
 
 type ExeItem<'a> = Box<dyn FormatExe + 'a>;
@@ -14,7 +14,7 @@ type ExeList<'a> = Vec<ExeItem<'a>>;
 pub fn show(
     executables: &ExeList, 
     mw: &MainWindow,
-    _fmt: &Formatter,
+    fmt: &Formatter,
     colors: &Colors) -> Result<()> {
 
     // Setup the line info and header
@@ -102,6 +102,7 @@ pub fn show(
     let key_pgdown_handler = key_pgdown_generator(&w, &executables, highlight, fmt_line );
     let key_home_handler = key_home_generator(&w, &executables, highlight, fmt_line );
     let key_end_handler = key_end_generator(&w, &executables, highlight, fmt_line );
+    let key_enter_handler = key_enter_generator(&w, &executables, fmt, colors );
 
     // Do it!
 
@@ -127,12 +128,12 @@ pub fn show(
 
         match pw.getch() {
 
-            Some(Input::KeyUp) => key_up_handler(&mut win_idx, &mut top_idx),
-            Some(Input::KeyDown) => key_down_handler(&mut win_idx, &mut top_idx),
-            Some(Input::KeyPPage) => key_pgup_handler(&mut win_idx, &mut top_idx),
-            Some(Input::KeyNPage) => key_pgdown_handler(&mut win_idx, &mut top_idx),
-            Some(Input::KeyHome) => key_home_handler(&mut win_idx, &mut top_idx),
-            Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx),
+            Some(Input::KeyUp) => key_up_handler(&mut win_idx, &mut top_idx)?,
+            Some(Input::KeyDown) => key_down_handler(&mut win_idx, &mut top_idx)?,
+            Some(Input::KeyPPage) => key_pgup_handler(&mut win_idx, &mut top_idx)?,
+            Some(Input::KeyNPage) => key_pgdown_handler(&mut win_idx, &mut top_idx)?,
+            Some(Input::KeyHome) => key_home_handler(&mut win_idx, &mut top_idx)?,
+            Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx)?,
 
             Some(Input::KeyResize) => {
 
@@ -167,11 +168,11 @@ pub fn show(
                 mpw.touch();
                 mpw.refresh();
 
-            }
+            },
 
             Some(Input::Character(c)) => match c {
                 'q' | '\u{1b}' => break,
-                '\n' => (),
+                '\n' => key_enter_handler(&mut win_idx, &mut top_idx)?,
                 _ => ()
                 }
 
@@ -250,7 +251,7 @@ fn key_up_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()>  + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -268,6 +269,7 @@ fn key_up_generator<'a>
         }
 
         highlight_fn(*win_idx, true);
+        Ok(())
 
     }
 }
@@ -280,7 +282,7 @@ fn key_down_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -297,7 +299,8 @@ fn key_down_generator<'a>
             );
         }
 
-        highlight_fn(*win_idx, true)
+        highlight_fn(*win_idx, true);
+        Ok(())
 
     }
 }
@@ -310,7 +313,7 @@ fn key_pgup_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -338,8 +341,10 @@ fn key_pgup_generator<'a>
         }
 
         highlight_fn(*win_idx, true);
+        Ok(())
 
     }
+
 }
 
 // ------------------------------------------------------------------------
@@ -350,7 +355,7 @@ fn key_pgdown_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -376,8 +381,10 @@ fn key_pgdown_generator<'a>
         }
 
         highlight_fn(*win_idx, true);
+        Ok(())
 
     }
+
 }
 
 // ------------------------------------------------------------------------
@@ -388,7 +395,7 @@ fn key_home_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -402,6 +409,8 @@ fn key_home_generator<'a>
             *win_idx = 0;
             highlight_fn(*win_idx, true);
         }
+        Ok(())
+
     }
 
 }
@@ -414,7 +423,7 @@ fn key_end_generator<'a>
     exes: &'a[ExeItem],
     highlight_fn : impl Fn(usize, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize)  + 'a
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
 {
 
     move | win_idx: &mut usize, top_idx: &mut usize | {
@@ -423,11 +432,41 @@ fn key_end_generator<'a>
             *top_idx = exes.len() - w.avail_canvas_lines;
             write_lines(&w.win, &exes[*top_idx..], &fmt_fn);
         }
+
         if *win_idx != w.avail_canvas_lines - 1 {
             highlight_fn(*win_idx, false);
             *win_idx = w.avail_canvas_lines - 1;
             highlight_fn(*win_idx, true);
         }
+        Ok(())
+
+    }
+
+}
+
+// ------------------------------------------------------------------------
+
+fn key_enter_generator<'a>
+(
+    w: &'a window::ExeWindow,
+    exes: &'a[ExeItem],
+    fmt : &'a Formatter,
+    colors : &'a Colors,
+) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+{
+
+    move | win_idx: &mut usize, top_idx: &mut usize | -> Result<()> {
+
+        let exe = &exes[*top_idx + *win_idx];
+
+        if exe.exe_type() != ExeType::NOPE {
+            exe.show(&w.main_window, fmt, colors)?;
+            w.win.touch();
+            w.main_window.win.attroff(A_COLOR);
+            w.main_window.win.touch();
+            w.main_window.win.refresh();
+        }
+        Ok(())
 
     }
 
@@ -451,7 +490,7 @@ mod tests {
             &self, 
             _mw: &MainWindow,
             _fmt: &Formatter,
-            _colors: &Colors
+            _colors: &Colors,
         ) -> Result<()> 
         { 
             Ok(()) 

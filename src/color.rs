@@ -28,7 +28,8 @@ pub struct ColorSet {
 
 pub struct Colors<'a> {
 
-    map: HashMap<&'a str, Box<ColorSet>>
+    map: HashMap<&'a str, Box<ColorSet>>,
+    bkgr: usize
 
 }
 
@@ -42,25 +43,23 @@ impl<'a> Colors<'a> {
 
         pancurses::start_color();
 
-        // let num_colors = pancurses::COLORS();
-        // let num_pairs = pancurses::COLOR_PAIRS();
-
-        // init_colors();
-
-        // println!("Colors {}, pairs {}", num_colors, num_pairs);
-
         Ok(
             Box::new(
                 Colors{map: 
                     HashMap::from([
                         ("file_list", solarize_color_pairs_1()?),
                         ("header", solarize_color_pairs_2()?),
-                    ])}))
+                    ]),
+                bkgr: init_color_pair(1, 15, 14)?}))
 
     }
 
     pub fn set(&self, name: &str) -> &ColorSet {
         &self.map[name]
+    }
+
+    pub fn bkgr(&self) -> usize {
+        self.bkgr
     }
 
 }
@@ -149,9 +148,9 @@ fn solarize_color_pairs_1 ()
 
     let sc = solarize_colors()?;
 
-    let frame = init_color_pair(1, sc["magenta"], sc["base3"])?;
-    let title = init_color_pair(2, sc["green"], sc["base3"])?;
-    let text = init_color_pair(3, sc["red"], sc["base3"])?;
+    let frame = init_color_pair(10, sc["magenta"], sc["base3"])?;
+    let title = init_color_pair(11, sc["green"], sc["base3"])?;
+    let text = init_color_pair(12, sc["red"], sc["base3"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value: 0}))
 
@@ -164,10 +163,10 @@ fn solarize_color_pairs_2 ()
 
     let sc = solarize_colors()?;
 
-    let frame = init_color_pair(4, sc["violet"], sc["base2"])?;
-    let title = init_color_pair(5, sc["cyan"], sc["base2"])?;
-    let text = init_color_pair(6, sc["blue"], sc["base2"])?;
-    let value = init_color_pair(7, sc["green"], sc["base2"])?;
+    let frame = init_color_pair(21, sc["violet"], sc["base2"])?;
+    let title = init_color_pair(22, sc["cyan"], sc["base2"])?;
+    let text = init_color_pair(23, sc["blue"], sc["base2"])?;
+    let value = init_color_pair(24, sc["green"], sc["base2"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value}))
 
@@ -219,14 +218,10 @@ mod tests {
 
         env::set_var("TERM", "screen-256color");
 
-        let mw = pancurses::initscr();
-        pancurses::noecho();
-
-        mw.refresh();
-
+        let _mw = pancurses::initscr();
+        
         let c = Colors::new().unwrap();
-
-
+        
         let w = newwin(10, 30, 5, 5);
 
         w.bkgd(pancurses::COLOR_PAIR(c.map["file_list"].frame as u32));
@@ -242,10 +237,26 @@ mod tests {
         w.attrset(pancurses::COLOR_PAIR(c.map["file_list"].text as u32) | pancurses::A_REVERSE);
         w.mvaddstr(2, 2, "Some Text Reversed");
 
-        w.getch();
+        let pch = | ch | 
+            println!("{:08x}x {:x}x {:x}x {:x}x", 
+                ch,  
+                ch & pancurses::A_CHARTEXT,
+                ch & pancurses::A_ATTRIBUTES,
+                ch & pancurses::A_COLOR);
 
+        let ch1 = w.mvinch(0,0); 
+        pch(ch1);
+        let ch2 = w.mvinch(1,2); 
+        pch(ch2);
+        let ch3 = w.mvinch(2,2); 
+        pch(ch3);
+        
         pancurses::endwin();
 
+        assert!(ch1 == 0x00000b41);
+        assert!(ch2 == 0x00000c53);
+        assert!(ch3 == 0x00040c53);
+            
     }
 
     #[test]

@@ -1,5 +1,8 @@
 #![allow(unused)]
 
+fn main() {
+}
+
 struct Cl1 {}
 
 impl Cl1 {

@@ -10,16 +10,17 @@
 //!       12/15/23 - Initial support in file_list_window
 //! TODO: Terminal resizing
 //!       12/11/23 - Setup to handle resize without file list window size change
-//! TODO: Link file_list to header window
 //! TODO: Margins by window
 
-//! FIXED: Endian support with Hex and Binary output
-//!        12/17/23 Implemented
-//! FIXED: Improved error handling
-//!        12/11/23 - Setup for error trait
-//!        12/16/23 - Implented anyhow crate
-//! FIXED: show-notexe flag
-//!        12/11/23 - Will be set to true is any config item is true, false otherwise
+//! DONE: Link file_list to header window
+//!       12/18/23 - Completed
+//! DONE: Endian support with Hex and Binary output
+//!       12/17/23 Implemented
+//! DONE: Improved error handling
+//!       12/11/23 - Setup for error trait
+//!       12/16/23 - Implented anyhow crate
+//! DONE: show-notexe flag
+//!       12/11/23 - Will be set to true is any config item is true, false otherwise
 
 use anyhow::Result;
 use clap::Parser;
@@ -179,6 +180,8 @@ fn main() -> Result<()> {
 
     // Get color information
     let colours = Colors::new()?;
+    mw.win.bkgd(pancurses::COLOR_PAIR(colours.bkgr() as u32));
+    mw.win.refresh();
 
     // Get format mapper
     let formatter = Formatter::new();

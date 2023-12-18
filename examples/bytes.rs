@@ -1,4 +1,7 @@
 #![allow(unused)]
+fn main() {
+}
+
 
 // https://stackoverflow.com/questions/59289331/how-do-i-map-data-from-a-vector-of-bytes-to-a-structure-in-rust
 
