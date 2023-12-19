@@ -11,9 +11,13 @@
 //! TODO: Terminal resizing
 //!       12/11/23 - Setup to handle resize without file list window size change
 //! TODO: Margins by window
+//! TODO: Addresses as hex
+//! TODO: Verify mmap length
+//! TODO: Decode bits
+//! TODO: Decode types
 
 //! DONE: Link file_list to header window
-//!       12/18/23 - Completed
+//!      12/18/23 - Completed
 //! DONE: Endian support with Hex and Binary output
 //!       12/17/23 Implemented
 //! DONE: Improved error handling
@@ -34,6 +38,7 @@ mod configuration;
 mod elf;
 mod file_list_window;
 mod formatter;
+mod header_window;
 mod macho32;
 mod macho64;
 mod main_window;
@@ -178,9 +183,9 @@ fn main() -> Result<()> {
     // Initialize curses
     let mw = MainWindow::new();
 
-    // Get color information
-    let colours = Colors::new()?;
-    mw.win.bkgd(pancurses::COLOR_PAIR(colours.bkgr() as u32));
+    // Setup colors
+    let colors = Colors::new()?;
+    mw.win.bkgd(pancurses::COLOR_PAIR(colors.bkgr() as u32));
     mw.win.refresh();
 
     // Get format mapper
@@ -188,9 +193,9 @@ fn main() -> Result<()> {
 
     // Display file info
     if executables.len() == 1 {
-        executables[0].show(&mw, &formatter, &colours)
+        executables[0].show(&mw, &formatter, &colors)
     } else {
-        file_list_window::show(&executables, &mw, &formatter, &colours)
+        file_list_window::show(&executables, &mw, &formatter, &colors)
     }
 
 }

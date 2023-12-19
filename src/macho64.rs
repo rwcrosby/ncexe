@@ -1,20 +1,25 @@
 #![allow(dead_code)]
 //! Formatter for the MacOS Mach-O format
 
-use std::ops::Deref;
-
-use anyhow::Context;
-
 use anyhow::Result;
 use memmap2::Mmap;
-use pancurses::COLOR_PAIR;
+use std::ops::Deref;
 
-use crate::color::Colors;
 use crate::ExeType;
 use crate::FormatExe;
+
+use crate::color::Colors;
 use crate::formatter::Formatter;
-use crate::window;
+use crate::header_window;
 use crate::main_window::MainWindow;
+
+// ------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct Macho64Formatter<'a> {
+  filename: &'a str,
+  mmap: Mmap,
+}
 
 // ------------------------------------------------------------------------
 
@@ -30,12 +35,6 @@ impl Macho64Formatter<'_> {
 }
 
 // ------------------------------------------------------------------------
-
-#[derive(Debug)]
-pub struct Macho64Formatter<'a> {
-    filename: &'a str,
-    mmap: Mmap,
-}
 
 impl FormatExe for Macho64Formatter<'_> {
 
@@ -61,53 +60,15 @@ impl FormatExe for Macho64Formatter<'_> {
         fmt: &Formatter,
         colors: &Colors
     ) -> Result<()> {
-        
-        // Load the format specification
 
-        let fb = fmt.from_str(HEADER)
-          .context("Macho-O 64 Header")?;
+        let fmt_blk = fmt.from_str(HEADER)?;
 
-        let lines = fb.fields.len();
-        let cols = fb.max_text_len + 3 + fb.max_value_len;
-
-        let color_set = colors.set("header");
-
-        // Create the window
-                    
-        let w = window::ExeWindow::new(
-            lines, 
-            cols, 
-            "Mach-O 64 Bit Header", 
-            color_set,
+        header_window::show(
             mw, 
-        )?;
-
-        let pw = &w.win;
-        let _mpw = &mw.win;
-
-        // Display the fields
-
-        for (idx, fld) in fb.fields.iter().enumerate() {
-
-            let df = &self.mmap.deref()
-                [fld.offset as usize..fld.offset as usize + fld.y_field.size];
-
-            pw.mv((idx + window::TMARGIN) as i32, 
-                  window::LMARGIN as i32);
-
-            pw.attrset(COLOR_PAIR(color_set.text as u32));
-            pw.addstr(format!("{fname:>nl$.nl$} : ", 
-                              nl = fb.max_text_len,
-                              fname=fld.y_field.name));
-
-            pw.attrset(COLOR_PAIR(color_set.value as u32));
-            pw.addstr((fld.fmt_fn)(df));
-
-        };
-
-        pw.getch();
-
-        Ok(())
+            colors, 
+            &fmt_blk, 
+            "Macho-O 64 Header", 
+            self.mmap.deref())
 
     }
 

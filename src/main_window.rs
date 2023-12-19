@@ -1,5 +1,3 @@
-use pancurses;
-
 // use gettextrs;
 
 // use crate::file_list_window::FileListWindow;
