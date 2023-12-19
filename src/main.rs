@@ -1,52 +1,25 @@
+//!
 //! Curses based executable display
 //!
-//! Some playing with lifetimes
-//! https://gist.github.com/rust-play/1752b69650f04d9db975db82ff348a3f
-//! 
-//! Keyboard mapping in tmux:
-//! https://stackoverflow.com/questions/18600188/home-end-keys-do-not-work-in-tmux
-
-//! TODO: Color support
-//!       12/15/23 - Initial support in file_list_window
-//! TODO: Terminal resizing
-//!       12/11/23 - Setup to handle resize without file list window size change
-//! TODO: Margins by window
-//! TODO: Addresses as hex
-//! TODO: Verify mmap length
-//! TODO: Decode bits
-//! TODO: Decode types
-
-//! DONE: Link file_list to header window
-//!      12/18/23 - Completed
-//! DONE: Endian support with Hex and Binary output
-//!       12/17/23 Implemented
-//! DONE: Improved error handling
-//!       12/11/23 - Setup for error trait
-//!       12/16/23 - Implented anyhow crate
-//! DONE: show-notexe flag
-//!       12/11/23 - Will be set to true is any config item is true, false otherwise
-
-use anyhow::Result;
-use clap::Parser;
-use memmap2::Mmap;
-use std::fmt;
-use std::fs::File;
-use std::path::PathBuf;
 
 mod color;
 mod configuration;
-mod elf;
-mod file_list_window;
+mod exe_types;
 mod formatter;
-mod header_window;
-mod macho32;
-mod macho64;
-mod main_window;
 mod window;
+mod windows;
+
+use anyhow::Result;
+use clap::Parser;
+use std::path::PathBuf;
 
 use color::Colors;
-use formatter::{Formatter, FormatExe};
-use main_window::MainWindow;
+use exe_types::ExeType;
+use formatter::Formatter;
+use windows::{
+    screen::Screen,
+    file_list_window,
+};
 
 // ------------------------------------------------------------------------
 /// Display executable file information
@@ -68,98 +41,6 @@ pub struct Arguments {
 
 // ------------------------------------------------------------------------
 
-#[derive(Debug, PartialEq)]
-pub enum ExeType {
-    MachO32,
-    MachO64,
-    ELF,
-    NOPE,
-    //     UNIVBIN,
-    //     PE,
-}
-
-impl fmt::Display for ExeType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{}",
-            match self {
-                Self::MachO64 => "Mach-O 64 Bit",
-                Self::MachO32 => "Mach-O 32 Bit",
-                Self::ELF => "ELF",
-                Self::NOPE => "Not Executable",
-        })
-    }
-}
-
-const ETYPELENGTH : usize = "Portable Executable".len();
-
-// ------------------------------------------------------------------------
-
-#[derive(Debug)]
-struct NotExecutable<'a> {
-    filename: &'a str,
-    msg: String,
-}
-
-impl FormatExe for NotExecutable<'_> {
-    fn to_string(&self) -> String {
-        format!("Not an Executable: {}: {}", self.filename, self.msg)
-    }
-    fn exe_type(&self) -> ExeType {
-        ExeType::NOPE
-    }
-    fn filename(&self) -> &str {
-        self.filename
-    }
-
-}
-
-// ------------------------------------------------------------------------
-
-fn new_executable(filename: &str) -> Box<dyn FormatExe + '_> {
-    let fd = match File::open(filename) {
-        Ok(v) => v,
-        Err(e) => {
-            return Box::new(NotExecutable {
-                filename,
-                msg: e.to_string(),
-            })
-        }
-    };
-
-    let mmap = match unsafe { Mmap::map(&fd) } {
-        Ok(v) => v,
-        Err(e) => {
-            return Box::new(NotExecutable {
-                filename,
-                msg: e.to_string(),
-            })
-        }
-    };
-
-    if mmap.len() < 4 {
-        return Box::new(NotExecutable {
-            filename,
-            msg: format!("Too small: {}", mmap.len()),
-        });
-    };
-
-    let raw_type = unsafe { *(mmap.as_ptr() as *const u32) };
-    match raw_type {
-        0xfeedface => macho32::Macho32Formatter::new(filename, mmap),
-        0xfeedfacf => macho64::Macho64Formatter::new(filename, mmap),
-        0x7f454c46 => elf::ELFFormatter::new(filename, mmap),
-        0x464c457f => elf::ELFFormatter::new(filename, mmap),
-        // 0xcafebabe => ExeType::UNIVBIN,
-        // 0xbebafeca => ExeType::UNIVBIN,
-        v => Box::new(NotExecutable {
-            filename,
-            msg: format!("Invalid magic number: {:x}", v),
-        }),
-    }
-}
-
-// ------------------------------------------------------------------------
-
 fn main() -> Result<()> {
 
     // Process the arguments
@@ -171,7 +52,7 @@ fn main() -> Result<()> {
     // Build the list of executable objects
     let executables: Vec<_> = args.exe_filename
         .iter()
-        .map(|fname| new_executable(fname))
+        .map(|fname| exe_types::new(fname))
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
@@ -181,21 +62,21 @@ fn main() -> Result<()> {
     }
 
     // Initialize curses
-    let mw = MainWindow::new();
+    let screen = Screen::new();
 
     // Setup colors
     let colors = Colors::new()?;
-    mw.win.bkgd(pancurses::COLOR_PAIR(colors.bkgr() as u32));
-    mw.win.refresh();
+    screen.win.bkgd(pancurses::COLOR_PAIR(colors.bkgr() as u32));
+    screen.win.refresh();
 
     // Get format mapper
     let formatter = Formatter::new();
 
     // Display file info
     if executables.len() == 1 {
-        executables[0].show(&mw, &formatter, &colors)
+        executables[0].show(&screen, None, &formatter, &colors)
     } else {
-        file_list_window::show(&executables, &mw, &formatter, &colors)
+        file_list_window::show(&executables, &screen, &formatter, &colors)
     }
 
 }

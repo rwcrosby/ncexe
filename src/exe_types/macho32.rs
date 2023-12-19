@@ -1,10 +1,15 @@
-#![allow(dead_code)]
+//! 
 //! Formatter for the MacOS Mach-O format
+//!
 
 use memmap2::Mmap;
 
-use crate::ExeType;
-use crate::FormatExe;
+use super::{
+    ExeType,
+    ExeFormat,
+};
+
+// ------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct Macho32Formatter<'a> {
@@ -12,7 +17,7 @@ pub struct Macho32Formatter<'a> {
     mmap: Mmap,
 }
 
-impl FormatExe for Macho32Formatter<'_> {
+impl ExeFormat for Macho32Formatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O32: {:30} {:?}", self.filename, self.mmap)
@@ -35,7 +40,7 @@ impl FormatExe for Macho32Formatter<'_> {
 impl Macho32Formatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn FormatExe + '_> {
+            mmap : Mmap) -> Box<dyn ExeFormat + '_> {
 
         Box::new(Macho32Formatter{filename, mmap})
 

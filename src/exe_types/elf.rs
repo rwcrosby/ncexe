@@ -1,16 +1,24 @@
-//! Formatter for the MacOS Mach-O format
+//!
+//! Formatter for the Linux ELF executable format
+//! 
 
 use anyhow::{Result, bail};
 use memmap2::Mmap;
 use std::ops::Deref;
 
-use crate::ExeType;
-use crate::FormatExe;
-
-use crate::color::Colors;
-use crate::formatter::Formatter;
-use crate::header_window;
-use crate::main_window::MainWindow;
+use crate::{
+    color::Colors,
+    formatter::Formatter,
+    window::ExeWindow,
+    windows::{
+        header_window,
+        screen::Screen,
+    },
+};
+use super::{
+    ExeFormat,
+    ExeType,
+};
 
 // ------------------------------------------------------------------------
 
@@ -25,7 +33,7 @@ pub struct ELFFormatter<'a> {
 impl ELFFormatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn FormatExe + '_> {
+            mmap : Mmap) -> Box<dyn ExeFormat + '_> {
 
         Box::new(ELFFormatter{filename, mmap})
 
@@ -35,7 +43,7 @@ impl ELFFormatter<'_> {
 
 // ------------------------------------------------------------------------
 
-impl FormatExe for ELFFormatter<'_> {
+impl ExeFormat for ELFFormatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -54,8 +62,9 @@ impl FormatExe for ELFFormatter<'_> {
     }
 
     fn show(
-        &self, 
-        mw : &MainWindow,
+        &self,
+        screen : &Screen,
+        parent : Option<&ExeWindow>,
         fmt: &Formatter,
         colors: &Colors
     ) -> Result<()> {
@@ -79,10 +88,11 @@ impl FormatExe for ELFFormatter<'_> {
         let fmt_blk = fmt.from_str(fmt_yaml)?;
 
         header_window::show(
-            mw, 
+            screen,
+            parent, 
             colors, 
-            &fmt_blk, 
             "ELF Header", 
+            &fmt_blk, 
             mmap_slice)
 
     }

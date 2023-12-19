@@ -1,36 +1,17 @@
-#![allow(dead_code)]
-
-/// Format a block of memory into a window
+//! 
+//! Format a block of memory into a window
+//! 
 
 use anyhow::{anyhow, bail, Context, Result};
 use serde::Deserialize;
 use std::cmp;
 use std::collections::HashMap;
 
-use crate::ExeType;
-use crate::MainWindow;
-use crate::color::Colors;
-
 // ------------------------------------------------------------------------
-/// Trait to be implemented by the various eexecutable handlers
 
-pub trait FormatExe: std::fmt::Debug {
-
-    fn to_string(&self) -> String { String::from("") }
-    fn exe_type(&self) -> ExeType;
-    fn len(&self) -> usize { 0 }
-    fn filename(&self) -> &str {""}
-
-    fn show(&self, 
-            _mw : &MainWindow,
-            _fmt: &Formatter,
-            _colors: &Colors)
-        -> Result<()>
-    { 
-        Ok(())
-    }
-
-}
+type FmtMap = HashMap<(FieldType, FieldFormat, Option<usize>), (Box<DataToString>, Box<DataLen>)>;
+type DataToString = dyn Fn(&[u8]) -> String;
+type DataLen = dyn Fn(usize) -> usize;
 
 // ------------------------------------------------------------------------
 /// Global formatting information 
@@ -58,6 +39,7 @@ impl Formatter {
 
     }
 
+    #[allow(dead_code)]
     pub fn from_file(&self, filename: &str) 
         -> Result<Box<FormatBlock>> 
     {
@@ -71,10 +53,6 @@ impl Formatter {
     }
 
 }
-
-type FmtMap = HashMap<(FieldType, FieldFormat, Option<usize>), (Box<DataToString>, Box<DataLen>)>;
-type DataToString = dyn Fn(&[u8]) -> String;
-type DataLen = dyn Fn(usize) -> usize;
 
 // ------------------------------------------------------------------------
 
@@ -125,59 +103,6 @@ pub struct FormatBlock<'a> {
     pub len: usize,
     pub max_text_len: usize,
     pub max_value_len: usize,
-}
-
-fn int2_2_int(data: &[u8]) -> String {
-    data[0].to_string()
-}
-
-fn be16_2_int(data: &[u8]) -> String {
-    u16::from_be_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn be32_2_int(data: &[u8]) -> String {
-    u32::from_be_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn be64_2_int(data: &[u8]) -> String {
-    u64::from_be_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn le16_2_int(data: &[u8]) -> String {
-    u16::from_le_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn le32_2_int(data: &[u8]) -> String {
-    u32::from_le_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn le64_2_int(data: &[u8]) -> String {
-    u64::from_le_bytes(data.try_into().unwrap()).to_string()
-}
-
-fn be_2_bin(data: &[u8]) -> String {
-    data.iter()
-        .map(|byte| -> String { format!("{:08b}", byte) })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-fn be_2_hex(data: &[u8]) -> String {
-    data.iter()
-        .map(|byte| -> String { format!("{:02x}", byte) })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-fn char_2_string(data: &[u8]) -> String {
-    match std::str::from_utf8(data) {
-        Ok(v) => format!("\"{}\"", v),
-        Err(e) => e.to_string(),
-    }
-}
-
-fn ignore_2_string(_data: &[u8]) -> String {
-    String::from("")
 }
 
 // ------------------------------------------------------------------------

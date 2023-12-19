@@ -1,9 +1,6 @@
-#![allow(dead_code)]
+//! 
 //! Setup colors
 //! 
-//! Seem to be constrained to 256 colors, rgb doesn't work
-//! 
-//! https://ethanschoonover.com/solarized/
 
 use anyhow::{anyhow, bail, Context, Result};
 use hex;
@@ -12,7 +9,8 @@ use std::collections::HashMap;
 
 // ------------------------------------------------------------------------
 /// Color numbers for the various parts of the window
-/// 
+
+#[derive(Debug)]
 pub struct ColorSet {
 
     pub frame: usize,

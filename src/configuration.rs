@@ -1,7 +1,9 @@
+//! 
 //! Configuration object creation
 //! 
 //! The configuration object is used throughout and is intended to be the 
 //! single source of configuration information
+//! 
 
 use anyhow::{Context, Result};
 use std::fs::File;

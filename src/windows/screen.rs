@@ -1,19 +1,17 @@
-// use gettextrs;
-
-// use crate::file_list_window::FileListWindow;
-// use crate::Formatter;
+//! 
+//! The underlying curses screen
+//! 
 
 // ------------------------------------------------------------------------
-// File list window
 
 #[derive(Debug)]
-pub struct MainWindow {
+pub struct Screen {
     pub win: pancurses::Window,
 }
 
-impl MainWindow {
-    pub fn new() -> MainWindow {
-        let win = MainWindow {
+impl Screen {
+    pub fn new() -> Screen {
+        let win = Screen {
             win: pancurses::initscr(),
         };
 
@@ -25,7 +23,7 @@ impl MainWindow {
 
 }
 
-impl Drop for MainWindow {
+impl Drop for Screen {
     fn drop(&mut self) {
         pancurses::endwin();
     }
@@ -41,7 +39,7 @@ mod tests {
     #[test]
     #[ignore]
     pub fn test_1() {
-        let w = MainWindow::new();
+        let w = Screen::new();
         w.win.printw("Curses test 1");
         w.win.getch();
     }

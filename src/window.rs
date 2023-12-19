@@ -1,86 +1,122 @@
-#![allow(dead_code)]
-//! Functions to manage curses windows
+//! 
+//! The application window type and associated elements
+//! 
 
 use anyhow::Result;
 
-use crate::{main_window::MainWindow, color::ColorSet};
+use crate::{
+    color::ColorSet,
+    windows::screen::Screen, 
+};
 
+// ------------------------------------------------------------------------
+/// Y/X coordinates
+#[derive(Debug)]
+pub struct Coords {
+    pub line: i32,
+    pub col: i32,
+}
+
+// ------------------------------------------------------------------------
+/// Window margins
+#[derive(Debug)]
+pub struct Margins {
+    pub left: i32,
+    pub right: i32,
+    pub top: i32,
+    pub bottom: i32,
+}
+
+// ------------------------------------------------------------------------
+/// Application window
 #[derive(Debug)]
 pub struct ExeWindow<'a> {
 
-    /// Reference to the main window
-    pub main_window : &'a MainWindow,
+    /// Reference to the underlying screen (main window)
+    pub screen: &'a Screen,
+
+    /// Parent window (if one exists)
+    _parent: Option<&'a ExeWindow<'a>>,
 
     /// This window's curses window
     pub win : pancurses::Window,
 
+    /// Window margins
+    pub margins: &'a Margins,
+
+    /// Window margins
+    pub colors: &'a ColorSet,
+
+    /// Reference to the main window
+    // pub main_window : &'a MainWindow,
+
     /// User requested dimensions of the writable area
-    pub desired_canvas_cols : usize, 
-    pub desired_canvas_lines : usize,
+    pub desired: Coords, 
 
     /// Available dimensions of the writable area
-    pub avail_canvas_cols : usize, 
-    pub avail_canvas_lines : usize,
+    pub avail: Coords, 
 
 }
 
-pub const LMARGIN : usize = 2;
-pub const RMARGIN : usize = 2;
-pub const TMARGIN : usize = 2;
-pub const BMARGIN : usize = 1;
-
+// ------------------------------------------------------------------------
 impl<'a> ExeWindow<'a> {
 
-    pub fn new( desired_canvas_lines : usize,
-                desired_canvas_cols : usize,
+    pub fn new( desired: Coords,
                 title : &str,
-                colors : &ColorSet,
-                main_window: &'a MainWindow ) -> Result<Box<ExeWindow<'a>>> {
+                colors : &'a ColorSet,
+                parent: Option<&'a ExeWindow>,
+                margins: &'a Margins,
+                screen: &'a Screen ) -> Result<Box<ExeWindow<'a>>> {
 
-        let mw = &main_window.win;
+        let sc = &screen.win;
 
         // Figure out the x dimensions to use for the window
-        let mw_cols = mw.get_max_x() as usize;
+        let screen_cols = sc.get_max_x();
 
-        let des_win_cols = desired_canvas_cols + LMARGIN + RMARGIN; 
-        let mut avail_canvas_cols = mw_cols - LMARGIN - RMARGIN;
+        let des_win_cols = desired.col + margins.left + margins.right; 
+        let mut avail_cols = screen_cols - margins.left - margins.right;
 
         let mut beg_col  = 0;
-        let mut cols = mw_cols;
+        let mut cols = screen_cols;
 
-        if des_win_cols < mw_cols {
-            beg_col = (mw_cols - des_win_cols) / 2;
+        if des_win_cols < screen_cols {
+            beg_col = (screen_cols - des_win_cols) / 2;
             cols = des_win_cols; 
-            avail_canvas_cols = desired_canvas_cols;
+            avail_cols = desired.col;
         };
 
         // Figure out the y dimensions to use for the window
         
-        let mw_lines = mw.get_max_y() as usize;
+        let screen_lines = sc.get_max_y();
 
-        let des_win_lines = desired_canvas_lines + TMARGIN + BMARGIN; 
-        let mut avail_canvas_lines = mw_lines - TMARGIN - BMARGIN;
+        let des_win_lines = desired.line + margins.top + margins.bottom; 
+        let mut avail_lines = screen_lines - margins.top - margins.bottom;
         
         let mut beg_line = 0;
-        let mut lines = mw_lines;
+        let mut lines = screen_lines;
         
-        if des_win_lines < mw_lines {
-            beg_line = (mw_lines - des_win_lines) / 2;
+        if des_win_lines < screen_lines {
+            beg_line = (screen_lines - des_win_lines) / 2;
             lines = des_win_lines; 
-            avail_canvas_lines = desired_canvas_lines;
+            avail_lines = desired.line;
         };
         
         // Create the window
         
-        let win = Box::new(ExeWindow{   main_window, 
-                                        desired_canvas_cols, desired_canvas_lines,
-                                        avail_canvas_cols, avail_canvas_lines,
-                                        win : pancurses::newwin(
-                                            lines as i32, 
-                                            cols as i32, 
-                                            beg_line as i32, 
-                                            beg_col as i32
-                                        )} );
+        let win = Box::new(ExeWindow{   
+            screen, 
+            margins,
+            _parent: parent,
+            colors,
+            desired,
+            avail: Coords{ line: avail_lines, col: avail_cols}, 
+            win : pancurses::newwin(
+                lines, 
+                cols, 
+                beg_line, 
+                beg_col
+            )
+        } );
 
         let w = &win.win;
 
@@ -96,8 +132,8 @@ impl<'a> ExeWindow<'a> {
         
         let display_title = format!(" {} ", title);
         
-        if display_title.len() <=  cols - LMARGIN - RMARGIN {
-            let y = (cols - display_title.len()) / 2;
+        if display_title.len() as i32 <=  cols - margins.left - margins.right {
+            let y = (cols - display_title.len() as i32) / 2;
             w.attrset(pancurses::COLOR_PAIR(colors.title as u32));
             w.mvprintw(0, y as i32, display_title);
         }
@@ -108,17 +144,18 @@ impl<'a> ExeWindow<'a> {
 
 }
 
+// ------------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
 
     use super::*;
 
-    use crate::main_window::MainWindow;
+    use crate::windows::screen::Screen;
 
     #[test]
     pub fn window_test_1() {
 
-        let w = MainWindow::new();
+        let w = Screen::new();
         
         w.win.printw("Curses test 1 <\u{21d1}>");
         w.win.getch();
@@ -129,8 +166,14 @@ mod tests {
         pancurses::init_pair(131, 40, 210);
 
         let cs = ColorSet{frame: 128, title: 129, text: 130, value: 131};
+        let margins = Margins{top: 1, bottom: 2, left: 3, right: 4 };
 
-        let sw = ExeWindow::new(10, 10, "Blah", &cs, &w ).unwrap();
+        let sw = ExeWindow::new(Coords{line: 10, col: 10}, 
+                                "Blah", 
+                                &cs, 
+                                None, 
+                                &margins,
+                                &w ).unwrap();
 
         sw.win.mvaddstr(2, 1, "x");
         let x = sw.win.mvaddstr(20, 1, "Overflow");

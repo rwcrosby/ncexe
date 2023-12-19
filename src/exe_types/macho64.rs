@@ -1,20 +1,23 @@
-#![allow(dead_code)]
+//! 
 //! Formatter for the MacOS Mach-O format
+//! 
 
 use anyhow::Result;
 use memmap2::Mmap;
 use std::ops::Deref;
 
-use crate::ExeType;
-use crate::FormatExe;
-
-use crate::color::Colors;
-use crate::formatter::Formatter;
-use crate::header_window;
-use crate::main_window::MainWindow;
+use crate::{
+  color::Colors,
+  formatter::Formatter,
+  window::ExeWindow,
+  windows::{
+    header_window,
+    screen::Screen,
+  },
+};
+use super::ExeFormat;
 
 // ------------------------------------------------------------------------
-
 #[derive(Debug)]
 pub struct Macho64Formatter<'a> {
   filename: &'a str,
@@ -26,7 +29,7 @@ pub struct Macho64Formatter<'a> {
 impl Macho64Formatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn FormatExe + '_> {
+                mmap : Mmap) -> Box<dyn ExeFormat + '_> {
 
         Box::new(Macho64Formatter{filename, mmap})
 
@@ -36,14 +39,14 @@ impl Macho64Formatter<'_> {
 
 // ------------------------------------------------------------------------
 
-impl FormatExe for Macho64Formatter<'_> {
+impl ExeFormat for Macho64Formatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
     }
 
-    fn exe_type(&self) -> ExeType {
-        ExeType::MachO64
+    fn exe_type(&self) -> super::ExeType {
+        super::ExeType::MachO64
     }
 
     fn filename(&self) -> &str {
@@ -56,7 +59,8 @@ impl FormatExe for Macho64Formatter<'_> {
 
     fn show(
         &self, 
-        mw : &MainWindow,
+        screen : &Screen,
+        parent : Option<&ExeWindow>,
         fmt: &Formatter,
         colors: &Colors
     ) -> Result<()> {
@@ -64,10 +68,11 @@ impl FormatExe for Macho64Formatter<'_> {
         let fmt_blk = fmt.from_str(HEADER)?;
 
         header_window::show(
-            mw, 
+            screen,
+            parent, 
             colors, 
-            &fmt_blk, 
             "Macho-O 64 Header", 
+            &fmt_blk, 
             self.mmap.deref())
 
     }

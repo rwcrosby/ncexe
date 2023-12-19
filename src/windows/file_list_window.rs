@@ -1,19 +1,37 @@
+//! 
+//! Show the file list window
+//!
+
 use anyhow::{bail, Result};
-use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR, A_COLOR};
+use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
 
-use crate::color::Colors;
-use crate::main_window::MainWindow;
-use crate::{window, ExeType};
-use crate::{Formatter, FormatExe, ETYPELENGTH};
+use crate::exe_types::{
+    ETYPE_LENGTH,
+    ExeType,
+    ExeFormat,
+};
 
-type ExeItem<'a> = Box<dyn FormatExe + 'a>;
+use crate::{
+    Formatter, 
+    color::Colors,
+    window::{
+        Coords,
+        Margins,
+        ExeWindow,
+    }, 
+    windows::screen::Screen,
+};
+
+// ------------------------------------------------------------------------
+
+type ExeItem<'a> = Box<dyn ExeFormat + 'a>;
 type ExeList<'a> = Vec<ExeItem<'a>>;
 
 // ------------------------------------------------------------------------
 
 pub fn show(
     executables: &ExeList, 
-    mw: &MainWindow,
+    mw: &Screen,
     fmt: &Formatter,
     colors: &Colors) -> Result<()> {
 
@@ -27,7 +45,7 @@ pub fn show(
         .len();
 
     let hdr_line = format!("{etype:<l0$.l0$} {fname:<l1$.l1$} {fsize:>10.10}",
-        l0 = ETYPELENGTH,
+        l0 = ETYPE_LENGTH,
         etype = "File Type",
         l1 = max_name_len,
         fname = "Name",
@@ -38,13 +56,16 @@ pub fn show(
 
     let color_set = colors.set("file_list");
 
+    let margins = Margins{top: 2, bottom: 1, left: 2, right: 2 };
+
     // Create the window
                 
-    let w = window::ExeWindow::new(
-        executables.len(), 
-        line_len, 
+    let w = ExeWindow::new(
+        Coords{line: executables.len() as i32, col: line_len as i32}, 
         "Files Selected", 
         color_set,
+        None,
+        &margins,
         mw, 
     )?;
 
@@ -52,10 +73,10 @@ pub fn show(
     let mpw = &mw.win;
 
     // TODO Shorten filenames
-    if w.avail_canvas_cols < w.desired_canvas_cols {
+    if w.avail.col < w.desired.col {
         bail!("Window too narrow, need {} columns, only have {}", 
-              w.desired_canvas_cols, 
-              w.avail_canvas_cols);
+              w.desired.col, 
+              w.avail.col);
     }
 
     pw.mvaddstr(1, 2, hdr_line);
@@ -65,7 +86,7 @@ pub fn show(
         pw.mvaddstr(0, 0, 
             format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
                 line_len,
-                w.avail_canvas_lines, w.avail_canvas_cols,
+                w.avail.line, w.avail.col,
                 pw.get_max_y(), pw.get_max_x()
             ),
         );
@@ -73,11 +94,11 @@ pub fn show(
 
     // Line handling closures
 
-    let highlight = |win_idx, highlight| {
+    let highlight = |win_idx: i32, highlight| {
         pw.mvchgat(
-            (window::TMARGIN + win_idx) as i32,
-            window::LMARGIN as i32,
-            w.avail_canvas_cols as i32,
+            margins.top + win_idx,
+            margins.left,
+            w.avail.col,
             if highlight { A_REVERSE } else { A_NORMAL },
             color_set.text as i16,
         );
@@ -86,7 +107,7 @@ pub fn show(
     let fmt_line = |exe: &ExeItem| -> String {
         format!(
             "{etype:l0$.l0$} {fname:l1$.l1$} {fsize:10}",
-            l0 = ETYPELENGTH,
+            l0 = ETYPE_LENGTH,
             etype = exe.exe_type().to_string(),
             l1 = max_name_len,
             fname = exe.filename(),
@@ -106,11 +127,11 @@ pub fn show(
 
     // Do it!
 
-    let mut win_idx: usize = 0;
+    let mut win_idx: i32 = 0;
     let mut top_idx: usize = 0;
 
     pw.attrset(COLOR_PAIR(color_set.text as u32));
-    write_lines(&w.win, &executables[0..w.avail_canvas_lines], &fmt_line);
+    write_lines(&w.win, &executables[0..w.avail.line as usize], &fmt_line, &margins);
     highlight(0, true);
 
     loop {
@@ -118,7 +139,7 @@ pub fn show(
         pw.mvprintw(pw.get_max_y() - 1, 0,
             format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
                 executables.len(),
-                w.avail_canvas_lines,
+                w.avail.line,
                 top_idx,
                 win_idx,
                 pw.get_max_yx()));
@@ -189,15 +210,15 @@ pub fn show(
 // ------------------------------------------------------------------------
 
 fn indicate_more_up(
-    w : &window::ExeWindow,
+    w : &ExeWindow,
     top_idx : usize
 ) {
 
     let pos = w.win.get_cur_yx();
 
     w.win.mvprintw(
-        window::TMARGIN as i32, 
-        (window::LMARGIN - 1) as i32, 
+        w.margins.top as i32, 
+        (w.margins.left - 1) as i32, 
         if top_idx > 0 { "\u{21d1}" } else { " " }
     );
 
@@ -208,7 +229,7 @@ fn indicate_more_up(
 // ------------------------------------------------------------------------
 
 fn indicate_more_down(
-    w : &window::ExeWindow,
+    w : &ExeWindow,
     top_idx : usize,
     num_exe : usize
 ) {
@@ -216,9 +237,9 @@ fn indicate_more_down(
     let pos = w.win.get_cur_yx();
     
     w.win.mvprintw(
-        w.win.get_max_y() - window::BMARGIN as i32  - 1, 
-        (window::LMARGIN - 1) as i32, 
-        if w.avail_canvas_lines as usize + top_idx  == num_exe { " " } else {"\u{21d3}" } 
+        w.win.get_max_y() - w.margins.bottom as i32  - 1, 
+        (w.margins.left - 1) as i32, 
+        if w.avail.line as usize + top_idx  == num_exe { " " } else {"\u{21d3}" } 
     );
         
     w.win.mv(pos.0, pos.1);
@@ -231,12 +252,13 @@ fn write_lines(
     pw: &pancurses::Window,
     exe_list: &[ExeItem],
     fmt_fn: impl Fn(&ExeItem) -> String,
+    margins: &Margins,
 )
 {
     for (idx, exe) in exe_list.iter().enumerate()  {
         pw.mvprintw(
-            (idx + window::TMARGIN) as i32,
-            window::LMARGIN as i32,
+            margins.top + idx as i32,
+            margins.left,
             fmt_fn(exe),
         );
         pw.refresh();
@@ -247,14 +269,14 @@ fn write_lines(
 
 fn key_up_generator<'a> 
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()>  + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()>  + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
         if *win_idx > 0 {
             highlight_fn(*win_idx, false);
@@ -263,8 +285,9 @@ fn key_up_generator<'a>
             *top_idx -= 1;
             write_lines(
                 &w.win, 
-                &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
-                &fmt_fn
+                &exes[*top_idx..*top_idx + w.avail.line as usize], 
+                &fmt_fn,
+                &w.margins,
             );
         }
 
@@ -278,24 +301,25 @@ fn key_up_generator<'a>
 
 fn key_down_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
-        if *win_idx < w.avail_canvas_lines - 1 {
+        if *win_idx < w.avail.line - 1 {
             highlight_fn(*win_idx, false);
             *win_idx += 1;
-        } else if *top_idx + (w.avail_canvas_lines) < exes.len()  {
+        } else if *top_idx + (w.avail.line as usize) < exes.len()  {
             *top_idx += 1;
             write_lines(
                 &w.win, 
-                &exes[*top_idx..*top_idx + w.avail_canvas_lines], 
-                &fmt_fn
+                &exes[*top_idx..*top_idx + w.avail.line as usize], 
+                &fmt_fn,
+                &w.margins,
             );
         }
 
@@ -309,19 +333,19 @@ fn key_down_generator<'a>
 
 fn key_pgup_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
         if *top_idx > 0 {
 
-            if *top_idx  > w.avail_canvas_lines {
-                *top_idx -= w.avail_canvas_lines;
+            if *top_idx  > w.avail.line as usize {
+                *top_idx -= w.avail.line as usize;
             } else {
                 *top_idx = 0;
                 
@@ -329,8 +353,9 @@ fn key_pgup_generator<'a>
 
             write_lines(
                 &w.win, 
-                &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], 
-                &fmt_fn
+                &exes[*top_idx..(*top_idx + w.avail.line as usize)], 
+                &fmt_fn,
+                &w.margins,
             );
 
             *win_idx = 0;
@@ -351,33 +376,35 @@ fn key_pgup_generator<'a>
 
 fn key_pgdown_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
-        if w.avail_canvas_lines + *top_idx < exes.len() {
+        if w.avail.line as usize + *top_idx < exes.len() {
 
-            if *top_idx + w.avail_canvas_lines as usize * 2 > exes.len() {
-                *top_idx = exes.len() - w.avail_canvas_lines;
+            if *top_idx + w.avail.line as usize as usize * 2 > exes.len() {
+                *top_idx = exes.len() - w.avail.line as usize;
             } else {
-                *top_idx += w.avail_canvas_lines;
+                *top_idx += w.avail.line as usize;
             }
             
             write_lines(
                 &w.win, 
-                &exes[*top_idx..(*top_idx + w.avail_canvas_lines)], 
-                &fmt_fn);
+                &exes[*top_idx..(*top_idx + w.avail.line as usize)], 
+                &fmt_fn,
+                &w.margins,
+            );
 
             *win_idx = 0;
 
         } else {
             highlight_fn(*win_idx, false);
-            *win_idx = w.avail_canvas_lines - 1;
+            *win_idx = w.avail.line - 1;
         }
 
         highlight_fn(*win_idx, true);
@@ -391,18 +418,23 @@ fn key_pgdown_generator<'a>
 
 fn key_home_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
         if *top_idx != 0 {
             *top_idx = 0;
-            write_lines(&w.win, &exes[0..w.avail_canvas_lines], &fmt_fn);
+            write_lines(
+                &w.win, 
+                &exes[0..w.avail.line as usize], 
+                &fmt_fn, 
+                &w.margins,
+            );
         }
         if *win_idx != 0 {
             highlight_fn(*win_idx, false);
@@ -419,23 +451,28 @@ fn key_home_generator<'a>
 
 fn key_end_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
-    highlight_fn : impl Fn(usize, bool) + 'a,
+    highlight_fn : impl Fn(i32, bool) + 'a,
     fmt_fn : impl Fn(&ExeItem) -> String + 'a,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | {
+    move | win_idx: &mut i32, top_idx: &mut usize | {
 
-        if *top_idx + w.avail_canvas_lines != exes.len() {
-            *top_idx = exes.len() - w.avail_canvas_lines;
-            write_lines(&w.win, &exes[*top_idx..], &fmt_fn);
+        if *top_idx + w.avail.line as usize != exes.len() {
+            *top_idx = exes.len() - w.avail.line as usize;
+            write_lines(
+                &w.win, 
+                &exes[*top_idx..], 
+                &fmt_fn,
+                &w.margins,
+            );
         }
 
-        if *win_idx != w.avail_canvas_lines - 1 {
+        if *win_idx != w.avail.line - 1 {
             highlight_fn(*win_idx, false);
-            *win_idx = w.avail_canvas_lines - 1;
+            *win_idx = w.avail.line - 1;
             highlight_fn(*win_idx, true);
         }
         Ok(())
@@ -448,24 +485,26 @@ fn key_end_generator<'a>
 
 fn key_enter_generator<'a>
 (
-    w: &'a window::ExeWindow,
+    w: &'a ExeWindow,
     exes: &'a[ExeItem],
     fmt : &'a Formatter,
     colors : &'a Colors,
-) -> impl Fn(&mut usize, &mut usize) -> Result<()> + 'a
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
 {
 
-    move | win_idx: &mut usize, top_idx: &mut usize | -> Result<()> {
+    move | win_idx: &mut i32, top_idx: &mut usize | -> Result<()> {
 
-        let exe = &exes[*top_idx + *win_idx];
+        let exe = &exes[*top_idx + *win_idx as usize];
 
         if exe.exe_type() != ExeType::NOPE {
-            exe.show(&w.main_window, fmt, colors)?;
+            exe.show(&w.screen, Some(&w), fmt, colors)?;
+
             w.win.touch();
-            w.main_window.win.attroff(A_COLOR);
-            w.main_window.win.touch();
-            w.main_window.win.refresh();
+            w.screen.win.touch();
+            w.screen.win.refresh();
+
         }
+
         Ok(())
 
     }
@@ -478,17 +517,18 @@ fn key_enter_generator<'a>
 mod tests {
 
     use super::*;
-    use crate::MainWindow;
-    use crate::{ExeType, NotExecutable};
+    use crate::Screen;
+    use crate::exe_types::{ExeType, NotExecutable};
     use pancurses::{endwin, initscr};
 
-    impl FormatExe for std::string::String {
+    impl ExeFormat for std::string::String {
         fn exe_type(&self) -> ExeType {
             ExeType::NOPE
         }
         fn show(
             &self, 
-            _mw: &MainWindow,
+            _screen: &Screen,
+            _parent: Option<&ExeWindow>,
             _fmt: &Formatter,
             _colors: &Colors,
         ) -> Result<()> 
@@ -498,7 +538,7 @@ mod tests {
     }
 
     fn window_test(_lines: &ExeList) {
-        let _w = MainWindow::new();
+        let _w = Screen::new();
         // show(lines, &w ).unwrap();
     }
 
@@ -515,7 +555,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_2() {
-        let mut lines: Vec<Box<dyn FormatExe>> = vec![];
+        let mut lines: Vec<Box<dyn ExeFormat>> = vec![];
         (0..10).for_each(|i| {
             lines.push(Box::new(NotExecutable {
                 filename: "Blah",
@@ -529,7 +569,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_3() {
-        let lines: Vec<Box<dyn FormatExe>> = vec![
+        let lines: Vec<Box<dyn ExeFormat>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 12".to_string()),
@@ -545,7 +585,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_4() {
-        let lines: Vec<Box<dyn FormatExe>> = vec![
+        let lines: Vec<Box<dyn ExeFormat>> = vec![
             Box::new("Something".to_string()),
             Box::new("Something 1".to_string()),
             Box::new("Something 1".to_string()),
