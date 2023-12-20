@@ -70,6 +70,7 @@ enum FieldType {
 enum FieldFormat {
     Int,
     Hex,
+    Ptr,
     Binary,
     Char    
 }
@@ -222,6 +223,18 @@ fn make_fmt_map()
                 Box::new(| d: &[u8]| u64::from_be_bytes(d.try_into().unwrap()).to_string() ), 
                 Box::new(| _d | 12usize)
         )),
+        ((FieldType::Be, FieldFormat::Ptr, Some(4)), 
+            (
+                Box::new(| d: &[u8]| 
+                    format!("{:p}", u32::from_be_bytes(d.try_into().unwrap()) as *const u32) ), 
+                Box::new(| _d | 10usize)
+        )),
+        ((FieldType::Be, FieldFormat::Ptr, Some(8)), 
+            (
+                Box::new(| d: &[u8]| 
+                    format!("{:p}", u64::from_be_bytes(d.try_into().unwrap()) as *const u64) ), 
+                Box::new(| _d | 18usize)
+        )),
         ((FieldType::Be, FieldFormat::Hex, None), 
             (
                 Box::new(| d: &[u8]| to_hex(d)), 
@@ -251,6 +264,18 @@ fn make_fmt_map()
             (
                 Box::new(| d: &[u8]| u64::from_le_bytes(d.try_into().unwrap()).to_string() ), 
                 Box::new(| _d | 12usize)
+        )),
+        ((FieldType::Le, FieldFormat::Ptr, Some(4)), 
+            (
+                Box::new(| d: &[u8]| 
+                    format!("{:p}", u32::from_le_bytes(d.try_into().unwrap()) as *const u32) ), 
+                Box::new(| _d | 10usize)
+        )),
+        ((FieldType::Le, FieldFormat::Ptr, Some(8)), 
+            (
+                Box::new(| d: &[u8]| 
+                    format!("{:p}", u64::from_le_bytes(d.try_into().unwrap()) as *const u64) ), 
+                Box::new(| _d | 18usize)
         )),
         ((FieldType::Le, FieldFormat::Hex, Some(2)), 
             (

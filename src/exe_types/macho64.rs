@@ -106,7 +106,7 @@ const HEADER: &str = "
   size: 4
 - name: Load Command Length
   type: !Le
-  format: !Int
+  format: !Ptr
   size: 4
 - name: Flags
   type: !Le

@@ -9,6 +9,7 @@
         "!Bytes",
         "!Ignore",
         "!Hex",
+        "!Ptr",
         "!Binary",
         "!Char",
         "!Int"

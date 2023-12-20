@@ -114,9 +114,9 @@ const HDR_32_LE: &str = "
 - {size: 2, format: !Hex, type: !Le, name: 'Object File Type'}
 - {size: 2, format: !Hex, type: !Le, name: 'Instruction Set Architecture'}
 - {size: 4, format: !Int, type: !Le, name: 'ELF Version'}
-- {size: 4, format: !Hex, type: !Le, name: 'Entry Point Address'}
-- {size: 4, format: !Int, type: !Le, name: 'Program Header Offset'}
-- {size: 4, format: !Int, type: !Le, name: 'Segment Header Offset'}
+- {size: 4, format: !Ptr, type: !Le, name: 'Entry Point Address'}
+- {size: 4, format: !Ptr, type: !Le, name: 'Program Header Offset'}
+- {size: 4, format: !Ptr, type: !Le, name: 'Segment Header Offset'}
 - {size: 4, format: !Binary, type: !Le, name: 'Flags'}
 - {size: 2, format: !Int, type: !Le, name: 'Header Size'}
 - {size: 2, format: !Int, type: !Le, name: 'Program Header Size'}
@@ -138,9 +138,9 @@ const HDR_32_BE: &str = "
 - {size: 2, format: !Hex, type: !Be, name: 'Object File Type'}
 - {size: 2, format: !Hex, type: !Be, name: 'Instruction Set Architecture'}
 - {size: 4, format: !Int, type: !Be, name: 'ELF Version'}
-- {size: 4, format: !Hex, type: !Be, name: 'Entry Point Address'}
-- {size: 4, format: !Int, type: !Be, name: 'Program Header Offset'}
-- {size: 4, format: !Int, type: !Be, name: 'Segment Header Offset'}
+- {size: 4, format: !Ptr, type: !Be, name: 'Entry Point Address'}
+- {size: 4, format: !Ptr, type: !Be, name: 'Program Header Offset'}
+- {size: 4, format: !Pre, type: !Be, name: 'Segment Header Offset'}
 - {size: 4, format: !Binary, type: !Be, name: 'Flags'}
 - {size: 2, format: !Int, type: !Be, name: 'Header Size'}
 - {size: 2, format: !Int, type: !Be, name: 'Program Header Size'}
@@ -162,9 +162,9 @@ const HDR_64_LE: &str = "
 - {size: 2, format: !Hex, type: !Le, name: 'Object File Type'}
 - {size: 2, format: !Hex, type: !Le, name: 'Instruction Set Architecture'}
 - {size: 4, format: !Int, type: !Le, name: 'ELF Version'}
-- {size: 8, format: !Hex, type: !Le, name: 'Entry Point Address'}
-- {size: 8, format: !Int, type: !Le, name: 'Program Header Offset'}
-- {size: 8, format: !Int, type: !Le, name: 'Segment Header Offset'}
+- {size: 8, format: !Ptr, type: !Le, name: 'Entry Point Address'}
+- {size: 8, format: !Ptr, type: !Le, name: 'Program Header Offset'}
+- {size: 8, format: !Ptr, type: !Le, name: 'Segment Header Offset'}
 - {size: 4, format: !Binary, type: !Le, name: 'Flags'}
 - {size: 2, format: !Int, type: !Le, name: 'Header Size'}
 - {size: 2, format: !Int, type: !Le, name: 'Program Header Size'}
@@ -185,9 +185,9 @@ const HDR_64_BE: &str = "
 - {size: 2, format: !Hex, type: !Be, name: 'Object File Type'}
 - {size: 2, format: !Hex, type: !Be, name: 'Instruction Set Architecture'}
 - {size: 4, format: !Int, type: !Be, name: 'ELF Version'}
-- {size: 8, format: !Hex, type: !Be, name: 'Entry Point Address'}
-- {size: 8, format: !Int, type: !Be, name: 'Program Header Offset'}
-- {size: 8, format: !Int, type: !Be, name: 'Segment Header Offset'}
+- {size: 8, format: !Ptr, type: !Be, name: 'Entry Point Address'}
+- {size: 8, format: !Ptr, type: !Be, name: 'Program Header Offset'}
+- {size: 8, format: !Ptr, type: !Be, name: 'Segment Header Offset'}
 - {size: 4, format: !Binary, type: !Be, name: 'Flags'}
 - {size: 2, format: !Int, type: !Be, name: 'Header Size'}
 - {size: 2, format: !Int, type: !Be, name: 'Program Header Size'}
