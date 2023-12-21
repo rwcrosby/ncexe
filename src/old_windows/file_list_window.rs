@@ -19,7 +19,7 @@ use crate::{
         Margins,
         ExeWindow,
     }, 
-    windows::screen::Screen,
+    old_windows::screen::Screen,
 };
 
 // ------------------------------------------------------------------------
@@ -70,7 +70,7 @@ pub fn show(
     )?;
 
     let pw = &w.win;
-    let mpw = &mw.win;
+    // let mpw = &mw.win;
 
     // TODO Shorten filenames
     if w.avail.col < w.desired.col {
@@ -81,7 +81,7 @@ pub fn show(
 
     pw.mvaddstr(1, 2, hdr_line);
 
-    #[cfg(debug_assertions)]
+    #[cfg(scum)]
     {
         pw.mvaddstr(0, 0, 
             format!("ll {:3}: acl {:3}: acc {:3}: maxl {:3}: maxc {:3}",
@@ -124,6 +124,7 @@ pub fn show(
     let key_home_handler = key_home_generator(&w, &executables, highlight, fmt_line );
     let key_end_handler = key_end_generator(&w, &executables, highlight, fmt_line );
     let key_enter_handler = key_enter_generator(&w, &executables, fmt, colors );
+    let key_resize_handler = key_resize_generator(&w, &executables, fmt, colors );
 
     // Do it!
 
@@ -135,7 +136,7 @@ pub fn show(
     highlight(0, true);
 
     loop {
-        #[cfg(debug_assertions)]
+        #[cfg(scum)]
         pw.mvprintw(pw.get_max_y() - 1, 0,
             format!("e_l {:3}: c_l {:2}: t_i {:2}: w_i {:2}, {:?}",
                 executables.len(),
@@ -155,48 +156,12 @@ pub fn show(
             Some(Input::KeyNPage) => key_pgdown_handler(&mut win_idx, &mut top_idx)?,
             Some(Input::KeyHome) => key_home_handler(&mut win_idx, &mut top_idx)?,
             Some(Input::KeyEnd) => key_end_handler(&mut win_idx, &mut top_idx)?,
-
-            Some(Input::KeyResize) => {
-
-                // Will the existing window fit on the screen, if so jut move it
-
-                let (old_flw_y, old_flw_x) = pw.get_beg_yx();
-                let (mut new_flw_y, mut new_flw_x) = (old_flw_y, old_flw_x);
-                let (old_flw_l, old_flw_c) = pw.get_max_yx();
-
-                let (new_mw_l, new_mw_c) = mpw.get_max_yx();
-
-                if  new_mw_l >= old_flw_l {
-                    new_flw_y = (new_mw_l - old_flw_l) / 2;
-                }
-
-                if  new_mw_c >= old_flw_c {
-                    new_flw_x = (new_mw_c - old_flw_c) / 2;
-                }
-
-                pw.mvwin(new_flw_y as i32, new_flw_x as i32);
-
-                #[cfg(debug_assertions)]
-                pw.mvprintw(0, 0,
-                    format!("new mw {}/{}, old flw {}/{} {}/{}, new flw {}/{}",
-                            new_mw_l, new_mw_c,
-                            old_flw_l, old_flw_c,
-                            old_flw_y, old_flw_x,
-                            new_flw_y, new_flw_x)
-                );
-
-                // Clean up the screen
-                mpw.touch();
-                mpw.refresh();
-
-            },
-
+            Some(Input::KeyResize) => key_resize_handler(&mut win_idx, &mut top_idx)?,
             Some(Input::Character(c)) => match c {
                 'q' | '\u{1b}' => break,
                 '\n' => key_enter_handler(&mut win_idx, &mut top_idx)?,
                 _ => ()
                 }
-
             _ => (),
 
         }
@@ -504,6 +469,58 @@ fn key_enter_generator<'a>
             w.screen.win.refresh();
 
         }
+
+        Ok(())
+
+    }
+
+}
+// ------------------------------------------------------------------------
+
+fn key_resize_generator<'a>
+(
+    w: &'a ExeWindow,
+    _exes: &'a[ExeItem],
+    _fmt : &'a Formatter,
+    _colors : &'a Colors,
+) -> impl Fn(&mut i32, &mut usize) -> Result<()> + 'a
+{
+
+    move | _win_idx: &mut i32, _top_idx: &mut usize | -> Result<()> {
+
+        // Will the existing window fit on the screen, if so just move it
+
+        let pw = &w.win;
+        let mpw = &w.screen.win;
+
+        let (old_flw_y, old_flw_x) = pw.get_beg_yx();
+        let (mut new_flw_y, mut new_flw_x) = (old_flw_y, old_flw_x);
+        let (old_flw_l, old_flw_c) = pw.get_max_yx();
+
+        let (new_mw_l, new_mw_c) = mpw.get_max_yx();
+
+        if  new_mw_l >= old_flw_l {
+            new_flw_y = (new_mw_l - old_flw_l) / 2;
+        }
+
+        if  new_mw_c >= old_flw_c {
+            new_flw_x = (new_mw_c - old_flw_c) / 2;
+        }
+
+        pw.mvwin(new_flw_y as i32, new_flw_x as i32);
+
+        #[cfg(scum)]
+        pw.mvprintw(0, 0,
+            format!("new mw {}/{}, old flw {}/{} {}/{}, new flw {}/{}",
+                    new_mw_l, new_mw_c,
+                    old_flw_l, old_flw_c,
+                    old_flw_y, old_flw_x,
+                    new_flw_y, new_flw_x)
+        );
+
+        // Clean up the screen
+        mpw.touch();
+        mpw.refresh();
 
         Ok(())
 

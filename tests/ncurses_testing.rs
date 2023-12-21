@@ -1,5 +1,3 @@
-use pancurses;
-
 fn base_windows() {
 
     let mw = pancurses::initscr();

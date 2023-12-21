@@ -6,7 +6,7 @@ use anyhow::Result;
 
 use crate::{
     color::ColorSet,
-    windows::screen::Screen, 
+    old_windows::screen::Screen, 
 };
 
 // ------------------------------------------------------------------------
@@ -150,7 +150,7 @@ mod tests {
 
     use super::*;
 
-    use crate::windows::screen::Screen;
+    use crate::old_windows::screen::Screen;
 
     #[test]
     pub fn window_test_1() {

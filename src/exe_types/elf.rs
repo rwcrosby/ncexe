@@ -10,7 +10,7 @@ use crate::{
     color::Colors,
     formatter::Formatter,
     window::ExeWindow,
-    windows::{
+    old_windows::{
         header_window,
         screen::Screen,
     },

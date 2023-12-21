@@ -8,6 +8,7 @@ mod exe_types;
 mod formatter;
 mod window;
 mod windows;
+mod old_windows;
 
 use anyhow::Result;
 use clap::Parser;
@@ -16,7 +17,7 @@ use std::path::PathBuf;
 use color::Colors;
 use exe_types::ExeType;
 use formatter::Formatter;
-use windows::{
+use old_windows::{
     screen::Screen,
     file_list_window,
 };

@@ -17,7 +17,7 @@ use crate::{
     color::Colors,
     formatter::Formatter,
     window::ExeWindow,
-    windows::screen::Screen,
+    old_windows::screen::Screen,
 };
 
 use macho32::Macho32Formatter;
