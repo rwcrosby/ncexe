@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "lldb",
             "request": "launch",
@@ -99,6 +100,29 @@
                 "TERM": "xterm-256color"
             }
 
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'windows_testing'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=bytes",
+                    "--package=ncexe"
+                ],
+                "filter": {
+                    "name": "windows_testing",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "TERM": "xterm-256color"
+            }
+
         }
-    ]
+     ]
 }

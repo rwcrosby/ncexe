@@ -153,12 +153,12 @@ mod tests {
     use crate::old_windows::screen::Screen;
 
     #[test]
-    pub fn window_test_1() {
+    pub fn old_test_1() {
 
         let w = Screen::new();
         
-        w.win.printw("Curses test 1 <\u{21d1}>");
-        w.win.getch();
+        // w.win.printw("Curses test 1 <\u{21d1}>");
+        // w.win.getch();
 
         pancurses::init_pair(128, 10, 240);
         pancurses::init_pair(129, 20, 230);
@@ -179,7 +179,12 @@ mod tests {
         let x = sw.win.mvaddstr(20, 1, "Overflow");
         sw.win.mvaddstr(3, 1, format!("{}", x));
 
-        sw.win.getch();
+        let ch = sw.win.getch();
         
+        sw.win.printw(format!("{:?}", ch));
+        sw.win.refresh();
+        
+        sw.win.getch();
+
     }
 }

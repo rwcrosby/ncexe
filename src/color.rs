@@ -52,8 +52,8 @@ impl<'a> Colors<'a> {
 
     }
 
-    pub fn set(&self, name: &str) -> &ColorSet {
-        &self.map[name]
+    pub fn set(&self, name: &str) -> Result<&Box<ColorSet>> {
+        self.map.get(name).ok_or(anyhow!("Colorset {} not found", name))
     }
 
     pub fn bkgr(&self) -> usize {
@@ -146,9 +146,9 @@ fn solarize_color_pairs_1 ()
 
     let sc = solarize_colors()?;
 
-    let frame = init_color_pair(10, sc["magenta"], sc["base3"])?;
-    let title = init_color_pair(11, sc["green"], sc["base3"])?;
-    let text = init_color_pair(12, sc["red"], sc["base3"])?;
+    let frame = init_color_pair(10, sc["magenta"], sc["base2"])?;
+    let title = init_color_pair(11, sc["green"], sc["base2"])?;
+    let text = init_color_pair(12, sc["red"], sc["base2"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value: 0}))
 
@@ -161,10 +161,10 @@ fn solarize_color_pairs_2 ()
 
     let sc = solarize_colors()?;
 
-    let frame = init_color_pair(21, sc["violet"], sc["base2"])?;
-    let title = init_color_pair(22, sc["cyan"], sc["base2"])?;
-    let text = init_color_pair(23, sc["blue"], sc["base2"])?;
-    let value = init_color_pair(24, sc["green"], sc["base2"])?;
+    let frame = init_color_pair(21, sc["violet"], sc["base00"])?;
+    let title = init_color_pair(22, sc["cyan"], sc["base00"])?;
+    let text = init_color_pair(23, sc["blue"], sc["base00"])?;
+    let value = init_color_pair(24, sc["green"], sc["base00"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value}))
 

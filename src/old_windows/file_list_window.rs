@@ -54,7 +54,7 @@ pub fn show(
 
     let line_len = hdr_line.len();
 
-    let color_set = colors.set("file_list");
+    let color_set = colors.set("file_list")?;
 
     let margins = Margins{top: 2, bottom: 1, left: 2, right: 2 };
 

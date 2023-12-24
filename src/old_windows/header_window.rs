@@ -32,7 +32,7 @@ pub fn show(
     let dim = Coords{line: fmt_blk.fields.len() as i32,
                      col: (fmt_blk.max_text_len + 3 + fmt_blk.max_value_len) as i32};
 
-    let color_set = colors.set("header");
+    let color_set = colors.set("header")?;
 
     let margins = Margins{top: 1, bottom: 1, left: 2, right: 2 };
 
