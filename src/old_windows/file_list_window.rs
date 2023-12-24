@@ -3,7 +3,11 @@
 //!
 
 use anyhow::{bail, Result};
-use pancurses::{Input, A_NORMAL, A_REVERSE, COLOR_PAIR};
+use pancurses::{
+    Input, 
+    A_COLOR, 
+    A_REVERSE,
+};
 
 use crate::exe_types::{
     ETYPE_LENGTH,
@@ -54,7 +58,7 @@ pub fn show(
 
     let line_len = hdr_line.len();
 
-    let color_set = colors.set("file_list")?;
+    let color_set = &colors.get_window_set_colors("file_list")?;
 
     let margins = Margins{top: 2, bottom: 1, left: 2, right: 2 };
 
@@ -63,7 +67,7 @@ pub fn show(
     let w = ExeWindow::new(
         Coords{line: executables.len() as i32, col: line_len as i32}, 
         "Files Selected", 
-        color_set,
+        &color_set.header,
         None,
         &margins,
         mw, 
@@ -95,12 +99,16 @@ pub fn show(
     // Line handling closures
 
     let highlight = |win_idx: i32, highlight| {
+
+        let bkgr = color_set.scrollable_region.text;
+        let cp = (bkgr & A_COLOR) >> 8;
+
         pw.mvchgat(
             margins.top + win_idx,
             margins.left,
             w.avail.col,
-            if highlight { A_REVERSE } else { A_NORMAL },
-            color_set.text as i16,
+            if highlight { bkgr | A_REVERSE } else { bkgr & !A_REVERSE },
+            cp as i16,
         );
     };
 
@@ -131,7 +139,7 @@ pub fn show(
     let mut win_idx: i32 = 0;
     let mut top_idx: usize = 0;
 
-    pw.attrset(COLOR_PAIR(color_set.text as u32));
+    pw.attrset(color_set.scrollable_region.text);
     write_lines(&w.win, &executables[0..w.avail.line as usize], &fmt_line, &margins);
     highlight(0, true);
 

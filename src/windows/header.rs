@@ -4,23 +4,23 @@
 
 use anyhow::Result;
 
-use crate::color::ColorSet;
+use crate::color::WindowColors;
 use crate::windows::Coords;
 
 pub struct Header<'a> {
-    cs: &'a  ColorSet,
+    window_colors: &'a  WindowColors,
     pub pwin: pancurses::Window,
 }
 
 impl Header<'_> {
 
     pub fn new<'a> (
-        cs: &'a ColorSet, 
+        window_colors: &'a WindowColors, 
         screen_size: &Coords,
     ) -> Box<Header<'a>> 
     {
         let pwin = pancurses::newwin(2, screen_size.x, 0, 0);
-        Box::new(Header{ cs, pwin })
+        Box::new(Header{ window_colors, pwin })
     }
 
     pub fn show(&mut self, screen_size: &Coords) -> Result<()> {
@@ -30,9 +30,9 @@ impl Header<'_> {
         let size: Coords = Coords{y:  2, x: screen_size.x};
         
         self.pwin.resize(size.y, size.x);
-        self.pwin.bkgd(pancurses::COLOR_PAIR(self.cs.frame as u32));
+        self.pwin.bkgd(self.window_colors.bkgr);
 
-        show_corners(&self.pwin, &size, self.cs)?;
+        show_corners(&self.pwin, &size, self.window_colors)?;
 
         self.pwin.refresh();
         
@@ -47,7 +47,7 @@ impl Header<'_> {
         self.pwin.resize(size.y, size.x);
         self.pwin.erase();
 
-        show_corners(&self.pwin, &size, self.cs)?;
+        show_corners(&self.pwin, &size, self.window_colors)?;
 
         self.pwin.noutrefresh();
 
@@ -56,9 +56,9 @@ impl Header<'_> {
 
 }
 
-fn show_corners(win: &pancurses::Window, dim: &Coords, cs: &ColorSet) -> Result<()> {
+fn show_corners(win: &pancurses::Window, dim: &Coords, wc: &WindowColors) -> Result<()> {
     
-    win.attrset(pancurses::COLOR_PAIR(cs.title as u32));
+    win.attrset(wc.title);
     win.mvprintw(0, 0, "UL");
     win.mvprintw(dim.y - 1, 0, "LL");
     win.mvprintw(0, dim.x - 2, "UR");

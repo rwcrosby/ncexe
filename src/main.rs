@@ -36,8 +36,13 @@ pub struct Arguments {
     config: Option<PathBuf>,
 
     /// Show non-executable files in the list
-    #[clap(short, long, action)]
+    #[arg(short, long, action)]
     show_notexe: bool,
+
+    /// Theme to use 
+    #[arg(short, long, default_value="Dark")]
+    theme: String,
+    
 }
 
 // ------------------------------------------------------------------------
@@ -62,22 +67,25 @@ fn main() -> Result<()> {
         panic!("No executable files of interest found");
     }
 
-    // Initialize curses
-    let screen = Screen::new();
+    {
+        // Initialize curses
+        let screen = Screen::new();
 
-    // Setup colors
-    let colors = Colors::new()?;
-    screen.win.bkgd(pancurses::COLOR_PAIR(colors.bkgr() as u32));
-    screen.win.refresh();
+        // Setup colors
+        let colors = Colors::new(&config.theme)?;
+        screen.win.bkgd(colors.bkgr()?);
+        screen.win.refresh();
 
-    // Get format mapper
-    let formatter = Formatter::new();
+        // Get format mapper
+        let formatter = Formatter::new();
 
-    // Display file info
-    if executables.len() == 1 {
-        executables[0].show(&screen, None, &formatter, &colors)
-    } else {
-        file_list_window::show(&executables, &screen, &formatter, &colors)
+        // Display file info
+        if executables.len() == 1 {
+            executables[0].show(&screen, None, &formatter, &colors)
+        } else {
+            file_list_window::show(&executables, &screen, &formatter, &colors)
+        }
+
     }
 
 }

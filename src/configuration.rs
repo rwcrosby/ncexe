@@ -18,7 +18,7 @@ use crate::Arguments;
 #[derive(Debug, Default, PartialEq)]
 pub struct Configuration {
     /// Theme to apply to screen, not yet implemented
-    theme: String,
+    pub theme: String,
     /// Show non-executable files is the file list window?
     pub show_notexe: bool,
 }
@@ -47,7 +47,6 @@ impl<'a> Configuration {
         
         let cfile : PathBuf;
         
-
         cfile  = match &args.config {
             Some(v) => v.to_path_buf(),
             None => {
@@ -65,12 +64,10 @@ impl<'a> Configuration {
         let mut config = match std::fs::symlink_metadata(&cfile) {
             Ok(_) => load_config_file(&cfile)?,
             Err(_) => {
-                eprintln!("Config file <{}> not found", cfile.display().to_string());
-                Box::new(Configuration{theme: "No config file".to_string(),
-                                          show_notexe : false})
+                Box::new(Configuration{ theme: String::from("dark"),
+                                        show_notexe : false})
             }
         };
-
 
         if args.show_notexe {
                 config.show_notexe = true;
@@ -119,7 +116,10 @@ mod tests {
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: false}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), 
+                            config: None, 
+                            show_notexe: false,
+                            theme: String::from("Dark") }; 
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
@@ -130,7 +130,11 @@ mod tests {
 
     fn test_2() {
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: true}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), 
+                            config: None, 
+                            show_notexe: true,
+                            theme: String::from("Dark") }; 
+
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
@@ -143,7 +147,11 @@ mod tests {
         env::set_var("NCEXE_CONFIG", "tests/goodconfig.yaml");
         assert!(env::var("NCEXE_CONFIG") == Ok("tests/goodconfig.yaml".to_string()));
 
-        let arg = Arguments{exe_filename: vec!("blah".to_string()), config: None, show_notexe: true}; 
+        let arg = Arguments{exe_filename: vec!("blah".to_string()), 
+                            config: None, 
+                            show_notexe: true,
+                            theme: String::from("Dark") }; 
+
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);

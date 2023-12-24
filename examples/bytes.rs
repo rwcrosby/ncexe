@@ -1,14 +1,28 @@
 #![allow(unused)]
 fn main() {
 
-	println!("In bytes");
+    align();
+    transmute();
+    raw_pointer();
+
+    bit_ops();
 
 }
 
 
+fn bit_ops() {
+
+    let x: u32 = 0x0020_1300; // Bold + color pair 19
+
+    println!("Bit_ops {:08x} {:08x} {:08x}", 
+        x,  
+        x & pancurses::A_COLOR,
+        (x & pancurses::A_COLOR) >> 8 );
+
+}
+
 // https://stackoverflow.com/questions/59289331/how-do-i-map-data-from-a-vector-of-bytes-to-a-structure-in-rust
 
-#[test]
 // align_to doesn't move the data, just sets up another slice
 pub fn align() {
     
@@ -36,7 +50,6 @@ pub fn align() {
     
 }
 
-#[test]
 // transmute creats a copy of the dataq
 pub fn transmute() {
     
@@ -58,7 +71,6 @@ pub fn transmute() {
     
 }
 
-#[test]
 // raw_pointer seem to be the way to go, no data movement, just reference to the memory
 // read_unaligned moves the data
 pub fn raw_pointer() {

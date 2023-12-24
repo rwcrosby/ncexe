@@ -5,7 +5,7 @@
 use anyhow::Result;
 
 use crate::{
-    color::ColorSet,
+    color::WindowColors,
     old_windows::screen::Screen, 
 };
 
@@ -45,7 +45,7 @@ pub struct ExeWindow<'a> {
     pub margins: &'a Margins,
 
     /// Window margins
-    pub colors: &'a ColorSet,
+    pub colors: &'a WindowColors,
 
     /// Reference to the main window
     // pub main_window : &'a MainWindow,
@@ -63,7 +63,7 @@ impl<'a> ExeWindow<'a> {
 
     pub fn new( desired: Coords,
                 title : &str,
-                colors : &'a ColorSet,
+                colors : &'a WindowColors,
                 parent: Option<&'a ExeWindow>,
                 margins: &'a Margins,
                 screen: &'a Screen ) -> Result<Box<ExeWindow<'a>>> {
@@ -126,15 +126,15 @@ impl<'a> ExeWindow<'a> {
         
         // Show the title
         
-        w.bkgd(pancurses::COLOR_PAIR(colors.frame as u32));
-        w.attrset(pancurses::COLOR_PAIR(colors.frame as u32));
+        w.bkgd(colors.title);
+        w.attrset(colors.title);
         w.draw_box(0, 0);
         
         let display_title = format!(" {} ", title);
         
         if display_title.len() as i32 <=  cols - margins.left - margins.right {
             let y = (cols - display_title.len() as i32) / 2;
-            w.attrset(pancurses::COLOR_PAIR(colors.title as u32));
+            w.attrset(colors.title);
             w.mvprintw(0, y as i32, display_title);
         }
 
@@ -165,7 +165,7 @@ mod tests {
         pancurses::init_pair(130, 30, 220);
         pancurses::init_pair(131, 40, 210);
 
-        let cs = ColorSet{frame: 128, title: 129, text: 130, value: 131};
+        let cs = WindowColors{bkgr: 0, title: 129, text: 130, value: 131};
         let margins = Margins{top: 1, bottom: 2, left: 3, right: 4 };
 
         let sw = ExeWindow::new(Coords{line: 10, col: 10}, 

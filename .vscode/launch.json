@@ -59,6 +59,22 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug example 'window_testing'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=window_testing",
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "TERM": "xterm-256color"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'ncexe'",
             "cargo": {
                 "args": [
