@@ -7,6 +7,8 @@ use hex;
 use pancurses;
 use std::collections::HashMap;
 
+type ColorMap<'a> = Box<HashMap<&'a str, u8>>;
+
 // ------------------------------------------------------------------------
 /// Color numbers for the various parts of the window
 
@@ -41,14 +43,18 @@ impl<'a> Colors<'a> {
 
         pancurses::start_color();
 
+        let color_map = color_map()?;
+
         Ok(
             Box::new(
                 Colors{map: 
                     HashMap::from([
-                        ("file_list", solarize_color_pairs_1()?),
-                        ("header", solarize_color_pairs_2()?),
+                        ("file_list", color_pairs_1(&color_map)?),
+                        ("header", color_pairs_2(&color_map)?),
                     ]),
-                bkgr: init_color_pair(1, 15, 14)?}))
+                bkgr: init_color_pair(1, 15, color_map["base2"])?}
+            )
+        )
 
     }
 
@@ -59,28 +65,6 @@ impl<'a> Colors<'a> {
     pub fn bkgr(&self) -> usize {
         self.bkgr
     }
-
-}
-
-// ------------------------------------------------------------------------
-
-fn colour_dist( r1: usize, g1: usize, b1: usize, r2: usize, g2: usize, b2: usize ) -> isize {
-
-    let rd = r1 as isize - r2 as isize;
-    let gd = g1 as isize - g2 as isize;
-    let bd = b1 as isize - b2 as isize;
-
-    rd * rd + gd * gd + bd * bd 
-
-}
-
-// ------------------------------------------------------------------------
-
-fn colour_to_6cube(v: usize) -> usize {
-
-    if v < 48       { 0 }
-    else if v < 114 { 1 }
-    else              { (v - 35) / 40 }
 
 }
 
@@ -97,58 +81,13 @@ fn init_color_pair(pair_no: usize, fgr_no: u8, bkgr_no: u8 )
 }
 
 // ------------------------------------------------------------------------
-/// From: https://github.com/tmux/tmux/blob/master/colour.c
 
-fn rgb_to_xterm256(rgb_str: &str) -> Result<u8> {
-
-    const Q2C: [usize; 6] = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ];
-
-
-    let hexstr = hex::decode(rgb_str)
-        .context(anyhow!("Bad rgb string {}", rgb_str))?;
-    let r = hexstr[0] as usize;
-    let g = hexstr[1] as usize;
-    let b = hexstr[2] as usize;
-
-    let qr = colour_to_6cube(r); let cr = Q2C[qr as usize];
-	let qg = colour_to_6cube(g); let cg = Q2C[qg as usize];
-	let qb = colour_to_6cube(b); let cb = Q2C[qb as usize];
-
-    // If we have hit the colour exactly, return early.
-	if cr == r && cg == g && cb == b {
-        return Ok((16 + (36 * qr) + (6 * qg) + qb) as u8);
-    }
-
-    // Work out the closest grey (average of RGB).
-	let grey_avg = (r + g + b) / 3;
-
-    let grey_idx = 	if grey_avg > 238 {
-	    	23
-        } else {
-		    (grey_avg - 3) / 10
-        };
-	let grey = 8 + (10 * grey_idx);    
-
-    // Is grey or 6x6x6 colour closest? 
-    Ok((if colour_dist(cr, cg, cb, r, g, b) > colour_dist( grey, grey, grey, r, g, b) { 
-             232 + grey_idx 
-        } else {
-            16 + (36 * qr) + (6 * qg) + qb
-        } ) as u8
-    )
-
-}
-
-// ------------------------------------------------------------------------
-
-fn solarize_color_pairs_1 ()
+fn color_pairs_1 (cm: &ColorMap)
     -> Result<Box<ColorSet>> {
 
-    let sc = solarize_colors()?;
-
-    let frame = init_color_pair(10, sc["magenta"], sc["base2"])?;
-    let title = init_color_pair(11, sc["green"], sc["base2"])?;
-    let text = init_color_pair(12, sc["red"], sc["base2"])?;
+    let frame = init_color_pair(10, cm["base03"], cm["base0"])?;
+    let title = init_color_pair(11, cm["red"], cm["base0"])?;
+    let text = init_color_pair(12, cm["magenta"], cm["base0"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value: 0}))
 
@@ -156,27 +95,46 @@ fn solarize_color_pairs_1 ()
 
 // ------------------------------------------------------------------------
 
-fn solarize_color_pairs_2 ()
+fn color_pairs_2 (cm: &ColorMap)
     -> Result<Box<ColorSet>> {
 
-    let sc = solarize_colors()?;
-
-    let frame = init_color_pair(21, sc["violet"], sc["base00"])?;
-    let title = init_color_pair(22, sc["cyan"], sc["base00"])?;
-    let text = init_color_pair(23, sc["blue"], sc["base00"])?;
-    let value = init_color_pair(24, sc["green"], sc["base00"])?;
+    let frame = init_color_pair(21, cm["base03"], cm["base1"])?;
+    let title = init_color_pair(22, cm["red"], cm["base1"])?;
+    let text = init_color_pair(23, cm["magenta"], cm["base1"])?;
+    let value = init_color_pair(24, cm["cyan"], cm["base1"])?;
 
     Ok(Box::new(ColorSet{frame, title, text, value}))
 
 }
 
 // ------------------------------------------------------------------------
+/// Setup colors, see:
+/// https://www.ditig.com/publications/256-colors-cheat-sheet
 
-fn solarize_colors<'a> () 
+pub fn color_map<'a> () 
     -> Result<Box<HashMap<&'a str, u8>>>
 {
 
-    let solarize_map = Box::new(HashMap::from([
+    let color_map = Box::new(HashMap::from([
+        ("base03", 0xe8), 
+        ("base02", 0xec),
+        ("base01", 0xef),
+        ("base00", 0xf2),
+        ("base0", 0xf5),
+        ("base1", 0xf8),
+        ("base2", 0xfb),
+        ("base3", 0xff),
+        ("yellow", 226),
+        ("orange", 166),
+        ("red", 160),
+        ("magenta", 127),
+        ("violet", 62),
+        ("blue", 32),
+        ("cyan", 43),
+        ("green", 34),
+    ]));
+
+/*     let solarize_map = Box::new(HashMap::from([
         ("base03", rgb_to_xterm256("000000")?), 
         ("base02", rgb_to_xterm256("073642")?),
         ("base01", rgb_to_xterm256("586e75")?),
@@ -194,9 +152,73 @@ fn solarize_colors<'a> ()
         ("cyan", rgb_to_xterm256("2aa198")?),
         ("green", rgb_to_xterm256("859900")?),
     ]));
-
-    Ok(solarize_map)
+ */    
+    Ok(color_map)
     
+}
+
+// ------------------------------------------------------------------------
+/// From: https://github.com/tmux/tmux/blob/master/colour.c
+
+fn _rgb_to_xterm256(rgb_str: &str) -> Result<u8> {
+
+    const Q2C: [usize; 6] = [0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ];
+
+
+    let hexstr = hex::decode(rgb_str)
+        .context(anyhow!("Bad rgb string {}", rgb_str))?;
+    let r = hexstr[0] as usize;
+    let g = hexstr[1] as usize;
+    let b = hexstr[2] as usize;
+
+    let qr = _colour_to_6cube(r); let cr = Q2C[qr as usize];
+	let qg = _colour_to_6cube(g); let cg = Q2C[qg as usize];
+	let qb = _colour_to_6cube(b); let cb = Q2C[qb as usize];
+
+    // If we have hit the colour exactly, return early.
+	if cr == r && cg == g && cb == b {
+        return Ok((16 + (36 * qr) + (6 * qg) + qb) as u8);
+    }
+
+    // Work out the closest grey (average of RGB).
+	let grey_avg = (r + g + b) / 3;
+
+    let grey_idx = 	if grey_avg > 238 {
+	    	23
+        } else {
+		    (grey_avg - 3) / 10
+        };
+	let grey = 8 + (10 * grey_idx);    
+
+    // Is grey or 6x6x6 colour closest? 
+    Ok((if _colour_dist(cr, cg, cb, r, g, b) > _colour_dist( grey, grey, grey, r, g, b) { 
+             232 + grey_idx 
+        } else {
+            16 + (36 * qr) + (6 * qg) + qb
+        } ) as u8
+    )
+
+}
+
+// ------------------------------------------------------------------------
+
+fn _colour_dist( r1: usize, g1: usize, b1: usize, r2: usize, g2: usize, b2: usize ) -> isize {
+
+    let rd = r1 as isize - r2 as isize;
+    let gd = g1 as isize - g2 as isize;
+    let bd = b1 as isize - b2 as isize;
+
+    rd * rd + gd * gd + bd * bd 
+
+}
+
+// ------------------------------------------------------------------------
+
+fn _colour_to_6cube(v: usize) -> usize {
+
+    if v < 48       { 0 }
+    else if v < 114 { 1 }
+    else              { (v - 35) / 40 }
 
 }
 
@@ -260,16 +282,18 @@ mod tests {
     #[test]
     fn rgb_2_xterm() {
 
-        let c1 = rgb_to_xterm256("b58900").unwrap();
-        let c2 = rgb_to_xterm256("dc322f").unwrap();
-        let c3 = rgb_to_xterm256("d33682").unwrap();
+        let c1 = _rgb_to_xterm256("b58900").unwrap();
+        let c2 = _rgb_to_xterm256("dc322f").unwrap();
+        let c3 = _rgb_to_xterm256("d33682").unwrap();
         println!("Yellow {}, Red {}, Magenta {}", c1, c2, c3);
 
         assert!(c1==136);
         assert!(c2==166);
         assert!(c3==168);
 
-        let c2 = solarize_colors();
+        let cs = color_map().unwrap();
+
+        let c2 = color_pairs_1(&cs);
         println!{"{:?}", c2};
 
     }
