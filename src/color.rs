@@ -121,7 +121,6 @@ impl Colors {
         let _ = pancurses::has_colors()  || bail!("Colors not supported");
         pancurses::start_color();
 
-
         let yml: YamlColorThemes = serde_yaml::from_str(YAML).unwrap();
         let themes = to_color_themes(&yml, 10)?;
 
