@@ -3,7 +3,6 @@
 //! 
 
 use anyhow::Result;
-use pancurses::COLOR_PAIR;
 
 use crate::{
     color::Colors,
@@ -57,12 +56,12 @@ pub fn show(
         pw.mv(idx as i32 + margins.top, 
               margins.left);
 
-        pw.attrset(COLOR_PAIR(color_set.text as u32));
+        pw.attrset(color_set.text);
         pw.addstr(format!("{fname:>nl$.nl$} : ", 
                           nl = fmt_blk.max_text_len,
                           fname=fld.y_field.name));
 
-        pw.attrset(COLOR_PAIR(color_set.value as u32));
+        pw.attrset(color_set.value);
         pw.addstr((fld.fmt_fn)(df));
 
     };

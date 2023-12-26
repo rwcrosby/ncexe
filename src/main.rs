@@ -7,7 +7,7 @@ mod configuration;
 mod exe_types;
 mod formatter;
 mod window;
-mod windows;
+// mod windows;
 mod old_windows;
 
 use anyhow::Result;
@@ -23,7 +23,7 @@ use old_windows::{
 };
 
 // ------------------------------------------------------------------------
-/// Display executable file information
+/// Command line argument format
 
 #[derive(Parser, Default, Debug)]
 pub struct Arguments {
@@ -40,7 +40,7 @@ pub struct Arguments {
     show_notexe: bool,
 
     /// Theme to use 
-    #[arg(short, long, default_value="Dark")]
+    #[arg(short, long, default_value="dark")]
     theme: String,
     
 }

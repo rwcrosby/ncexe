@@ -63,10 +63,8 @@ impl<'a> Configuration {
         
         let mut config = match std::fs::symlink_metadata(&cfile) {
             Ok(_) => load_config_file(&cfile)?,
-            Err(_) => {
-                Box::new(Configuration{ theme: String::from("dark"),
-                                        show_notexe : false})
-            }
+            Err(_) => Box::new(Configuration{ theme: args.theme.clone(),
+                                              show_notexe : false})
         };
 
         if args.show_notexe {

@@ -19,7 +19,7 @@ fn main() {
     let cs1 = colors.get_window_set_colors("file_list").unwrap();
     let cs2 = colors.get_window_set_colors("file_header").unwrap();
 
-    screen.win.bkgd(pancurses::COLOR_PAIR(cs1.header.text as u32));
+    screen.win.bkgd(cs1.header.text);
     screen.win.refresh();
 
     let mut hdr_win = header::Header::new(&cs1.header, &screen_size );
