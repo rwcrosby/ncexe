@@ -12,23 +12,18 @@ use pancurses::{
 use crate::exe_types::{
     ETYPE_LENGTH,
     ExeType,
-    ExeFormat,
 };
 
 use crate::{
     Formatter, 
     color::Colors,
-    window::{
-        Coords,
-        Margins,
-        ExeWindow,
-    }, 
-    old_windows::screen::Screen,
+    exe_types::Executable,
+    windows::screen::Screen,
 };
 
 // ------------------------------------------------------------------------
 
-type ExeItem<'a> = Box<dyn ExeFormat + 'a>;
+type ExeItem<'a> = Box<dyn Executable + 'a>;
 type ExeList<'a> = Vec<ExeItem<'a>>;
 
 // ------------------------------------------------------------------------
@@ -83,6 +78,8 @@ pub fn show(
               w.avail.col);
     }
 
+    let hdr_len = hdr_line.len();
+
     pw.mvaddstr(1, 2, hdr_line);
 
     #[cfg(scum)]
@@ -113,6 +110,9 @@ pub fn show(
     };
 
     let fmt_line = |exe: &ExeItem| -> String {
+
+        exe.as_line(hdr_len);
+
         format!(
             "{etype:l0$.l0$} {fname:l1$.l1$} {fsize:10}",
             l0 = ETYPE_LENGTH,
@@ -121,6 +121,8 @@ pub fn show(
             fname = exe.filename(),
             fsize = exe.len()
         )
+
+
     };
 
     // Create key handler closures

@@ -4,34 +4,60 @@
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::{
-  color::Colors,
-  formatter::Formatter,
-  window::ExeWindow,
-  old_windows::{
-    header_window,
-    screen::Screen,
-  },
+    color::Colors,
+    formatter::Formatter,
+    windows::{
+        FSIZE_LENGTH,
+        file_list_window::FnameFn,
+        line::Line,
+        screen::Screen,
+    },
 };
-use super::ExeFormat;
+
+use super::{
+    ETYPE_LENGTH,
+    Executable
+};
 
 // ------------------------------------------------------------------------
-#[derive(Debug)]
-pub struct Macho64Formatter<'a> {
-  filename: &'a str,
-  mmap: Mmap,
+// #[derive(Debug)]
+pub struct MachO64<'a> {
+    filename: &'a str,
+    mmap: Mmap,
+    fname_fn: Option<Rc<FnameFn>>,
 }
 
 // ------------------------------------------------------------------------
 
-impl Macho64Formatter<'_> {
+impl<'a> MachO64<'a> {
 
-    pub fn new( filename : &str,
-                mmap : Mmap) -> Box<dyn ExeFormat + '_> {
+    pub fn new( filename: &'a str,
+                mmap: Mmap,
+    ) -> Box<dyn Executable + 'a> {
 
-        Box::new(Macho64Formatter{filename, mmap})
+        Box::new(MachO64{filename, mmap, fname_fn: None})
+
+    }
+
+}
+
+// ------------------------------------------------------------------------
+// Return a file list line 
+
+impl Line for MachO64<'_> {
+
+    fn as_line(&self, sc: usize) -> String {
+
+        let fname_fn = self.fname_fn.as_ref().unwrap();
+
+        format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
+            tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
+            ml=FSIZE_LENGTH, size=self.mmap.len(),
+            fname=fname_fn(sc, self.filename)
+        )
 
     }
 
@@ -39,7 +65,7 @@ impl Macho64Formatter<'_> {
 
 // ------------------------------------------------------------------------
 
-impl ExeFormat for Macho64Formatter<'_> {
+impl Executable for MachO64<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -57,64 +83,67 @@ impl ExeFormat for Macho64Formatter<'_> {
         self.mmap.len()
     }
 
+    // fn as_line(&self, max_len: usize) -> String {
+    //   Line::as_line(self, max_len)
+    // }
+
     fn show(
         &self, 
-        screen : &Screen,
-        parent : Option<&ExeWindow>,
-        fmt: &Formatter,
-        colors: &Colors
+        _screen : &Screen,
+        _fmt: &Formatter,
+        _colors: &Colors
     ) -> Result<()> {
 
-        let fmt_blk = fmt.from_str(HEADER)?;
+      Ok(())
 
-        header_window::show(
-            screen,
-            parent, 
-            colors, 
-            "Macho-O 64 Header", 
-            &fmt_blk, 
-            self.mmap.deref())
+    }
 
+    fn to_line(&self) -> &dyn Line {
+        self
+    }
+
+    fn set_fname_fn(&mut self, fname_fn: Rc<FnameFn>) {
+        self.fname_fn = Some(fname_fn);
     }
 
 }
 
 // ------------------------------------------------------------------------
 
-const HEADER: &str = "
+const _HEADER: &str = "
 ---
 
-- name: Magic Number 
-  format: !Hex
-  type: !Le
-  size: 4
-- name: CPU Type 
-  format: !Hex
-  type: !Le
-  size: 4
-- name: CPU Sub-Type 
-  format: !Hex
-  type: !Le
-  size: 4
-- name: File Type 
-  type: !Le
-  format: !Hex
-  size: 4
-- name: Load Commands
-  type: !Le
-  format: !Int
-  size: 4
-- name: Load Command Length
-  type: !Le
-  format: !Ptr
-  size: 4
-- name: Flags
-  type: !Le
-  format: !Binary
-  size: 4
-- name: Reserved
-  type: !Ignore
-  format: !Char
-  size: 4
+-   name: Magic Number 
+    format: !Hex
+    type: !Le
+    size: 4
+-   name: CPU Type 
+    format: !Hex
+    type: !Le
+    size: 4
+-   name: CPU Sub-Type 
+    format: !Hex
+    type: !Le
+    size: 4
+-   name: File Type 
+    type: !Le
+    format: !Hex
+    size: 4
+-   name: Load Commands
+    type: !Le
+    format: !Int
+    size: 4
+-   name: Load Command Length
+    type: !Le
+    format: !Ptr
+    size: 4
+-   name: Flags
+    type: !Le
+    format: !Binary
+    size: 4
+-   name: Reserved
+    type: !Ignore
+    format: !Char
+    size: 4
 
 ";

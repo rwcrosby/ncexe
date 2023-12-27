@@ -6,9 +6,7 @@ mod color;
 mod configuration;
 mod exe_types;
 mod formatter;
-mod window;
-// mod windows;
-mod old_windows;
+mod windows;
 
 use anyhow::Result;
 use clap::Parser;
@@ -17,9 +15,9 @@ use std::path::PathBuf;
 use color::Colors;
 use exe_types::ExeType;
 use formatter::Formatter;
-use old_windows::{
-    screen::Screen,
+use windows::{
     file_list_window,
+    screen::Screen,
 };
 
 // ------------------------------------------------------------------------
@@ -56,7 +54,7 @@ fn main() -> Result<()> {
     let config = configuration::Configuration::new(&args)?;
 
     // Build the list of executable objects
-    let executables: Vec<_> = args.exe_filename
+    let mut executables: Vec<_> = args.exe_filename
         .iter()
         .map(|fname| exe_types::new(fname))
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
@@ -81,9 +79,9 @@ fn main() -> Result<()> {
 
         // Display file info
         if executables.len() == 1 {
-            executables[0].show(&screen, None, &formatter, &colors)
+            executables[0].show(&screen, &formatter, &colors)
         } else {
-            file_list_window::show(&executables, &screen, &formatter, &colors)
+            file_list_window::show(&mut executables, &screen, &formatter, &colors)
         }
 
     }

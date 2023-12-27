@@ -17,6 +17,7 @@ impl Screen {
         pancurses::noecho();
         win.win.keypad(true);
         win.win.refresh();
+        pancurses::curs_set(0);
 
         win
 

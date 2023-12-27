@@ -2,8 +2,9 @@
 //! Modules comprising the window manager
 //! 
 
-#![allow(dead_code)]
+// #![allow(dead_code)]
 
+pub mod file_list_window;
 pub mod footer;
 pub mod header;
 pub mod line;
@@ -25,19 +26,19 @@ use crate::windows::{
 
 #[derive(Debug)]
 pub struct Coords {
-    pub y: i32,
-    pub x: i32,
+    pub y: usize,
+    pub x: usize,
 }
 
 impl From<(i32, i32)> for Coords {
 
     fn from(value: (i32, i32)) -> Self {
-
-        Coords{y: value.0, x: value.1}
-
+        Coords{y: value.0 as usize, x: value.1 as usize}
     }
 
 }
+
+pub const FSIZE_LENGTH: usize = 10;
 
 // ------------------------------------------------------------------------
 /// The set of widnows (header, scrollable region, footer)
@@ -69,6 +70,7 @@ impl WindowSet<'_> {
         self.hdr_win.show(&size)?;
         self.scr_win.show(&size)?;
         self.ftr_win.show(&size)?;
+        pancurses::doupdate();
         
         // Loop handling keystrokes
 
@@ -86,7 +88,8 @@ impl WindowSet<'_> {
                     _ => (),
                     },
 
-                _ => (),
+                Some(c) => self.scr_win.handle_key(c)?,
+                None => (),
     
             };
 

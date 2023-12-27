@@ -10,7 +10,7 @@ pub struct Screen {
 }
 
 impl Screen {
-    pub fn new() -> Screen {
+    pub fn _new() -> Screen {
         let win = Screen {
             win: pancurses::initscr(),
         };
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     #[ignore]
     pub fn test_1() {
-        let w = Screen::new();
+        let w = Screen::_new();
         w.win.printw("Curses test 1");
         w.win.getch();
     }

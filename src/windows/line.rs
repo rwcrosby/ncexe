@@ -4,4 +4,6 @@
 
 pub trait Line {
 
+    fn as_line(&self, max_len: usize) -> String;
+
 }

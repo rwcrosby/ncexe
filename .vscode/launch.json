@@ -43,6 +43,11 @@
                 }
             },
             "args": ["target/debug/ncexe", 
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
+                     "target/release/ncexe",
                      "target/release/ncexe",
                      "target/release/ncexe",
                      "target/release/ncexe",
@@ -51,7 +56,6 @@
                      "target/release/ncexe",
                      "target/release/ncexe"],
             "cwd": "${workspaceFolder}",
-            "console": "externalTerminal",
             "env": {
                 "TERM": "xterm-256color"
             }

@@ -4,11 +4,6 @@
 
 use anyhow::Result;
 
-use crate::{
-    color::WindowColors,
-    old_windows::screen::Screen, 
-};
-
 // ------------------------------------------------------------------------
 /// Y/X coordinates
 #[derive(Debug)]
@@ -150,7 +145,7 @@ mod tests {
 
     use super::*;
 
-    use crate::old_windows::screen::Screen;
+    use crate::windows::screen::Screen;
 
     #[test]
     pub fn old_test_1() {

@@ -12,7 +12,7 @@ use crate::{
         ExeWindow,
         Margins,
     },
-    old_windows::screen::Screen,
+    windows::screen::Screen,
 };
 
 // ------------------------------------------------------------------------

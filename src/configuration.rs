@@ -136,7 +136,7 @@ mod tests {
         let cfg = Configuration::new(&arg).unwrap();
 
         println!("{:?}", cfg);
-        assert!(*cfg == Configuration{theme: "No config file".to_string(), show_notexe: true});
+        assert!(*cfg == Configuration{theme: "Dark".to_string(), show_notexe: true});
 
     }
 

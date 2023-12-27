@@ -9,14 +9,14 @@ use std::ops::Deref;
 use crate::{
     color::Colors,
     formatter::Formatter,
-    window::ExeWindow,
-    old_windows::{
-        header_window,
+    windows::{
+        line::Line,
         screen::Screen,
     },
 };
+
 use super::{
-    ExeFormat,
+    Executable,
     ExeType,
 };
 
@@ -33,7 +33,7 @@ pub struct ELFFormatter<'a> {
 impl ELFFormatter<'_> {
 
     pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn ExeFormat + '_> {
+            mmap : Mmap) -> Box<dyn Executable + '_> {
 
         Box::new(ELFFormatter{filename, mmap})
 
@@ -43,7 +43,17 @@ impl ELFFormatter<'_> {
 
 // ------------------------------------------------------------------------
 
-impl ExeFormat for ELFFormatter<'_> {
+impl Line for ELFFormatter<'_> {
+
+    fn as_line(&self, _max_len: usize) -> String {
+        String::from("ELF on a shelf")
+    }
+
+}
+
+// ------------------------------------------------------------------------
+
+impl Executable for ELFFormatter<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -63,10 +73,9 @@ impl ExeFormat for ELFFormatter<'_> {
 
     fn show(
         &self,
-        screen : &Screen,
-        parent : Option<&ExeWindow>,
+        _screen : &Screen,
         fmt: &Formatter,
-        colors: &Colors
+        _colors: &Colors
     ) -> Result<()> {
 
         let mmap_slice = self.mmap.deref();
@@ -85,16 +94,23 @@ impl ExeFormat for ELFFormatter<'_> {
             v => bail!("Invalid ELF bit length {:02x}", v)
         };
 
-        let fmt_blk = fmt.from_str(fmt_yaml)?;
+        let _fmt_blk = fmt.from_str(fmt_yaml)?;
 
-        header_window::show(
+/*         header_window::show(
             screen,
             parent, 
             colors, 
             "ELF Header", 
             &fmt_blk, 
             mmap_slice)
+ */
 
+        Ok(())
+
+    }
+
+    fn to_line(&self) -> &dyn Line {
+        self
     }
 
 

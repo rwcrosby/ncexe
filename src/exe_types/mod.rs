@@ -11,37 +11,45 @@ use memmap2::Mmap;
 use std::{
     fmt,
     fs::File,
+    rc::Rc,
 };
 
 use crate::{
     color::Colors,
     formatter::Formatter,
-    window::ExeWindow,
-    old_windows::screen::Screen,
+    windows::{
+        file_list_window::FnameFn,
+        line::Line,
+        screen::Screen, 
+    },
 };
 
 use macho32::Macho32Formatter;
-use macho64::Macho64Formatter;
+use macho64::MachO64;
 use elf::ELFFormatter;
 
 // ------------------------------------------------------------------------
 /// Trait to be implemented by the various executable handlers
-pub trait ExeFormat: std::fmt::Debug {
+pub trait Executable {
 
     fn to_string(&self) -> String { String::from("") }
     fn exe_type(&self) -> ExeType;
     fn len(&self) -> usize { 0 }
     fn filename(&self) -> &str {""}
+    // fn as_line(&self, _max_len: usize) -> String {String::from("Not implemented")}
 
     fn show(&self, 
             _mw : &Screen,
-            _parent: Option<&ExeWindow>,
             _fmt: &Formatter,
             _colors: &Colors)
         -> Result<()>
     { 
         Ok(())
     }
+
+    fn to_line(&self) -> &dyn Line;
+
+    fn set_fname_fn(&mut self, _fname_dn: Rc<FnameFn>) { () }
 
 }
 
@@ -81,7 +89,7 @@ pub struct NotExecutable<'a> {
     pub msg: String,
 }
 
-impl ExeFormat for NotExecutable<'_> {
+impl Executable for NotExecutable<'_> {
     fn to_string(&self) -> String {
         format!("Not an Executable: {}: {}", self.filename, self.msg)
     }
@@ -91,12 +99,22 @@ impl ExeFormat for NotExecutable<'_> {
     fn filename(&self) -> &str {
         self.filename
     }
+    fn to_line(&self) -> &dyn Line {
+        self
+    }
+}
+
+impl Line for NotExecutable<'_> {
+
+    fn as_line(&self, _max_len: usize) -> String {
+        String::from("Not Executable")
+    }
 
 }
 
 // ------------------------------------------------------------------------
 pub fn new(filename: &str) 
-    -> Box<dyn ExeFormat + '_> 
+    -> Box<dyn Executable + '_> 
 {
     let fd = match File::open(filename) {
         Ok(v) => v,
@@ -128,7 +146,7 @@ pub fn new(filename: &str)
     let raw_type = unsafe { *(mmap.as_ptr() as *const u32) };
     match raw_type {
         0xfeedface => Macho32Formatter::new(filename, mmap),
-        0xfeedfacf => Macho64Formatter::new(filename, mmap),
+        0xfeedfacf => MachO64::new(filename, mmap),
         0x7f454c46 => ELFFormatter::new(filename, mmap),
         0x464c457f => ELFFormatter::new(filename, mmap),
         // 0xcafebabe => ExeType::UNIVBIN,

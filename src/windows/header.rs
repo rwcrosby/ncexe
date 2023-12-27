@@ -10,59 +10,60 @@ use crate::windows::Coords;
 pub struct Header<'a> {
     window_colors: &'a  WindowColors,
     pub pwin: pancurses::Window,
+    line2_fn: &'a dyn Fn(usize) -> &'a str,
 }
 
 impl Header<'_> {
 
     pub fn new<'a> (
         window_colors: &'a WindowColors, 
-        screen_size: &Coords,
+        line2_fn: &'a dyn Fn(usize) -> &'a str,
     ) -> Box<Header<'a>> 
     {
-        let pwin = pancurses::newwin(2, screen_size.x, 0, 0);
-        Box::new(Header{ window_colors, pwin })
+        let pwin = pancurses::newwin(2, 1, 0, 0);
+        Box::new(Header{ window_colors, pwin, line2_fn })
     }
 
-    pub fn show(&mut self, screen_size: &Coords) -> Result<()> {
-
+    pub fn show(&mut self, size: &Coords) -> Result<()> {
+        self.paint(size, true)
+    }
+    
+    pub fn resize(&mut self, size: &Coords) -> Result<()> {
+        self.paint(size, false)
+    }
+    
+    fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
+        
         // Size is 2 lines by full width
-        
-        let size: Coords = Coords{y:  2, x: screen_size.x};
-        
-        self.pwin.resize(size.y, size.x);
-        self.pwin.bkgd(self.window_colors.bkgr);
 
-        show_corners(&self.pwin, &size, self.window_colors)?;
+        let size: Coords = Coords{y:  2, x: size.x};
 
-        self.pwin.refresh();
-        
-        Ok(())
+        self.pwin.resize(i32::try_from(size.y)?, i32::try_from(size.x)?);
+        if init {
+            self.pwin.bkgd(self.window_colors.bkgr)
+        } else {
+            self.pwin.erase()
+        };
 
-    }
-
-    pub fn resize(&mut self, new_size: &Coords) -> Result<()> {
-
-        let size: Coords = Coords{y:  2, x: new_size.x};
-
-        self.pwin.resize(size.y, size.x);
-        self.pwin.erase();
+        let line2 = (self.line2_fn)(size.x);
+        self.pwin.attrset(self.window_colors.title);
+        self.pwin.mvprintw(1, 0, line2);
 
         show_corners(&self.pwin, &size, self.window_colors)?;
 
         self.pwin.noutrefresh();
 
         Ok(())
+
     }
 
 }
 
-fn show_corners(win: &pancurses::Window, dim: &Coords, wc: &WindowColors) -> Result<()> {
+fn show_corners(win: &pancurses::Window, size: &Coords, wc: &WindowColors) -> Result<()> {
     
     win.attrset(wc.title);
     win.mvprintw(0, 0, "UL");
-    win.mvprintw(dim.y - 1, 0, "LL");
-    win.mvprintw(0, dim.x - 2, "UR");
-    win.mvprintw(dim.y - 1, dim.x - 2, "LR");
+    win.mvprintw(0, i32::try_from(size.x).unwrap() - 2, "UR");
 
     Ok(())
 }

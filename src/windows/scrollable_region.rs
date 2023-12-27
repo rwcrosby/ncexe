@@ -3,66 +3,308 @@
 //! 
 
 use anyhow::Result;
+use pancurses::{
+    A_REVERSE,
+    Input
+};
 
 use crate::windows::Coords;
 use crate::color::WindowColors;
 
+use super::line::Line;
+
+// ------------------------------------------------------------------------
+
 pub struct ScrollableRegion<'a> {
+
     window_colors: &'a  WindowColors,
+
     pub pwin: pancurses::Window,
+
+    /// Dimensions of the window
+    size: Coords,
+
+    /// set of line objects to display
+    lines : &'a mut Vec<&'a dyn Line>,
+
+    /// Index into lines of the top line in the window
+    top_idx: usize,
+
+    /// Index into the window of the currently selected line
+    win_idx: usize,
 }
 
-impl ScrollableRegion<'_> {
+impl<'a> ScrollableRegion<'a> {
 
-    pub fn new<'a> (
-        window_colors: &'a WindowColors, 
-        screen_size: &Coords,
+    // --------------------------------------------------------------------
+
+    pub fn new (
+        window_colors: &'a WindowColors,
+        lines: &'a mut Vec<&'a dyn Line >
     ) -> Box<ScrollableRegion<'a>> 
     {
-        let pwin = pancurses::newwin(1, screen_size.x, 2, 0);
-        Box::new(ScrollableRegion{ window_colors, pwin })
+
+        let pwin = pancurses::newwin(1, 1, 2, 0); 
+        pwin.keypad(true);
+
+        Box::new(ScrollableRegion{ 
+            window_colors, 
+            pwin,
+            size: Coords{y: 0, x: 0},
+            lines,
+            top_idx: 0,
+            win_idx: 0,
+        })
     }
 
+    // --------------------------------------------------------------------
+
     pub fn show(&mut self, screen_size: &Coords) -> Result<()> {
+        self.paint(screen_size, true)
+    }
 
-        // Size is lines - header and footer sizes by full width
-        
-        let size: Coords = Coords{y:  screen_size.y - 3, x: screen_size.x};
-        
-        self.pwin.resize(size.y, size.x);
-        self.pwin.bkgd(self.window_colors.title as u32);
+    pub fn resize(&mut self, screen_size: &Coords) -> Result<()> {
+        self.paint(screen_size, false)
+    }
 
-        show_corners(&self.pwin, &size, self.window_colors)?;
+    // --------------------------------------------------------------------
 
-        self.pwin.refresh();
-        
+    pub fn handle_key(&mut self, ch: Input ) -> Result<()> {
+        match ch {
+            Input::KeyDown => self.key_down_handler()?,
+            Input::KeyUp => self.key_up_handler()?,
+            Input::KeyPPage => self.key_pgup_handler()?,
+            Input::KeyNPage => self.key_pgdown_handler()?,
+            Input::KeyHome => self.key_home_handler()?,
+            Input::KeyEnd => self.key_end_handler()?,
+            _ => ()
+        }
+
+        Ok(())
+    }
+
+    // --------------------------------------------------------------------
+    /// Toggle highlight on a line
+
+    fn highlight(&self,  highlight: bool) -> Result<()> {
+
+        let attrs = self.pwin.attrget();
+
+        self.pwin.mvchgat(
+            i32::try_from(self.win_idx)?,
+            1,
+            i32::try_from(self.size.x)? - 1,
+            if highlight { attrs.0 | A_REVERSE } else { attrs.0 & !A_REVERSE },
+            attrs.1,
+        );
+
         Ok(())
 
     }
 
-    pub fn resize(&mut self, new_size: &Coords) -> Result<()> {
+    // --------------------------------------------------------------------
+    
+    fn key_down_handler(&mut self) -> Result<()> {
 
-        let size: Coords = Coords{y:  new_size.y - 3, x: new_size.x};
+        if self.win_idx < self.size.y - 1 && 
+           self.win_idx + self.top_idx < self.lines.len() - 1 {
+            self.highlight(false)?;
+            self.win_idx += 1;
+        } else if self.top_idx + self.size.y < self.lines.len() {
+            self.top_idx += 1;
+            self.write_lines();
+        }
 
-        self.pwin.resize(size.y, size.x);
-        self.pwin.erase();
+        self.highlight(true)
+    }
 
-        show_corners(&self.pwin, &size, self.window_colors)?;
+    // --------------------------------------------------------------------
+    
+    fn key_up_handler(&mut self) -> Result<()> {
 
+        if self.win_idx > 0 {
+            self.highlight(false)?;
+            self.win_idx -= 1;
+        } else if self.top_idx > 0 {
+            self.top_idx -= 1;
+            self.write_lines();
+        }
+
+        self.highlight(true)
+
+    }
+
+    // --------------------------------------------------------------------
+    
+    fn key_pgdown_handler(&mut self) -> Result<()> {
+
+        if self.size.y + self.top_idx < self.lines.len() {
+
+            if self.top_idx + self.size.y > self.lines.len() {
+                self.top_idx = self.lines.len() - self.size.y 
+            } else {
+                self.top_idx += self.size.y
+            }
+
+            self.write_lines();
+
+        } else {
+
+            self.highlight(false)?;
+            self.win_idx = std::cmp::min(self.lines.len() - self.top_idx - 1, self.size.y - 1);
+
+        }
+
+        if self.top_idx + self.size.y > self.lines.len() {
+            let first_blank = self.lines.len() - self.top_idx;
+            (first_blank..self.size.y)
+                .for_each(|l_no| {
+                    self.pwin.mv(i32::try_from(l_no).unwrap(), 0);
+                    self.pwin.clrtoeol();
+                })
+        }
+        
+        self.highlight(true)
+
+    }
+
+    // --------------------------------------------------------------------
+    
+    fn key_pgup_handler(&mut self) -> Result<()> {
+
+        if self.top_idx > 0 {
+
+            if self.top_idx > self.size.y {
+                self.top_idx -= self.size.y
+            } else {
+                self.top_idx = 0;
+            }
+
+            self.write_lines();
+
+
+        } else {
+            self.highlight(false)?;
+        }
+        
+        self.win_idx = 0;
+        self.highlight(true)
+
+    }
+
+    // --------------------------------------------------------------------
+    
+    fn key_home_handler(&mut self) -> Result<()> {
+
+        if self.top_idx > 0 {
+
+            self.top_idx = 0;
+            self.write_lines();
+
+
+        }
+
+        if self.win_idx > 0 {
+            self.highlight(false)?;
+            self.win_idx = 0;
+            self.highlight(true)?;
+        }
+
+        Ok(())
+
+    }
+
+    // --------------------------------------------------------------------
+    
+    fn key_end_handler(&mut self) -> Result<()> {
+
+        if self.top_idx + self.size.y <= self.lines.len() {
+            self.top_idx = self.lines.len() - self.size.y;
+            self.write_lines();
+        }
+
+        if self.win_idx != self.size.y - 1 {
+            self.highlight(false)?;
+            self.win_idx = if self.lines.len() - self.top_idx < self.size.y {
+                self.lines.len() - self.top_idx - 1
+            } else {
+                self.size.y - 1
+            };
+            self.highlight(true)?;
+
+        }
+
+        Ok(())
+
+    }
+
+    // --------------------------------------------------------------------
+    /// Reset and paint the screen
+
+    fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
+        
+        self.size = Coords{y:  size.y - 3, x: size.x};
+        self.pwin.resize(size.y.try_into()?, size.x.try_into()?);
+        
+        if init {
+            self.pwin.bkgd(self.window_colors.text)
+        } else {
+            self.pwin.erase()
+        };
+
+        if self.win_idx > self.size.y - 1 {
+            self.win_idx = self.size.y -1;
+        }
+
+        self.write_lines();
+        self.highlight(true)?;
         self.pwin.noutrefresh();
 
         Ok(())
+
     }
 
-}
+    // --------------------------------------------------------------------
+    // Set the scrolling indicators
 
-fn show_corners(win: &pancurses::Window, dim: &Coords, wc: &WindowColors) -> Result<()> {
+    fn set_indicators(&self) {
 
-    win.attrset(wc.text);
-    win.mvprintw(0, 0, "UL");
-    win.mvprintw(dim.y - 1, 0, "LL");
-    win.mvprintw(0, dim.x - 2, "UR");
-    win.mvprintw(dim.y - 1, dim.x - 2, "LR");
+        self.pwin.mvprintw(
+            0, 0,
+            if self.top_idx > 0 { "\u{21d1}" } else { " " }
+        );
 
-    Ok(())
+        self.pwin.mvprintw(
+            i32::try_from(self.size.y).unwrap() - 1, 0,
+            if self.size.y + self.top_idx >= self.lines.len() { 
+                " " 
+            } else {
+                "\u{21d3}" 
+            } 
+        );
+    
+    }
+
+    // --------------------------------------------------------------------
+    // Write whatever lines are available to the screen
+
+    fn write_lines(&self) {
+
+        let lim = if (self.size.y) <= self.lines.len() - self.top_idx {
+            // More lines remain than will fit on the screen
+            self.top_idx + self.size.y
+        } else {
+            // All remaining lines will fit on the screen
+            self.lines.len()
+        };
+
+        self.lines[self.top_idx..lim]
+            .iter()
+            .enumerate()
+            .for_each(|(y, l)| {self.pwin.mvprintw(y as i32, 0, l.as_line(self.size.x));} );
+
+        self.set_indicators();
+
+    }
+
 }
