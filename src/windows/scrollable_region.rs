@@ -8,10 +8,20 @@ use pancurses::{
     Input
 };
 
-use crate::windows::Coords;
-use crate::color::WindowColors;
+use crate::{
+    color::{
+        Colors,
+        WindowColors,
+    },
+    formatter::Formatter,
+};
 
-use super::line::Line;
+use super::{
+    Coords,
+    line::Line,
+    header_window,
+    screen::Screen,
+};
 
 // ------------------------------------------------------------------------
 
@@ -32,6 +42,11 @@ pub struct ScrollableRegion<'a> {
 
     /// Index into the window of the currently selected line
     win_idx: usize,
+
+    screen: &'a Screen,
+    fmt: &'a Formatter,
+    colors: &'a Colors,
+
 }
 
 impl<'a> ScrollableRegion<'a> {
@@ -40,7 +55,10 @@ impl<'a> ScrollableRegion<'a> {
 
     pub fn new (
         window_colors: &'a WindowColors,
-        lines: &'a mut Vec<&'a dyn Line >
+        lines: &'a mut Vec<&'a dyn Line >,
+        screen: &'a Screen,
+        fmt: &'a Formatter,
+        colors: &'a Colors,
     ) -> Box<ScrollableRegion<'a>> 
     {
 
@@ -54,6 +72,9 @@ impl<'a> ScrollableRegion<'a> {
             lines,
             top_idx: 0,
             win_idx: 0,
+            screen,
+            fmt,
+            colors,
         })
     }
 
@@ -77,6 +98,7 @@ impl<'a> ScrollableRegion<'a> {
             Input::KeyNPage => self.key_pgdown_handler()?,
             Input::KeyHome => self.key_home_handler()?,
             Input::KeyEnd => self.key_end_handler()?,
+            Input::KeyEnter => self.key_enter_handler()?,
             _ => ()
         }
 
@@ -86,17 +108,25 @@ impl<'a> ScrollableRegion<'a> {
     // --------------------------------------------------------------------
     /// Toggle highlight on a line
 
+
     fn highlight(&self,  highlight: bool) -> Result<()> {
 
-        let attrs = self.pwin.attrget();
+        for p in 1..self.size.x {
 
-        self.pwin.mvchgat(
-            i32::try_from(self.win_idx)?,
-            1,
-            i32::try_from(self.size.x)? - 1,
-            if highlight { attrs.0 | A_REVERSE } else { attrs.0 & !A_REVERSE },
-            attrs.1,
-        );
+            let ch = self.pwin.mvinch(
+                i32::try_from(self.win_idx)?, 
+                i32::try_from(p)?
+            );
+
+            let rev_ch = if highlight {
+                ch | A_REVERSE
+            } else {
+                ch & !A_REVERSE
+            };
+
+            self.pwin.addch(rev_ch);
+
+        }
 
         Ok(())
 
@@ -239,6 +269,21 @@ impl<'a> ScrollableRegion<'a> {
     }
 
     // --------------------------------------------------------------------
+    
+    fn key_enter_handler(&mut self) -> Result<()> {
+
+        let line = self.lines[self.top_idx + self.win_idx];
+
+        header_window::show(
+            line.to_executable(), 
+            self.screen, 
+            self.fmt, 
+            self.colors
+        )
+
+    }
+
+    // --------------------------------------------------------------------
     /// Reset and paint the screen
 
     fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
@@ -301,7 +346,17 @@ impl<'a> ScrollableRegion<'a> {
         self.lines[self.top_idx..lim]
             .iter()
             .enumerate()
-            .for_each(|(y, l)| {self.pwin.mvprintw(y as i32, 0, l.as_line(self.size.x));} );
+            .for_each(|(y, l)| {
+                self.pwin.mv(i32::try_from(y).unwrap(), 0);
+                l.as_line(self.size.x)
+                    .iter()
+                    .for_each(| li | { 
+                        if let Some(attr) = li.0 {
+                           self.pwin.attrset(attr);
+                        };
+                        self.pwin.printw(&li.1); 
+                    })
+            } );
 
         self.set_indicators();
 

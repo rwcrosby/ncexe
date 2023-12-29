@@ -4,7 +4,10 @@
 
 use memmap2::Mmap;
 
-use crate::windows::line::Line;
+use crate::windows::line::{
+    Line,
+    LineVec,
+};
 
 use super::{
     ExeType,
@@ -23,8 +26,12 @@ pub struct Macho32Formatter<'a> {
 
 impl Line for Macho32Formatter<'_> {
 
-    fn as_line(&self, _max_len: usize) -> String {
-        String::from("We be macho")
+    fn as_line(&self, _max_len: usize) -> LineVec {
+        Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))])
+    }
+
+    fn to_executable(&self) -> &dyn Executable {
+        self
     }
 
 }

@@ -7,6 +7,7 @@
 pub mod file_list_window;
 pub mod footer;
 pub mod header;
+pub mod header_window;
 pub mod line;
 pub mod screen;
 pub mod scrollable_region;
@@ -42,6 +43,7 @@ pub const FSIZE_LENGTH: usize = 10;
 
 // ------------------------------------------------------------------------
 /// The set of widnows (header, scrollable region, footer)
+
 pub struct WindowSet<'a> {
 
     screen: &'a Screen,
@@ -62,6 +64,8 @@ impl WindowSet<'_> {
     {
         Box::new(WindowSet{screen, hdr_win, scr_win, ftr_win})
     }
+
+    // --------------------------------------------------------------------
 
     pub fn show(& mut self) -> Result<()> {
 
@@ -98,6 +102,8 @@ impl WindowSet<'_> {
         Ok(())
 
     }
+
+    // --------------------------------------------------------------------
 
     fn key_resize_handler(&mut  self) -> Result<()> {
 

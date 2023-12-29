@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //!
 //! Formatter for the Linux ELF executable format
 //! 
@@ -5,37 +7,46 @@
 use anyhow::{Result, bail};
 use memmap2::Mmap;
 use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::{
     color::Colors,
     formatter::Formatter,
     windows::{
-        line::Line,
+        FSIZE_LENGTH,
+        file_list_window::FnameFn,
+        line::{
+            Line,
+            LineVec,
+        },
         screen::Screen,
     },
 };
 
 use super::{
+    ETYPE_LENGTH,
     Executable,
     ExeType,
 };
 
 // ------------------------------------------------------------------------
 
-#[derive(Debug)]
-pub struct ELFFormatter<'a> {
+pub struct ELF<'a> {
     filename: &'a str,
     mmap: Mmap,
+    fname_fn: Option<Rc<FnameFn>>,
 }
 
 // ------------------------------------------------------------------------
 
-impl ELFFormatter<'_> {
+impl ELF<'_> {
 
-    pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn Executable + '_> {
+    pub fn new( 
+        filename : &str,
+        mmap : Mmap
+    ) -> Box<dyn Executable + '_> {
 
-        Box::new(ELFFormatter{filename, mmap})
+        Box::new(ELF{filename, mmap, fname_fn: None})
 
     }
 
@@ -43,17 +54,31 @@ impl ELFFormatter<'_> {
 
 // ------------------------------------------------------------------------
 
-impl Line for ELFFormatter<'_> {
+impl Line for ELF<'_> {
 
-    fn as_line(&self, _max_len: usize) -> String {
-        String::from("ELF on a shelf")
+    fn as_line(&self, sc: usize) -> LineVec {
+
+        let fname_fn = self.fname_fn.as_ref().unwrap();
+
+        Vec::from([
+            (None, 
+             format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
+                tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
+                ml=FSIZE_LENGTH, size=self.mmap.len(),
+                fname=fname_fn(sc, self.filename)
+            ))])
+
+    }
+
+    fn to_executable(&self) -> &dyn Executable {
+        self
     }
 
 }
 
 // ------------------------------------------------------------------------
 
-impl Executable for ELFFormatter<'_> {
+impl Executable for ELF<'_> {
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
@@ -113,6 +138,9 @@ impl Executable for ELFFormatter<'_> {
         self
     }
 
+    fn set_fname_fn(&mut self, fname_fn: Rc<FnameFn>) {
+        self.fname_fn = Some(fname_fn);
+    }
 
 }
 

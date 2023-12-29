@@ -36,8 +36,9 @@ pub type FnameFn = dyn Fn(usize, &str) -> String;
 pub fn show(
     executables: &mut ExeList, 
     screen: &Screen,
-    _fmt: &Formatter,
-    colors: &Colors) -> Result<()> {
+    fmt: &Formatter,
+    colors: &Colors
+) -> Result<()> {
 
     let wsc = colors.get_window_set_colors("file_list")?;
 
@@ -104,7 +105,13 @@ pub fn show(
             })
             .collect();
 
-    let mut scr_win = ScrollableRegion::new(&wsc.scrollable_region, &mut lines);
+    let mut scr_win = ScrollableRegion::new(
+        &wsc.scrollable_region, 
+        &mut lines,
+        screen,
+        fmt,
+        colors,
+    );
 
     // Create the footer window
 
@@ -119,8 +126,6 @@ pub fn show(
         &mut ftr_win,
     );
 
-    win_set.show()?;
-
-    Ok(())
+    win_set.show()
 
 }

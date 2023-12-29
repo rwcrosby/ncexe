@@ -12,14 +12,18 @@ use crate::{
     windows::{
         FSIZE_LENGTH,
         file_list_window::FnameFn,
-        line::Line,
+        line::{
+            Line,
+            LineVec,
+        },
         screen::Screen,
     },
 };
 
 use super::{
     ETYPE_LENGTH,
-    Executable
+    Executable,
+    ExeType,
 };
 
 // ------------------------------------------------------------------------
@@ -34,8 +38,9 @@ pub struct MachO64<'a> {
 
 impl<'a> MachO64<'a> {
 
-    pub fn new( filename: &'a str,
-                mmap: Mmap,
+    pub fn new( 
+        filename: &'a str,
+        mmap: Mmap,
     ) -> Box<dyn Executable + 'a> {
 
         Box::new(MachO64{filename, mmap, fname_fn: None})
@@ -49,16 +54,25 @@ impl<'a> MachO64<'a> {
 
 impl Line for MachO64<'_> {
 
-    fn as_line(&self, sc: usize) -> String {
+    fn as_line(&self, sc: usize) -> LineVec {
 
         let fname_fn = self.fname_fn.as_ref().unwrap();
 
-        format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
-            tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
-            ml=FSIZE_LENGTH, size=self.mmap.len(),
-            fname=fname_fn(sc, self.filename)
-        )
+        Vec::from([
+            (   None,
+                format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
+                    tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
+                    ml=FSIZE_LENGTH, size=self.mmap.len(),
+                    fname=fname_fn(sc, self.filename)
+                )
+    
+            )
+        ])
 
+    }
+
+    fn to_executable(&self) -> &dyn Executable {
+        self
     }
 
 }
@@ -72,7 +86,7 @@ impl Executable for MachO64<'_> {
     }
 
     fn exe_type(&self) -> super::ExeType {
-        super::ExeType::MachO64
+        ExeType::MachO64
     }
 
     fn filename(&self) -> &str {
@@ -82,10 +96,6 @@ impl Executable for MachO64<'_> {
     fn len(&self) -> usize {
         self.mmap.len()
     }
-
-    // fn as_line(&self, max_len: usize) -> String {
-    //   Line::as_line(self, max_len)
-    // }
 
     fn show(
         &self, 

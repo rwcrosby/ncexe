@@ -1,6 +1,7 @@
 extern crate ncexe;
 
 use ncexe::exe_types::ETYPE_LENGTH;
+use ncexe::formatter::Formatter;
 use ncexe::windows::line::Line;
 use ncexe::windows::WindowSet;
 use ncexe::windows::screen::Screen;
@@ -39,10 +40,16 @@ fn main() {
         };
 
     let mut lines: Vec<&dyn Line> = Vec::from([]);
+    let fmt = Formatter::new();
 
     let mut hdr_win = header::Header::new(&cs1.header, &hdr_fn);
-    let mut scr_win = scrollable_region::ScrollableRegion::new(&cs2.scrollable_region, 
-        &mut lines);
+    let mut scr_win = scrollable_region::ScrollableRegion::new(
+        &cs2.scrollable_region, 
+        &mut lines,
+        &screen,
+        &fmt,
+        &colors,
+    );
     let mut ftr_win = footer::Footer::new(&cs1.footer);
 
     let mut win_set = WindowSet::new(

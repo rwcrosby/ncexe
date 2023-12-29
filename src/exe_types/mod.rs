@@ -19,14 +19,17 @@ use crate::{
     formatter::Formatter,
     windows::{
         file_list_window::FnameFn,
-        line::Line,
+        line::{
+            Line,
+            LineVec,
+        },
         screen::Screen, 
     },
 };
 
 use macho32::Macho32Formatter;
 use macho64::MachO64;
-use elf::ELFFormatter;
+use elf::ELF;
 
 // ------------------------------------------------------------------------
 /// Trait to be implemented by the various executable handlers
@@ -36,7 +39,6 @@ pub trait Executable {
     fn exe_type(&self) -> ExeType;
     fn len(&self) -> usize { 0 }
     fn filename(&self) -> &str {""}
-    // fn as_line(&self, _max_len: usize) -> String {String::from("Not implemented")}
 
     fn show(&self, 
             _mw : &Screen,
@@ -106,8 +108,12 @@ impl Executable for NotExecutable<'_> {
 
 impl Line for NotExecutable<'_> {
 
-    fn as_line(&self, _max_len: usize) -> String {
-        String::from("Not Executable")
+    fn as_line(&self, _max_len: usize) -> LineVec {
+        Vec::from([(None, String::from("Not Executable"))])
+    }
+
+    fn to_executable(&self) -> &dyn Executable {
+        self
     }
 
 }
@@ -147,8 +153,8 @@ pub fn new(filename: &str)
     match raw_type {
         0xfeedface => Macho32Formatter::new(filename, mmap),
         0xfeedfacf => MachO64::new(filename, mmap),
-        0x7f454c46 => ELFFormatter::new(filename, mmap),
-        0x464c457f => ELFFormatter::new(filename, mmap),
+        0x7f454c46 => ELF::new(filename, mmap),
+        0x464c457f => ELF::new(filename, mmap),
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
         v => Box::new(NotExecutable {
