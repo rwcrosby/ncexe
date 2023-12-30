@@ -1,4 +1,5 @@
 //!
+//!
 //! Footer window
 //! 
 
@@ -11,7 +12,7 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-type LineFn = dyn Fn(usize) -> (i32, String);
+type LineFn = dyn Fn(usize, usize, usize) -> (i32, String);
 
 pub struct Footer<'a> {
     window_colors: &'a  WindowColors,
@@ -31,7 +32,7 @@ impl Footer<'_> {
     }
 
     pub fn show(&mut self, size: &Coords) -> Result<()> {
-        self.paint(size, true)
+        self.paint(size, false)
     }
 
     pub fn resize(&mut self, size: &Coords) -> Result<()> {
@@ -40,27 +41,38 @@ impl Footer<'_> {
 
     // --------------------------------------------------------------------
 
-    fn paint(&mut self, screen_size: &Coords, init: bool) -> Result<()> {
+    fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
 
-        let size: Coords = Coords{y: 1, x: screen_size.x};
+        // Size is 1 line by full width
+
+        let size: Coords = Coords{y:  1, x: size.x};
 
         self.pwin.resize(i32::try_from(size.y)?, i32::try_from(size.x)?);
-        self.pwin.mvwin(i32::try_from(screen_size.y)? - 1, 0);
-
         if init {
             self.pwin.bkgd(self.window_colors.bkgr)
         } else {
             self.pwin.erase()
         };
 
-        let (x, line) = (self.line_fn)(size.x);
-        self.pwin.attrset(self.window_colors.title);
-        self.pwin.mvprintw(0, x, line);
+        let (x, line1) = (self.line_fn)(size.x, 0, 0);
 
-        self.pwin.noutrefresh();
+        self.pwin.attrset(self.window_colors.title);
+        self.pwin.mvprintw(0, x, line1);
         
+        self.pwin.noutrefresh();
+
         Ok(())
 
     }
+        
 
+}
+
+fn _show_corners(win: &pancurses::Window, size: &Coords, wc: &WindowColors) -> Result<()> {
+    
+    win.attrset(wc.value);
+    win.mvprintw(0, 0, "UL");
+    win.mvprintw(0, i32::try_from(size.x)? - 2, "UR");
+
+    Ok(())
 }

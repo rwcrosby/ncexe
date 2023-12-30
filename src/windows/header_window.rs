@@ -34,7 +34,7 @@ pub fn show(
 
     // Create header window
 
-    let hdr_fn = | sc: usize | "Blah";
+    let hdr_fn = | sc: usize | String::from("Blah");
 
     let mut hdr_win = Header::new(&wsc.header, &hdr_fn);
 
@@ -50,19 +50,22 @@ pub fn show(
         colors,
     );
 
-     // Create the footer window
+    // Create the footer window
 
-     let mut ftr_win = Footer::new(&wsc.footer);
-    
-     // Create and show the set of windows
- 
-     let mut win_set = WindowSet::new(
-         &screen, 
-         &mut hdr_win, 
-         &mut scr_win, 
-         &mut ftr_win,
-     );
- 
-     win_set.show()
- 
+    let footer_fn = | sc: usize | 
+        { (10, String::from("Blah")) };
+
+    let mut ftr_win = Footer::new(&wsc.footer, &footer_fn);
+
+    // Create and show the set of windows
+
+    let mut win_set = WindowSet::new(
+        &screen, 
+        &mut hdr_win, 
+        &mut scr_win, 
+        &mut ftr_win,
+    );
+
+    win_set.show()
+
 }

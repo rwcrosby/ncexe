@@ -46,6 +46,7 @@ pub fn show(
     
     let mut lfn = 0usize;
     let mut sfn = std::usize::MAX;
+    let num_exe = executables.len();
     
     executables
         .iter()
@@ -64,12 +65,12 @@ pub fn show(
         filename="Name",
     );
 
-    let hdr_fn = | sc: usize | 
+    let hdr_fn = move | sc: usize |
         if sc > hdr.len() {
-            &hdr
+            hdr.clone()
         }
         else {
-            &hdr.as_str()[0..sc]
+            String::from(&hdr.as_str()[0..sc])
         };
 
     let mut hdr_win = Header::new(&wsc.header, &hdr_fn);
@@ -96,11 +97,13 @@ pub fn show(
 
     });
 
+    let mut total_len = 0;
     let mut lines: Vec<&dyn Line> = 
         executables
             .iter_mut()
             .map(|e| {
                 e.set_fname_fn(fname_fn.clone());
+                total_len += e.len();
                 e.to_line()
             })
             .collect();
@@ -115,7 +118,25 @@ pub fn show(
 
     // Create the footer window
 
-    let mut ftr_win = Footer::new(&wsc.footer);
+    let footer_fn = move | sc: usize | {
+
+        let txt = format!("{} Files, {} Bytes",
+            num_exe,
+            total_len );
+
+        let excess = i32::try_from(sc).unwrap() - i32::try_from(txt.len()).unwrap();
+
+        let start_pos: i32 = if excess <= 0 {
+            0
+        } else {
+            excess / 2
+        };
+
+        (start_pos, txt)
+
+    };
+
+    let mut ftr_win = Footer::new(&wsc.footer, &footer_fn);
     
     // Create and show the set of windows
 
