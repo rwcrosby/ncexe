@@ -1,25 +1,21 @@
-#![allow(dead_code)]
-
 //!
 //! Formatter for the Linux ELF executable format
 //! 
 
-use anyhow::{Result, bail};
+use anyhow::{
+    Result, 
+    bail,
+};
 use memmap2::Mmap;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use crate::{
-    color::Colors,
-    formatter::Formatter,
-    windows::{
-        FSIZE_LENGTH,
-        file_list_window::FnameFn,
-        line::{
-            Line,
-            LineVec,
-        },
-        screen::Screen,
+use crate::windows::{
+    FSIZE_LENGTH,
+    file_list_window::FnameFn,
+    line::{
+        Line,
+        PairVec,
     },
 };
 
@@ -56,22 +52,23 @@ impl ELF<'_> {
 
 impl Line for ELF<'_> {
 
-    fn as_line(&self, sc: usize) -> LineVec {
+    fn as_executable(&self) -> &dyn Executable {
+        self
+    }
+
+    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
 
         let fname_fn = self.fname_fn.as_ref().unwrap();
 
-        Vec::from([
+        Ok(Vec::from([
             (None, 
              format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
                 tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
                 ml=FSIZE_LENGTH, size=self.mmap.len(),
                 fname=fname_fn(sc, self.filename)
-            ))])
+            ))
+        ]))
 
-    }
-
-    fn to_executable(&self) -> &dyn Executable {
-        self
     }
 
 }
@@ -80,30 +77,21 @@ impl Line for ELF<'_> {
 
 impl Executable for ELF<'_> {
 
-    fn to_string(&self) -> String {
-        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
-    }
-
     fn exe_type(&self) -> ExeType {
         ExeType::ELF
     }
-
     fn filename(&self) -> &str {
         self.filename
     }
-
     fn len(&self) -> usize {
         self.mmap.len()
     }
+    fn mmap(&self) -> &[u8] {
+        self.mmap.deref()
+    }
+    fn fmt_yaml(&self) -> Result<&str> {
 
-    fn show(
-        &self,
-        _screen : &Screen,
-        fmt: &Formatter,
-        _colors: &Colors
-    ) -> Result<()> {
-
-        let mmap_slice = self.mmap.deref();
+        let mmap_slice = self.mmap();
 
         let fmt_yaml = match mmap_slice[4] {
             1 => match mmap_slice[5] {
@@ -119,21 +107,13 @@ impl Executable for ELF<'_> {
             v => bail!("Invalid ELF bit length {:02x}", v)
         };
 
-        let _fmt_blk = fmt.from_str(fmt_yaml)?;
-
-/*         header_window::show(
-            screen,
-            parent, 
-            colors, 
-            "ELF Header", 
-            &fmt_blk, 
-            mmap_slice)
- */
-
-        Ok(())
+        Ok(fmt_yaml)
 
     }
 
+    fn to_string(&self) -> String {
+        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
+    }
     fn to_line(&self) -> &dyn Line {
         self
     }

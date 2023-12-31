@@ -27,7 +27,7 @@ use super::{
 
 pub struct ScrollableRegion<'a> {
 
-    window_colors: &'a  WindowColors,
+    window_colors: &'a WindowColors,
 
     pub pwin: pancurses::Window,
 
@@ -55,7 +55,7 @@ impl<'a> ScrollableRegion<'a> {
 
     pub fn new (
         window_colors: &'a WindowColors,
-        lines: &'a mut Vec<&'a dyn Line >,
+        lines: &'a mut Vec<&'a dyn Line>,
         screen: &'a Screen,
         fmt: &'a Formatter,
         colors: &'a Colors,
@@ -91,6 +91,7 @@ impl<'a> ScrollableRegion<'a> {
     // --------------------------------------------------------------------
 
     pub fn handle_key(&mut self, ch: Input ) -> Result<()> {
+        
         match ch {
             Input::KeyDown => self.key_down_handler()?,
             Input::KeyUp => self.key_up_handler()?,
@@ -142,7 +143,7 @@ impl<'a> ScrollableRegion<'a> {
             self.win_idx += 1;
         } else if self.top_idx + self.size.y < self.lines.len() {
             self.top_idx += 1;
-            self.write_lines();
+            self.write_lines()?;
         }
 
         self.highlight(true)
@@ -157,7 +158,7 @@ impl<'a> ScrollableRegion<'a> {
             self.win_idx -= 1;
         } else if self.top_idx > 0 {
             self.top_idx -= 1;
-            self.write_lines();
+            self.write_lines()?;
         }
 
         self.highlight(true)
@@ -176,7 +177,7 @@ impl<'a> ScrollableRegion<'a> {
                 self.top_idx += self.size.y
             }
 
-            self.write_lines();
+            self.write_lines()?;
 
         } else {
 
@@ -210,7 +211,7 @@ impl<'a> ScrollableRegion<'a> {
                 self.top_idx = 0;
             }
 
-            self.write_lines();
+            self.write_lines()?;
 
 
         } else {
@@ -229,7 +230,7 @@ impl<'a> ScrollableRegion<'a> {
         if self.top_idx > 0 {
 
             self.top_idx = 0;
-            self.write_lines();
+            self.write_lines()?;
 
 
         }
@@ -250,7 +251,7 @@ impl<'a> ScrollableRegion<'a> {
 
         if self.top_idx + self.size.y <= self.lines.len() {
             self.top_idx = self.lines.len() - self.size.y;
-            self.write_lines();
+            self.write_lines()?;
         }
 
         if self.win_idx != self.size.y - 1 {
@@ -275,7 +276,7 @@ impl<'a> ScrollableRegion<'a> {
         let line = self.lines[self.top_idx + self.win_idx];
 
         header_window::show(
-            line.to_executable(), 
+            line.as_executable(), 
             self.screen, 
             self.fmt, 
             self.colors
@@ -301,7 +302,7 @@ impl<'a> ScrollableRegion<'a> {
             self.win_idx = self.size.y -1;
         }
 
-        self.write_lines();
+        self.write_lines()?;
         self.highlight(true)?;
         self.pwin.noutrefresh();
 
@@ -333,7 +334,7 @@ impl<'a> ScrollableRegion<'a> {
     // --------------------------------------------------------------------
     // Write whatever lines are available to the screen
 
-    fn write_lines(&self) {
+    fn write_lines(&self) -> Result<()> {
 
         let lim = if (self.size.y) <= self.lines.len() - self.top_idx {
             // More lines remain than will fit on the screen
@@ -343,22 +344,38 @@ impl<'a> ScrollableRegion<'a> {
             self.lines.len()
         };
 
-        self.lines[self.top_idx..lim]
+        for (y, line) in self.lines[self.top_idx..lim]
             .iter()
-            .enumerate()
-            .for_each(|(y, l)| {
-                self.pwin.mv(i32::try_from(y).unwrap(), 0);
-                l.as_line(self.size.x)
-                    .iter()
-                    .for_each(| li | { 
-                        if let Some(attr) = li.0 {
-                           self.pwin.attrset(attr);
-                        };
-                        self.pwin.printw(&li.1); 
-                    })
-            } );
+            .enumerate() {
+
+            self.pwin.mv(i32::try_from(y)?, 0);
+            line.as_pairs(self.size.x)?
+                .iter()
+                .for_each(| lp | {
+
+                    let x = self.pwin.get_cur_x();
+                    let max_x = self.pwin.get_max_x();
+
+                    if x <= max_x {
+
+                        if let Some(attr) = lp.0 {
+                            self.pwin.attrset(attr);
+                        }
+
+                        if x + lp.1.len() as i32 <= max_x {
+                            self.pwin.printw(&lp.1); 
+                        } else {
+                            self.pwin.printw(&lp.1[0..(max_x - x) as usize]); 
+                        }
+
+                    }
+
+                })
+
+        }
 
         self.set_indicators();
+        Ok(())
 
     }
 

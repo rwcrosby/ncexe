@@ -2,6 +2,7 @@
 //! Container for the line trait
 //! 
 
+use anyhow::Result;
 use pancurses::chtype;
 
 use crate::exe_types::Executable;
@@ -11,16 +12,16 @@ use crate::exe_types::Executable;
 
 pub trait Line {
 
-    /// Return a string representation of the line
-    fn as_line(&self, max_len: usize) -> LineVec;
-
     /// Return the Executable trait for this line
-    fn to_executable(&self) -> &dyn Executable;
+    fn as_executable(&self) -> &dyn Executable;
+
+    /// Return a set of attr/string pairs
+    fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
 }
 
 // ------------------------------------------------------------------------
 /// The actual line is a vector of tuples(attribute,string)
 
-pub type LineItem = (Option<chtype>, String);
-pub type LineVec = Vec<LineItem>;
+pub type Pair = (Option<chtype>, String);
+pub type PairVec = Vec<Pair>;

@@ -2,10 +2,17 @@
 //! Format a block of memory into a window
 //! 
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{
+    anyhow, 
+    bail, 
+    Context, 
+    Result,
+};
 use serde::Deserialize;
-use std::cmp;
-use std::collections::HashMap;
+use std::{
+    cmp,
+    collections::HashMap,
+};
 
 // ------------------------------------------------------------------------
 
@@ -89,11 +96,9 @@ pub struct YamlField {
 
 // ------------------------------------------------------------------------
 
-#[allow(dead_code)]
 pub struct Field<'a> {
     pub y_field: Box<YamlField>,
     pub offset: isize,
-    value_len: usize,
     pub fmt_fn: &'a Box<DataToString>,
 }
 
@@ -101,19 +106,17 @@ pub struct Field<'a> {
 
 pub struct FormatBlock<'a> {
     pub fields: Vec<Box<Field<'a>>>,
-    pub len: usize,
+    pub data_len: usize,
     pub max_text_len: usize,
     pub max_value_len: usize,
 }
-
-// ------------------------------------------------------------------------
 
 impl<'a> FormatBlock<'a> {
 
     pub fn _to_string(&self, data: *const u8, offset: isize, len: usize) 
         -> Result<String>  
     {
-        if offset + len as isize > self.len as isize {
+        if offset + len as isize > self.data_len as isize {
             bail!("Data block not large enough");
         }
 
@@ -129,6 +132,20 @@ impl<'a> FormatBlock<'a> {
         });
 
         Ok(fmt_str)
+    }
+
+}
+
+// ------------------------------------------------------------------------
+
+pub fn center_in(width: usize, s: &str) -> (i32, String) {
+
+    let excess = i32::try_from(width).unwrap() - i32::try_from(s.len()).unwrap();
+
+    if excess <= 0 {
+        (0, String::from(&s[0..width]))
+    } else {
+        (excess / 2, String::from(s))
     }
 
 }
@@ -157,6 +174,7 @@ fn derive_fmt_fn<'a>(map: &'a Box<FmtMap>,
                         y_field.size ))
         }
     }
+
 }
 
 // ------------------------------------------------------------------------
@@ -167,7 +185,7 @@ fn make_fmt_block<'a>(fmt_map: &'a Box<FmtMap>,
 {
     let mut fmt = Box::new(FormatBlock {
         fields: vec![],
-        len: 0,
+        data_len: 0,
         max_text_len: 0,
         max_value_len: 0
     });
@@ -182,15 +200,14 @@ fn make_fmt_block<'a>(fmt_map: &'a Box<FmtMap>,
             fmt.fields.push(
                 Box::new(
                     Field { y_field: yfld,
-                            offset: fmt.len as isize,
-                            value_len,
+                            offset: fmt.data_len as isize,
                             fmt_fn,}
             ));
             fmt.max_value_len = cmp::max(value_len, fmt.max_value_len);
 
         }
 
-        fmt.len += size;
+        fmt.data_len += size;
     }
 
     Ok(fmt)
@@ -404,7 +421,7 @@ mod tests {
         let fmt = Formatter::new();
         let f = fmt.from_file("tests/SampleFormat.yaml").unwrap();
 
-        assert!(f.len == 9);
+        assert!(f.data_len == 9);
     }
 
     #[test]

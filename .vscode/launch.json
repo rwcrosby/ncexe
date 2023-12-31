@@ -45,32 +45,18 @@
             "args": ["target/debug/ncexe", 
                      "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe",
-                     "target/release/ncexe",
-                     "target/release/ncexe",
-                     "target/release/ncexe",
-                     "target/release/ncexe",
+                     "/Users/rcrosby/Projects/ncexe/target/release/ncexe",
                      "target/release/ncexe"],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "TERM": "xterm-256color"
-            }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug example 'window_testing'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--example=window_testing",
-                ]
-            },
-            "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
                 "TERM": "xterm-256color"
@@ -97,29 +83,6 @@
             "env": {
                 "TERM": "xterm-256color"
             }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'bytes'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=bytes",
-                    "--package=ncexe"
-                ],
-                "filter": {
-                    "name": "bytes",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "TERM": "xterm-256color"
-            }
-
         },
         {
             "type": "lldb",

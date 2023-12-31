@@ -31,13 +31,7 @@ fn main() {
         filename="Name",
     );
 
-    let hdr_fn = move | sc: usize |
-        if sc > hdr.len() {
-            hdr.clone()
-        }
-        else {
-            String::from(&hdr.as_str()[0..sc])
-        };
+    let hdr_fn = move | _sc: usize | (0, hdr.clone());
 
     let footer_fn = move | sc: usize| {
 

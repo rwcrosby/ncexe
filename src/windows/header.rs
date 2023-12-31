@@ -11,7 +11,7 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-type Line2Fn = dyn Fn(usize) -> String;
+type Line2Fn = dyn Fn(usize) -> (i32, String);
 
 // ------------------------------------------------------------------------
 
@@ -66,11 +66,12 @@ impl Header<'_> {
             "Use the arrow keys to navigate, q to go back",
             size.x
         )?;
-        let line2 = (self.line2_fn)(size.x);
-        
+
+        let (x2, line2) = (self.line2_fn)(size.x);
+
         self.pwin.attrset(self.window_colors.title);
         self.pwin.mvprintw(0, 0, line1);
-        self.pwin.mvprintw(1, 0, line2);
+        self.pwin.mvprintw(1, x2, line2);
         
         self.pwin.noutrefresh();
 

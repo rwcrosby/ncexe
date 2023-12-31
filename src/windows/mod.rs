@@ -88,7 +88,10 @@ impl WindowSet<'_> {
 
                 Some(Input::Character(c)) => match c {
                     'q' | '\u{1b}' => break,
-                    '\n' => (),
+                    '\n' => {
+                        self.scr_win.handle_key(Input::KeyEnter)?;
+                        self.repaint()?;
+                    }
                     _ => (),
                     },
 
@@ -104,19 +107,33 @@ impl WindowSet<'_> {
     }
 
     // --------------------------------------------------------------------
-
+    
     fn key_resize_handler(&mut  self) -> Result<()> {
-
+        
         let new_size: Coords = self.screen.win.get_max_yx().into();
-
+        
         self.hdr_win.resize(&new_size)?;
         self.scr_win.resize(&new_size)?;
         self.ftr_win.resize(&new_size)?;
-    
+        
         pancurses::doupdate();
-    
+        
         Ok(())
-    
+        
+    }
+
+    // --------------------------------------------------------------------
+
+    fn repaint(&mut self) -> Result<()> {
+        let size: Coords = self.screen.win.get_max_yx().into();
+        self.hdr_win.pwin.touch();
+        self.hdr_win.resize(&size)?;
+        self.scr_win.pwin.touch();
+        self.scr_win.resize(&size)?;
+        self.ftr_win.pwin.touch();
+        self.ftr_win.resize(&size)?;
+        pancurses::doupdate();
+        Ok(())
     }
 
 }

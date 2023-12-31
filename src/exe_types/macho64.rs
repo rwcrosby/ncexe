@@ -1,10 +1,11 @@
+#![allow(unused_imports)]
 //! 
 //! Formatter for the MacOS Mach-O format
 //! 
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::rc::Rc;
+use std::{rc::Rc, fmt::Pointer, ops::Deref};
 
 use crate::{
     color::Colors,
@@ -14,7 +15,7 @@ use crate::{
         file_list_window::FnameFn,
         line::{
             Line,
-            LineVec,
+            PairVec,
         },
         screen::Screen,
     },
@@ -54,25 +55,23 @@ impl<'a> MachO64<'a> {
 
 impl Line for MachO64<'_> {
 
-    fn as_line(&self, sc: usize) -> LineVec {
+    fn as_executable(&self) -> &dyn Executable {
+        self
+    }
+
+    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
 
         let fname_fn = self.fname_fn.as_ref().unwrap();
 
-        Vec::from([
+        Ok(Vec::from([
             (   None,
                 format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
                     tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
                     ml=FSIZE_LENGTH, size=self.mmap.len(),
                     fname=fname_fn(sc, self.filename)
-                )
-    
-            )
-        ])
+            ))
+        ]))
 
-    }
-
-    fn to_executable(&self) -> &dyn Executable {
-        self
     }
 
 }
@@ -81,33 +80,25 @@ impl Line for MachO64<'_> {
 
 impl Executable for MachO64<'_> {
 
-    fn to_string(&self) -> String {
-        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
-    }
-
     fn exe_type(&self) -> super::ExeType {
         ExeType::MachO64
     }
-
     fn filename(&self) -> &str {
         self.filename
     }
-
     fn len(&self) -> usize {
         self.mmap.len()
     }
-
-    fn show(
-        &self, 
-        _screen : &Screen,
-        _fmt: &Formatter,
-        _colors: &Colors
-    ) -> Result<()> {
-
-      Ok(())
-
+    fn fmt_yaml(&self) -> Result<&str> { 
+        Ok(_HEADER)
+    }
+    fn mmap(&self) -> &[u8] {
+        self.mmap.deref()
     }
 
+    fn to_string(&self) -> String {
+        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
+    }
     fn to_line(&self) -> &dyn Line {
         self
     }

@@ -2,11 +2,12 @@
 //! Formatter for the MacOS Mach-O format
 //!
 
+use anyhow::Result;
 use memmap2::Mmap;
 
 use crate::windows::line::{
     Line,
-    LineVec,
+    PairVec,
 };
 
 use super::{
@@ -26,11 +27,11 @@ pub struct Macho32Formatter<'a> {
 
 impl Line for Macho32Formatter<'_> {
 
-    fn as_line(&self, _max_len: usize) -> LineVec {
-        Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))])
+    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
+        Ok(Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))]))
     }
 
-    fn to_executable(&self) -> &dyn Executable {
+    fn as_executable(&self) -> &dyn Executable {
         self
     }
 

@@ -10,13 +10,17 @@ mod windows;
 
 use anyhow::Result;
 use clap::Parser;
-use std::path::PathBuf;
+use std::{
+    ops::Deref,
+    path::PathBuf, 
+};
 
 use color::Colors;
 use exe_types::ExeType;
 use formatter::Formatter;
 use windows::{
     file_list_window,
+    header_window,
     screen::Screen,
 };
 
@@ -65,25 +69,31 @@ fn main() -> Result<()> {
         panic!("No executable files of interest found");
     }
 
-    {
-        // Initialize curses
-        let screen = Screen::new();
+    // Get format mapper
+    let formatter = Formatter::new();
 
-        // Setup colors
-        let colors = Colors::new(&config.theme)?;
-        screen.win.bkgd(colors.bkgr()?);
-        screen.win.refresh();
+    let screen = Screen::new();
 
-        // Get format mapper
-        let formatter = Formatter::new();
+    // Setup colors
+    let colors = Colors::new(&config.theme)?;
+    screen.win.bkgd(colors.bkgr()?);
+    screen.win.refresh();
 
-        // Display file info
-        if executables.len() == 1 {
-            executables[0].show(&screen, &formatter, &colors)
-        } else {
-            file_list_window::show(&mut executables, &screen, &formatter, &colors)
-        }
-
+    // Display file info
+    if executables.len() == 1 {
+        header_window::show(
+            executables[0].deref(), 
+            &screen, 
+            &formatter, 
+            &colors
+        )
+    } else {
+        file_list_window::show(
+            &mut executables, 
+            &screen, 
+            &formatter, 
+            &colors
+        )
     }
 
 }

@@ -11,13 +11,12 @@ use crate::{
         Executable, 
         ETYPE_LENGTH
     },
-    formatter::Formatter, 
+    formatter::{Formatter, center_in}, 
 };
 
 use super::{
     FSIZE_LENGTH,
     WindowSet,
-    line::Line,
     footer::Footer,
     header::Header,
     screen::Screen,
@@ -65,14 +64,8 @@ pub fn show(
         filename="Name",
     );
 
-    let hdr_fn = move | sc: usize |
-        if sc > hdr.len() {
-            hdr.clone()
-        }
-        else {
-            String::from(&hdr.as_str()[0..sc])
-        };
-
+    let hdr_fn = move | _sc: usize | (0, hdr.clone());
+    
     let mut hdr_win = Header::new(&wsc.header, &hdr_fn);
 
     // Create the scrollable window
@@ -98,15 +91,14 @@ pub fn show(
     });
 
     let mut total_len = 0;
-    let mut lines: Vec<&dyn Line> = 
-        executables
-            .iter_mut()
-            .map(|e| {
-                e.set_fname_fn(fname_fn.clone());
-                total_len += e.len();
-                e.to_line()
-            })
-            .collect();
+    let mut lines = executables
+        .iter_mut()
+        .map(|e| {
+            e.set_fname_fn(fname_fn.clone());
+            total_len += e.len();
+            e.to_line()
+        })
+        .collect();
 
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
@@ -124,15 +116,7 @@ pub fn show(
             num_exe,
             total_len );
 
-        let excess = i32::try_from(sc).unwrap() - i32::try_from(txt.len()).unwrap();
-
-        let start_pos: i32 = if excess <= 0 {
-            0
-        } else {
-            excess / 2
-        };
-
-        (start_pos, txt)
+        center_in(sc, &txt)
 
     };
 

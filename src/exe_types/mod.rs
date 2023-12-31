@@ -21,7 +21,7 @@ use crate::{
         file_list_window::FnameFn,
         line::{
             Line,
-            LineVec,
+            PairVec,
         },
         screen::Screen, 
     },
@@ -35,23 +35,42 @@ use elf::ELF;
 /// Trait to be implemented by the various executable handlers
 pub trait Executable {
 
-    fn to_string(&self) -> String { String::from("") }
-    fn exe_type(&self) -> ExeType;
-    fn len(&self) -> usize { 0 }
-    fn filename(&self) -> &str {""}
-
-    fn show(&self, 
-            _mw : &Screen,
-            _fmt: &Formatter,
-            _colors: &Colors)
-        -> Result<()>
+    fn exe_type(&self) -> ExeType
+    {
+            ExeType::NOPE
+    }
+    fn len(&self) -> usize 
     { 
-        Ok(())
+        0 
+    }
+    fn filename(&self) -> &str 
+    {
+        ""
+    }
+    fn fmt_yaml(&self) -> Result<&str>
+    {
+        Ok("")
+    }
+    fn mmap(&self) -> &[u8] {
+        &[]
     }
 
     fn to_line(&self) -> &dyn Line;
+    fn to_string(&self) -> String 
+    { 
+        String::from("") 
+    }
+    
+    fn set_fname_fn(&mut self, _fname_dn: Rc<FnameFn>) {}
 
-    fn set_fname_fn(&mut self, _fname_dn: Rc<FnameFn>) { () }
+    fn show(&self, 
+        _mw : &Screen,
+        _fmt: &Formatter,
+        _colors: &Colors)
+    -> Result<()>
+    { 
+        Ok(())
+    }
 
 }
 
@@ -108,12 +127,12 @@ impl Executable for NotExecutable<'_> {
 
 impl Line for NotExecutable<'_> {
 
-    fn as_line(&self, _max_len: usize) -> LineVec {
-        Vec::from([(None, String::from("Not Executable"))])
+    fn as_executable(&self) -> &dyn Executable {
+        self
     }
 
-    fn to_executable(&self) -> &dyn Executable {
-        self
+    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
+        Ok(Vec::from([(None, String::from(" Not Executable"))]))
     }
 
 }
