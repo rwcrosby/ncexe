@@ -1,8 +1,4 @@
 {
-    "rust-analyzer.linkedProjects": [
-        "./Cargo.toml",
-    ],
-    "rust-analyzer.showUnlinkedFileNotification": false,
     "yaml.customTags": [
         "!Be",
         "!Le",
@@ -16,6 +12,10 @@
     ],
     "gitlens.codeLens.authors.enabled": false,
     "gitlens.codeLens.recentChange.enabled": false,
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml",
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
     "rust-analyzer.hover.actions.implementations.enable": true,
     "rust-analyzer.hover.actions.references.enable": true,
     "rust-analyzer.lens.enable": true,

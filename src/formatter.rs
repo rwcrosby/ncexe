@@ -92,6 +92,8 @@ pub struct YamlField {
     field_type: FieldType,
     #[serde(rename = "format")]
     field_fmt: FieldFormat,
+    #[serde{default}]
+    pub on_enter: Option<usize>,
 }
 
 // ------------------------------------------------------------------------

@@ -116,7 +116,7 @@ pub struct Colors {
 
 impl Colors {
 
-    pub fn new(theme: &str) -> Result<Box<Colors>> {
+    pub fn new(theme: &str) -> Result<Colors> {
 
         let _ = pancurses::has_colors()  || bail!("Colors not supported");
         pancurses::start_color();
@@ -127,9 +127,7 @@ impl Colors {
         let window_sets = themes.get(theme)
             .ok_or(anyhow!("Theme {} not found", theme))?.clone();
 
-        let c = Colors{_themes: themes, window_sets  };
-
-        Ok(Box::new(c))
+        Ok(Colors{_themes: themes, window_sets  })
 
     }
 

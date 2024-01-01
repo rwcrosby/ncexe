@@ -8,11 +8,11 @@ pub struct Screen {
 
 impl Screen {
 
-    pub fn new() -> Box<Screen> {
+    pub fn new() -> Screen {
 
-        let win = Box::new(Screen {
+        let win = Screen {
             win: pancurses::initscr(),
-        });
+        };
 
         pancurses::noecho();
         win.win.keypad(true);

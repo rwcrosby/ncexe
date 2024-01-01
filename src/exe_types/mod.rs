@@ -6,7 +6,10 @@ pub mod elf;
 pub mod macho32;
 pub mod macho64;
 
-use anyhow::Result;
+use anyhow::{
+    Result,
+    bail,
+};
 use memmap2::Mmap;
 use std::{
     fmt,
@@ -14,16 +17,11 @@ use std::{
     rc::Rc,
 };
 
-use crate::{
-    color::Colors,
-    formatter::Formatter,
-    windows::{
-        file_list_window::FnameFn,
-        line::{
-            Line,
-            PairVec,
-        },
-        screen::Screen, 
+use crate::windows::{
+    file_list_window::FnameFn,
+    line::{
+        Line,
+        PairVec,
     },
 };
 
@@ -49,10 +47,15 @@ pub trait Executable {
     }
     fn fmt_yaml(&self) -> Result<&str>
     {
-        Ok("")
+        bail!("Default trait method called")
     }
     fn mmap(&self) -> &[u8] {
         &[]
+    }
+
+    fn on_enter(&self, _efld_no: usize) -> Result<()>
+    {
+        Ok(())
     }
 
     fn to_line(&self) -> &dyn Line;
@@ -62,15 +65,6 @@ pub trait Executable {
     }
     
     fn set_fname_fn(&mut self, _fname_dn: Rc<FnameFn>) {}
-
-    fn show(&self, 
-        _mw : &Screen,
-        _fmt: &Formatter,
-        _colors: &Colors)
-    -> Result<()>
-    { 
-        Ok(())
-    }
 
 }
 

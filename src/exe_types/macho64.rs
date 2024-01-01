@@ -96,6 +96,13 @@ impl Executable for MachO64<'_> {
         self.mmap.deref()
     }
 
+    fn on_enter(
+        &self,
+         _efld_no: usize
+    ) -> Result<()> {
+        Ok(())    
+    }
+
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
     }
@@ -134,6 +141,7 @@ const _HEADER: &str = "
     type: !Le
     format: !Int
     size: 4
+    on_enter: 0
 -   name: Load Command Length
     type: !Le
     format: !Ptr

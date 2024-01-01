@@ -11,19 +11,19 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-type LineFn = dyn Fn(usize) -> (i32, String);
+pub type LineFn<'a> = Box<dyn Fn(usize) -> (i32, String) + 'a>;
 
 pub struct Footer<'a> {
     window_colors: &'a  WindowColors,
     pub pwin: pancurses::Window,
-    line_fn: &'a LineFn
+    line_fn: LineFn<'a>
 }
 
 impl Footer<'_> {
 
     pub fn new<'a> (
         window_colors: &'a WindowColors, 
-        line_fn: &'a LineFn,
+        line_fn: LineFn<'a>,
     ) -> Box<Footer<'a>> 
     {
         let pwin = pancurses::newwin(1, 1, 0, 0);

@@ -11,14 +11,14 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-type Line2Fn = dyn Fn(usize) -> (i32, String);
+type LineFn<'a> = Box<dyn Fn(usize) -> (i32, String) + 'a>;
 
 // ------------------------------------------------------------------------
 
 pub struct Header<'a> {
     window_colors: &'a  WindowColors,
     pub pwin: pancurses::Window,
-    line2_fn: &'a Line2Fn,
+    line2_fn: LineFn<'a>,
 }
 
 impl Header<'_> {
@@ -28,7 +28,7 @@ impl Header<'_> {
 
     pub fn new<'a> (
         window_colors: &'a WindowColors, 
-        line2_fn: &'a Line2Fn,
+        line2_fn: LineFn<'a>,
     ) -> Box<Header<'a>> 
     {
         let pwin = pancurses::newwin(2, 1, 0, 0);

@@ -8,20 +8,14 @@ use pancurses::{
     Input
 };
 
-use crate::{
-    color::{
-        Colors,
-        WindowColors,
-    },
-    formatter::Formatter,
-};
+use crate::color::WindowColors;
 
 use super::{
     Coords,
     line::Line,
-    header_window,
-    screen::Screen,
 };
+
+pub type EnterFn<'a> = Box<dyn Fn(usize, &dyn Line) -> Result<()> + 'a>;
 
 // ------------------------------------------------------------------------
 
@@ -43,9 +37,8 @@ pub struct ScrollableRegion<'a> {
     /// Index into the window of the currently selected line
     win_idx: usize,
 
-    screen: &'a Screen,
-    fmt: &'a Formatter,
-    colors: &'a Colors,
+    /// Function to call on enter
+    enter_fn: EnterFn<'a>,
 
 }
 
@@ -56,9 +49,7 @@ impl<'a> ScrollableRegion<'a> {
     pub fn new (
         window_colors: &'a WindowColors,
         lines: &'a mut Vec<&'a dyn Line>,
-        screen: &'a Screen,
-        fmt: &'a Formatter,
-        colors: &'a Colors,
+        enter_fn: EnterFn<'a>,
     ) -> Box<ScrollableRegion<'a>> 
     {
 
@@ -70,11 +61,9 @@ impl<'a> ScrollableRegion<'a> {
             pwin,
             size: Coords{y: 0, x: 0},
             lines,
+            enter_fn,
             top_idx: 0,
             win_idx: 0,
-            screen,
-            fmt,
-            colors,
         })
     }
 
@@ -273,14 +262,8 @@ impl<'a> ScrollableRegion<'a> {
     
     fn key_enter_handler(&mut self) -> Result<()> {
 
-        let line = self.lines[self.top_idx + self.win_idx];
-
-        header_window::show(
-            line.as_executable(), 
-            self.screen, 
-            self.fmt, 
-            self.colors
-        )
+        let idx = self.top_idx + self.win_idx;
+        (self.enter_fn)(idx, self.lines[idx])
 
     }
 

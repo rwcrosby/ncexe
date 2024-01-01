@@ -1,7 +1,6 @@
 extern crate ncexe;
 
 use ncexe::exe_types::ETYPE_LENGTH;
-use ncexe::formatter::Formatter;
 use ncexe::windows::line::Line;
 use ncexe::windows::WindowSet;
 use ncexe::windows::screen::Screen;
@@ -33,6 +32,8 @@ fn main() {
 
     let hdr_fn = move | _sc: usize | (0, hdr.clone());
 
+    let enter_fn = Box::new(| _idx: usize, _line: &dyn Line | Ok(()) );
+
     let footer_fn = move | sc: usize| {
 
         let txt = format!("{} Files {} Bytes",
@@ -50,26 +51,22 @@ fn main() {
         (start_pos, txt)
 
     };
-    
 
     let mut lines: Vec<&dyn Line> = Vec::from([]);
-    let fmt = Formatter::new();
 
-    let mut hdr_win = header::Header::new(&cs1.header, &hdr_fn);
-    let mut scr_win = scrollable_region::ScrollableRegion::new(
+    let hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
+    let scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
         &mut lines,
-        &screen,
-        &fmt,
-        &colors,
+        Box::new(enter_fn),
     );
-    let mut ftr_win = footer::Footer::new(&cs1.footer, &footer_fn);
+    let ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
     let mut win_set = WindowSet::new(
         &screen, 
-        &mut hdr_win, 
-        &mut scr_win, 
-        &mut ftr_win);
+        hdr_win, 
+        scr_win, 
+        ftr_win);
 
     win_set.show().unwrap();
 

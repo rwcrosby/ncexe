@@ -11,7 +11,10 @@ use crate::{
         Executable, 
         ETYPE_LENGTH
     },
-    formatter::{Formatter, center_in}, 
+    formatter::{
+        Formatter, 
+        center_in,
+    }, 
 };
 
 use super::{
@@ -19,6 +22,8 @@ use super::{
     WindowSet,
     footer::Footer,
     header::Header,
+    line::Line,
+    header_window,
     screen::Screen,
     scrollable_region::ScrollableRegion,
 };
@@ -32,11 +37,11 @@ pub type FnameFn = dyn Fn(usize, &str) -> String;
 
 // ------------------------------------------------------------------------
 
-pub fn show(
-    executables: &mut ExeList, 
-    screen: &Screen,
-    fmt: &Formatter,
-    colors: &Colors
+pub fn show<'a>(
+    executables: &'a mut ExeList, 
+    screen: &'a Screen,
+    fmt: &'a Formatter,
+    colors: &'a Colors,
 ) -> Result<()> {
 
     let wsc = colors.get_window_set_colors("file_list")?;
@@ -64,9 +69,12 @@ pub fn show(
         filename="Name",
     );
 
-    let hdr_fn = move | _sc: usize | (0, hdr.clone());
+    let hdr_fn = | _sc: usize | (0, hdr.clone());
     
-    let mut hdr_win = Header::new(&wsc.header, &hdr_fn);
+    let hdr_win = Header::new(
+        &wsc.header, 
+        Box::new(hdr_fn),
+    );
 
     // Create the scrollable window
         
@@ -90,6 +98,16 @@ pub fn show(
 
     });
 
+    let enter_fn = | _idx: usize,  line: & dyn Line |
+
+        header_window::show(
+            line.as_executable(), 
+            screen, 
+            fmt, 
+            colors,
+
+    );
+
     let mut total_len = 0;
     let mut lines = executables
         .iter_mut()
@@ -100,17 +118,15 @@ pub fn show(
         })
         .collect();
 
-    let mut scr_win = ScrollableRegion::new(
+    let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         &mut lines,
-        screen,
-        fmt,
-        colors,
+        Box::new(enter_fn),
     );
 
     // Create the footer window
 
-    let footer_fn = move | sc: usize | {
+    let footer_fn = | sc: usize | {
 
         let txt = format!("{} Files, {} Bytes",
             num_exe,
@@ -120,15 +136,18 @@ pub fn show(
 
     };
 
-    let mut ftr_win = Footer::new(&wsc.footer, &footer_fn);
+    let ftr_win = Footer::new(
+        &wsc.footer, 
+        Box::new(footer_fn),
+    );
     
     // Create and show the set of windows
 
     let mut win_set = WindowSet::new(
         &screen, 
-        &mut hdr_win, 
-        &mut scr_win, 
-        &mut ftr_win,
+        hdr_win, 
+        scr_win, 
+        ftr_win,
     );
 
     win_set.show()

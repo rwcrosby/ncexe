@@ -47,9 +47,9 @@ pub const FSIZE_LENGTH: usize = 10;
 pub struct WindowSet<'a> {
 
     screen: &'a Screen,
-    hdr_win: &'a mut Header<'a>,
-    scr_win: &'a mut ScrollableRegion<'a>,
-    ftr_win: &'a mut Footer<'a>,
+    hdr_win: Box<Header<'a>>,
+    scr_win: Box<ScrollableRegion<'a>>,
+    ftr_win: Box<Footer<'a>>,
 
 }
 
@@ -57,9 +57,9 @@ impl WindowSet<'_> {
 
     pub fn new<'a>(
         screen: &'a Screen,
-        hdr_win: &'a mut Header<'a>,
-        scr_win: &'a mut ScrollableRegion<'a>,
-        ftr_win: &'a mut Footer<'a>,
+        hdr_win: Box<Header<'a>>,
+        scr_win: Box<ScrollableRegion<'a>>,
+        ftr_win: Box<Footer<'a>>,
     ) -> Box<WindowSet<'a>> 
     {
         Box::new(WindowSet{screen, hdr_win, scr_win, ftr_win})
