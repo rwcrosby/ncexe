@@ -1,12 +1,8 @@
 //!
-//! Curses based executable display
+//! Curses based executable file dumper
 //!
 
-mod color;
 mod configuration;
-mod exe_types;
-mod formatter;
-mod windows;
 
 use anyhow::Result;
 use clap::Parser;
@@ -15,13 +11,16 @@ use std::{
     path::PathBuf, 
 };
 
-use color::Colors;
-use exe_types::ExeType;
-use formatter::Formatter;
-use windows::{
-    file_list_window,
-    header_window,
-    screen::Screen,
+use ncexe::{
+    color::Colors,
+    exe_types,
+    exe_types::ExeType,
+    formatter::Formatter,
+    windows::{
+        file_list_window,
+        header_window,
+        screen::Screen,
+    },
 };
 
 // ------------------------------------------------------------------------
@@ -51,13 +50,11 @@ pub struct Arguments {
 
 fn main() -> Result<()> {
 
-    // Process the arguments
+    // Build the configuration
     let args: Arguments = Arguments::parse();
-
-    // Load the configuration
     let config = configuration::Configuration::new(&args)?;
 
-    // Build the list of executable objects
+    // Setup the list of executable objects
     let mut executables: Vec<_> = args.exe_filename
         .iter()
         .map(|fname| exe_types::new(fname))
@@ -69,13 +66,12 @@ fn main() -> Result<()> {
         panic!("No executable files of interest found");
     }
 
-    // Get format mapper
+    // Setup principal objects
     let formatter = Formatter::new();
-
     let screen = Screen::new();
-
-    // Setup colors
     let colors = Colors::new(&config.theme)?;
+
+    // Initialize screen
     screen.win.bkgd(colors.bkgr()?);
     screen.win.refresh();
 
