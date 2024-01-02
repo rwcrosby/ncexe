@@ -1,10 +1,8 @@
-#![allow(dead_code, unused)]
-
 //! 
 //! The executable file header window
 //! 
 
-use std::{ops::Deref, fmt::Pointer};
+// use std::{ops::Deref, fmt::Pointer};
 
 use anyhow::Result;
 
@@ -22,7 +20,7 @@ use crate::{
 use super::{
     WindowSet,
     footer::Footer,
-    header::{Header, self},
+    header::Header,
     line::{
         Line,
         PairVec
@@ -48,21 +46,17 @@ pub fn show<'a >(
 
     let hdr_fn = move | sc: usize | center_in(sc, &etype.to_string() );
 
-    let mut hdr_win = Header::new(
+    let hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn),
     );
 
     // Create the scrollable window
 
-    let enter_fn = move | idx: usize, line: &dyn Line | -> Result<()> {
-        Ok(())
-    };
-
     let fmt_yaml = exe.fmt_yaml()?;
     let fmt_blk = fmt.from_str(fmt_yaml)?;
 
-    let mut fields: Vec<Box<HeaderLine>> = fmt_blk.fields
+    let fields: Vec<Box<HeaderLine>> = fmt_blk.fields
         .iter()
         .map(| fmt_field | HeaderLine::new(
             exe, 
@@ -83,7 +77,7 @@ pub fn show<'a >(
             let hdr = &fields[idx];
 
             if let Some(efld_no) =  hdr.fmt_field.y_field.on_enter {
-                hdr.exe.on_enter(efld_no)
+                hdr.exe.on_enter(efld_no, fmt, colors, screen)
             } else {
                 Ok(())
             }
@@ -91,7 +85,7 @@ pub fn show<'a >(
         } 
     );
 
-    let mut scr_win = ScrollableRegion::new(
+    let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         &mut lines,
         enter_fn,
@@ -99,16 +93,10 @@ pub fn show<'a >(
 
     // Create the footer window
 
-    let filename = String::from(exe.filename());
-    let file_len = exe.len();
-
-    // let footer_fn = move | sc: usize | 
-    //     center_in(sc, &format!("{}, {} bytes", filename, file_len) );
-
     let footer_fn = | sc: usize | 
-        center_in(sc, &format!("{}, {} bytes", exe.filename(), file_len) );
+        center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()) );
 
-    let mut ftr_win = Footer::new(
+    let ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn)
     );
@@ -152,7 +140,7 @@ impl Line for Box<HeaderLine<'_>> {
         self.exe
     }
 
-    fn as_pairs(&self, max_len: usize) -> Result<PairVec> {
+    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
         let fld = self.fmt_field;
 

@@ -36,46 +36,10 @@ use pancurses::{
     A_NORMAL
 };
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::rc::Rc;
-
-// ------------------------------------------------------------------------
-// Yaml desription objects
-
-#[derive(Debug, Deserialize)]
-struct YamlWindowColors {
-    bkgr: i16,
-    title: (i16, String),
-    text: (i16, String),
-    value: (i16, String),
-}
-
-impl YamlWindowColors {
-
-    fn to_window_colors(&self, pair_no: &mut u32) -> Result<WindowColors> {
-
-        pancurses::init_pair(*pair_no as i16, 0, self.bkgr);
-        let bkgr: chtype = COLOR_PAIR(*pair_no); 
-        *pair_no += 1;
-
-        let title = make_curses_attribute(pair_no, self.bkgr, &self.title)?;
-        let text = make_curses_attribute(pair_no, self.bkgr, &self.text)?;
-        let value = make_curses_attribute(pair_no, self.bkgr, &self.value)?;
-
-        Ok(WindowColors{bkgr, title, text, value})
-
-    }
-
-}
-
-#[derive(Debug, Deserialize)]
-struct YamlWindowSetColors {
-    header: YamlWindowColors,
-    scrollable_region: YamlWindowColors,
-    footer: YamlWindowColors,
-}
-
-type YamlColorThemes = HashMap<String, HashMap<String, YamlWindowSetColors>>;
+use std::{
+    collections::HashMap,
+    rc::Rc
+};
 
 // ------------------------------------------------------------------------
 /// Curses attribute definitions for a window's colors
@@ -150,6 +114,46 @@ impl Colors {
 
 }
 
+// ------------------------------------------------------------------------
+// Yaml desription objects
+
+#[derive(Debug, Deserialize)]
+struct YamlWindowColors {
+    bkgr: i16,
+    title: (i16, String),
+    text: (i16, String),
+    value: (i16, String),
+}
+
+impl YamlWindowColors {
+
+    fn to_window_colors(&self, pair_no: &mut u32) -> Result<WindowColors> {
+
+        pancurses::init_pair(*pair_no as i16, 0, self.bkgr);
+        let bkgr: chtype = COLOR_PAIR(*pair_no); 
+        *pair_no += 1;
+
+        let title = make_curses_attribute(pair_no, self.bkgr, &self.title)?;
+        let text = make_curses_attribute(pair_no, self.bkgr, &self.text)?;
+        let value = make_curses_attribute(pair_no, self.bkgr, &self.value)?;
+
+        Ok(WindowColors{bkgr, title, text, value})
+
+    }
+
+}
+
+#[derive(Debug, Deserialize)]
+struct YamlWindowSetColors {
+    header: YamlWindowColors,
+    scrollable_region: YamlWindowColors,
+    footer: YamlWindowColors,
+}
+
+type YamlColorThemes = HashMap<String, HashMap<String, YamlWindowSetColors>>;
+
+// ------------------------------------------------------------------------
+
 fn to_color_themes(
     yml: &YamlColorThemes,  
     mut pair_no: u32
@@ -180,6 +184,8 @@ fn to_color_themes(
 
 }
 
+// ------------------------------------------------------------------------
+
 fn make_curses_attribute(pair_no: &mut u32, bkgr: i16, fgr: &(i16, String)) -> Result<chtype> {
 
     pancurses::init_pair((*pair_no) as i16, fgr.0, bkgr);
@@ -193,6 +199,8 @@ fn make_curses_attribute(pair_no: &mut u32, bkgr: i16, fgr: &(i16, String)) -> R
     Ok(ch)
 
 }
+
+// ------------------------------------------------------------------------
 
 const YAML: &str = "
 ---
@@ -210,13 +218,13 @@ dark:
             text: [43, Bold]
             value: [127, Normal]
         footer:
-            bkgr: 245
+            bkgr: 232
             title: [160, Bold]
             text: [127, Normal]
-            value: [34, Bold]
+            value: [166, Bold]
     file_header: 
         header:
-            bkgr: 236
+            bkgr: 232
             title: [160, Bold]
             text: [127, Normal]
             value: [166, Normal]
@@ -226,10 +234,26 @@ dark:
             text: [226, Normal]
             value: [226, Normal]
         footer:
-            bkgr: 248
+            bkgr: 232
+            title: [160, Bold]
+            text: [127, Normal]
+            value: [166, Bold]
+    list: 
+        header:
+            bkgr: 232
             title: [160, Bold]
             text: [127, Normal]
             value: [166, Normal]
+        scrollable_region:
+            bkgr: 251
+            title: [160, Bold]
+            text: [127, Bold]
+            value: [127, Bold]
+        footer:
+            bkgr: 232
+            title: [160, Bold]
+            text: [127, Normal]
+            value: [166, Bold]
     
 ";
 

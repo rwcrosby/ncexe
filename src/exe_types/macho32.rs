@@ -23,19 +23,32 @@ pub struct Macho32Formatter<'a> {
     mmap: Mmap,
 }
 
-// ------------------------------------------------------------------------
+impl Macho32Formatter<'_> {
 
-impl Line for Macho32Formatter<'_> {
-
-    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        Ok(Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))]))
-    }
-
-    fn as_executable(&self) -> &dyn Executable {
-        self
+    pub fn new( 
+        filename : &str,
+        mmap : Mmap,
+    ) -> Result<Box<dyn Executable + '_>> {
+        Ok(Box::new(Macho32Formatter{filename, mmap}))
     }
 
 }
+
+// ------------------------------------------------------------------------
+
+impl Line for Macho32Formatter<'_> {
+    
+    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
+        Ok(Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))]))
+    }
+    
+    fn as_executable(&self) -> &dyn Executable {
+        self
+    }
+    
+}
+
+// ------------------------------------------------------------------------
 
 impl Executable for Macho32Formatter<'_> {
 
@@ -61,13 +74,3 @@ impl Executable for Macho32Formatter<'_> {
 
 }
 
-impl Macho32Formatter<'_> {
-
-    pub fn new( filename : &str,
-            mmap : Mmap) -> Box<dyn Executable + '_> {
-
-        Box::new(Macho32Formatter{filename, mmap})
-
-    }
-
-}

@@ -17,13 +17,13 @@ use std::{
     rc::Rc,
 };
 
-use crate::windows::{
+use crate::{windows::{
     file_list_window::FnameFn,
     line::{
         Line,
         PairVec,
-    },
-};
+    }, screen::Screen,
+}, formatter::Formatter, color::Colors};
 
 use macho32::Macho32Formatter;
 use macho64::MachO64;
@@ -53,7 +53,13 @@ pub trait Executable {
         &[]
     }
 
-    fn on_enter(&self, _efld_no: usize) -> Result<()>
+    fn on_enter(
+        &self, 
+        _efld_no: usize,
+        _fmt: &Formatter,
+        _colors: &Colors,
+        _screen: &Screen,
+    ) -> Result<()>
     {
         Ok(())
     }
@@ -132,48 +138,35 @@ impl Line for NotExecutable<'_> {
 }
 
 // ------------------------------------------------------------------------
-pub fn new(filename: &str) 
-    -> Box<dyn Executable + '_> 
+pub fn new<'a>(
+    filename: &'a str,
+    fmt: &'a Formatter,
+) -> Result<Box<dyn Executable + 'a>> 
 {
-    let fd = match File::open(filename) {
-        Ok(v) => v,
-        Err(e) => {
-            return Box::new(NotExecutable {
-                filename,
-                msg: e.to_string(),
-            })
-        }
-    };
+    let fd = File::open(filename)?;
 
-    let mmap = match unsafe { Mmap::map(&fd) } {
-        Ok(v) => v,
-        Err(e) => {
-            return Box::new(NotExecutable {
-                filename,
-                msg: e.to_string(),
-            })
-        }
-    };
+    let mmap = unsafe { Mmap::map(&fd) }?;
 
     if mmap.len() < 4 {
-        return Box::new(NotExecutable {
+        return Ok(Box::new(NotExecutable {
             filename,
             msg: format!("Too small: {}", mmap.len()),
-        });
+        }));
     };
 
     let raw_type = unsafe { *(mmap.as_ptr() as *const u32) };
+
     match raw_type {
         0xfeedface => Macho32Formatter::new(filename, mmap),
-        0xfeedfacf => MachO64::new(filename, mmap),
+        0xfeedfacf => MachO64::new(filename, mmap, fmt),
         0x7f454c46 => ELF::new(filename, mmap),
         0x464c457f => ELF::new(filename, mmap),
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
-        v => Box::new(NotExecutable {
+        v => Ok(Box::new(NotExecutable {
             filename,
             msg: format!("Invalid magic number: {:x}", v),
-        }),
+        })),
     }
 }
 

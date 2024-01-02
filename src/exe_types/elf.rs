@@ -40,9 +40,9 @@ impl ELF<'_> {
     pub fn new( 
         filename : &str,
         mmap : Mmap
-    ) -> Box<dyn Executable + '_> {
+    ) -> Result<Box<dyn Executable + '_>> {
 
-        Box::new(ELF{filename, mmap, fname_fn: None})
+        Ok(Box::new(ELF{filename, mmap, fname_fn: None}))
 
     }
 

@@ -54,10 +54,12 @@ fn main() -> Result<()> {
     let args: Arguments = Arguments::parse();
     let config = configuration::Configuration::new(&args)?;
 
+    let fmt = Formatter::new();
+
     // Setup the list of executable objects
     let mut executables: Vec<_> = args.exe_filename
         .iter()
-        .map(|fname| exe_types::new(fname))
+        .map(|fname| exe_types::new(fname, &fmt).unwrap())
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
@@ -67,7 +69,6 @@ fn main() -> Result<()> {
     }
 
     // Setup principal objects
-    let formatter = Formatter::new();
     let screen = Screen::new();
     let colors = Colors::new(&config.theme)?;
 
@@ -80,14 +81,14 @@ fn main() -> Result<()> {
         header_window::show(
             executables[0].deref(), 
             &screen, 
-            &formatter, 
+            &fmt, 
             &colors
         )
     } else {
         file_list_window::show(
             &mut executables, 
             &screen, 
-            &formatter, 
+            &fmt, 
             &colors
         )
     }

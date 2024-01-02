@@ -42,7 +42,7 @@ impl Formatter {
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_str(yaml_str)
             .context("Unable to parse YAML string")?;
     
-        make_fmt_block(&self.fmt_map, &mut y_fields)
+        FormatBlock::new(&self.fmt_map, &mut y_fields)
 
     }
 
@@ -56,7 +56,7 @@ impl Formatter {
         let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_reader(fd)
             .context(format!("Unable to parse YAML file {}", filename))?;
 
-        make_fmt_block(&self.fmt_map, &mut y_fields)
+        FormatBlock::new(&self.fmt_map, &mut y_fields)
     }
 
 }
@@ -104,16 +104,69 @@ pub struct Field<'a> {
     pub fmt_fn: &'a Box<DataToString>,
 }
 
+impl<'a> Field<'a> {
+
+    pub fn try_le_usize(&self, d: &[u8]) -> Result<usize> {
+
+        let start = self.offset as usize;
+        let end = start + self.y_field.size as usize;
+
+        let x = match self.y_field.size {
+            2 => u16::from_le_bytes(d[start..end].try_into()?) as usize,
+            4 => u32::from_le_bytes(d[start..end].try_into()?) as usize,
+            8 => u64::from_le_bytes(d[start..end].try_into()?) as usize,
+            _ => bail!("")
+        };
+
+        Ok(x)
+
+    }
+
+}
+
 // ------------------------------------------------------------------------
 
 pub struct FormatBlock<'a> {
-    pub fields: Vec<Box<Field<'a>>>,
+    pub fields: Vec<Field<'a>>,
     pub data_len: usize,
     pub max_text_len: usize,
     pub max_value_len: usize,
 }
 
 impl<'a> FormatBlock<'a> {
+
+    fn new(fmt_map: &'a Box<FmtMap>,
+        y_fields: &mut Vec<Box<YamlField>>
+    ) -> Result<Box<FormatBlock<'a>>> {
+
+        let mut fmt = Box::new(FormatBlock {
+            fields: Vec::with_capacity(y_fields.len()),
+            data_len: 0,
+            max_text_len: 0,
+            max_value_len: 0
+         });
+
+        for yfld in y_fields.drain(..) {
+        let size = yfld.size;
+
+        if yfld.field_type != FieldType::Ignore {
+
+            fmt.max_text_len = cmp::max(yfld.name.len(), fmt.max_text_len);
+            let (fmt_fn, value_len) = derive_fmt_fn(fmt_map, &yfld)?;
+            fmt.fields.push(
+                Field { y_field: yfld,
+                        offset: fmt.data_len as isize,
+                        fmt_fn,}
+            );
+            fmt.max_value_len = cmp::max(value_len, fmt.max_value_len);
+
+        }
+
+        fmt.data_len += size;
+        }
+
+        Ok(fmt)
+    }
 
     pub fn _to_string(&self, data: *const u8, offset: isize, len: usize) 
         -> Result<String>  
@@ -177,42 +230,6 @@ fn derive_fmt_fn<'a>(map: &'a Box<FmtMap>,
         }
     }
 
-}
-
-// ------------------------------------------------------------------------
-
-fn make_fmt_block<'a>(fmt_map: &'a Box<FmtMap>,
-                  y_fields: &mut Vec<Box<YamlField>>) 
-    -> Result<Box<FormatBlock<'a>>> 
-{
-    let mut fmt = Box::new(FormatBlock {
-        fields: vec![],
-        data_len: 0,
-        max_text_len: 0,
-        max_value_len: 0
-    });
-
-    for yfld in y_fields.drain(..) {
-        let size = yfld.size;
-        
-        if yfld.field_type != FieldType::Ignore {
-
-            fmt.max_text_len = cmp::max(yfld.name.len(), fmt.max_text_len);
-            let (fmt_fn, value_len) = derive_fmt_fn(fmt_map, &yfld)?;
-            fmt.fields.push(
-                Box::new(
-                    Field { y_field: yfld,
-                            offset: fmt.data_len as isize,
-                            fmt_fn,}
-            ));
-            fmt.max_value_len = cmp::max(value_len, fmt.max_value_len);
-
-        }
-
-        fmt.data_len += size;
-    }
-
-    Ok(fmt)
 }
 
 // ------------------------------------------------------------------------
@@ -287,13 +304,13 @@ fn make_fmt_map()
         ((FieldType::Le, FieldFormat::Ptr, Some(4)), 
             (
                 Box::new(| d: &[u8]| 
-                    format!("{:p}", u32::from_le_bytes(d.try_into().unwrap()) as *const u32) ), 
+                    format!("{:010p}", u32::from_le_bytes(d.try_into().unwrap()) as *const u32) ), 
                 Box::new(| _d | 10usize)
         )),
         ((FieldType::Le, FieldFormat::Ptr, Some(8)), 
             (
                 Box::new(| d: &[u8]| 
-                    format!("{:p}", u64::from_le_bytes(d.try_into().unwrap()) as *const u64) ), 
+                    format!("{:018p}", u64::from_le_bytes(d.try_into().unwrap()) as *const u64) ), 
                 Box::new(| _d | 18usize)
         )),
         ((FieldType::Le, FieldFormat::Hex, Some(2)), 
