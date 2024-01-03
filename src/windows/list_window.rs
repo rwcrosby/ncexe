@@ -6,10 +6,7 @@ use anyhow::Result;
 
 use crate::{
     color::WindowSetColors,
-    formatter::{
-        Formatter, 
-        center_in,
-    },
+    formatter::center_in,
 };
 
 use super::{
@@ -27,7 +24,6 @@ pub fn show<'a >(
     lines: &'a mut Vec<&'a dyn Line>,
     title: &'a str,
     trailer: &'a str,
-    _fmt: &'a Formatter,
     wsc: &'a WindowSetColors,
     screen : &'a Screen,
 ) -> Result<()> {

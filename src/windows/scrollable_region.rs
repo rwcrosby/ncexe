@@ -52,7 +52,6 @@ impl<'a> ScrollableRegion<'a> {
         enter_fn: EnterFn<'a>,
     ) -> Box<ScrollableRegion<'a>> 
     {
-
         let pwin = pancurses::newwin(1, 1, 2, 0); 
         pwin.keypad(true);
 
@@ -329,7 +328,8 @@ impl<'a> ScrollableRegion<'a> {
 
         for (y, line) in self.lines[self.top_idx..lim]
             .iter()
-            .enumerate() {
+            .enumerate()
+        {
 
             self.pwin.mv(i32::try_from(y)?, 0);
             line.as_pairs(self.size.x)?

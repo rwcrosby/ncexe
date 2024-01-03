@@ -2,191 +2,164 @@
 //! Format a block of memory into a window
 //! 
 
-use anyhow::{
-    anyhow, 
-    bail, 
-    Context, 
-    Result,
-};
-use serde::Deserialize;
-use std::{
-    cmp,
-    collections::HashMap,
-};
+use std::cmp;
 
 // ------------------------------------------------------------------------
+/// Set of mapping fields
 
-type FmtMap = HashMap<(FieldType, FieldFormat, Option<usize>), (Box<DataToString>, Box<DataLen>)>;
-type DataToString = dyn Fn(&[u8]) -> String;
-type DataLen = dyn Fn(usize) -> usize;
-
-// ------------------------------------------------------------------------
-/// Global formatting information 
-
-pub struct Formatter {
-
-    fmt_map: Box<FmtMap>,
-
-}
-
-impl Formatter {
-
-    pub fn new() -> Formatter {
-        Formatter{ fmt_map: make_fmt_map()}
-    }
-
-    pub fn from_str(&self, yaml_str: &str) 
-        -> Result<Box<FormatBlock>> 
-    {
-
-        let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_str(yaml_str)
-            .context("Unable to parse YAML string")?;
-    
-        FormatBlock::new(&self.fmt_map, &mut y_fields)
-
-    }
-
-    #[allow(dead_code)]
-    pub fn from_file(&self, filename: &str) 
-        -> Result<Box<FormatBlock>> 
-    {
-        let fd = std::fs::File::open(filename)
-            .context(format!("Unable to open format file {}", filename))?;
-        
-        let mut y_fields: Vec<Box<YamlField>> = serde_yaml::from_reader(fd)
-            .context(format!("Unable to parse YAML file {}", filename))?;
-
-        FormatBlock::new(&self.fmt_map, &mut y_fields)
-    }
-
-}
-
-// ------------------------------------------------------------------------
-
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
-enum FieldType {
-    Be,
-    Le,
-    Bytes,
-    Ignore,
-}
-
-// ------------------------------------------------------------------------
-
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Clone, Copy)]
-enum FieldFormat {
-    Int,
-    Hex,
-    Ptr,
-    Binary,
-    Char    
-}
-
-// ------------------------------------------------------------------------
-
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct YamlField {
-    pub size: usize,
-    pub name: String,
-    #[serde(rename = "type")]
-    field_type: FieldType,
-    #[serde(rename = "format")]
-    field_fmt: FieldFormat,
-    #[serde{default}]
-    pub on_enter: Option<usize>,
-}
-
-// ------------------------------------------------------------------------
-
-pub struct Field<'a> {
-    pub y_field: Box<YamlField>,
-    pub offset: isize,
-    pub fmt_fn: &'a Box<DataToString>,
-}
-
-impl<'a> Field<'a> {
-
-    pub fn try_le_usize(&self, d: &[u8]) -> Result<usize> {
-
-        let start = self.offset as usize;
-        let end = start + self.y_field.size as usize;
-
-        let x = match self.y_field.size {
-            2 => u16::from_le_bytes(d[start..end].try_into()?) as usize,
-            4 => u32::from_le_bytes(d[start..end].try_into()?) as usize,
-            8 => u64::from_le_bytes(d[start..end].try_into()?) as usize,
-            _ => bail!("")
-        };
-
-        Ok(x)
-
-    }
-
-}
-
-// ------------------------------------------------------------------------
-
-pub struct FormatBlock<'a> {
-    pub fields: Vec<Field<'a>>,
+pub struct MapSet {
+    pub fields: Vec<MapField>,
     pub data_len: usize,
     pub max_text_len: usize,
-    pub max_value_len: usize,
 }
 
-impl<'a> FormatBlock<'a> {
+impl<'a> MapSet {
 
-    fn new(fmt_map: &'a Box<FmtMap>,
-        y_fields: &mut Vec<Box<YamlField>>
-    ) -> Result<Box<FormatBlock<'a>>> {
+    pub fn new(
+        map_flds: &'static [FieldDef],
+    ) -> Box<MapSet> {
 
-        let mut fmt = Box::new(FormatBlock {
-            fields: Vec::with_capacity(y_fields.len()),
-            data_len: 0,
-            max_text_len: 0,
-            max_value_len: 0
+        let mut fmt = Box::new(
+            MapSet {
+                fields: Vec::with_capacity(map_flds.len()),
+                data_len: 0,
+                max_text_len: 0,
          });
 
-        for yfld in y_fields.drain(..) {
-        let size = yfld.size;
+        for mfld in map_flds.iter() {
 
-        if yfld.field_type != FieldType::Ignore {
+            if let Some(_) = mfld.string_fn {
 
-            fmt.max_text_len = cmp::max(yfld.name.len(), fmt.max_text_len);
-            let (fmt_fn, value_len) = derive_fmt_fn(fmt_map, &yfld)?;
-            fmt.fields.push(
-                Field { y_field: yfld,
-                        offset: fmt.data_len as isize,
-                        fmt_fn,}
-            );
-            fmt.max_value_len = cmp::max(value_len, fmt.max_value_len);
+                fmt.max_text_len = cmp::max(mfld.name.len(), fmt.max_text_len);
 
+                fmt.fields.push(
+                    MapField { 
+                        field: mfld,
+                        range: (fmt.data_len, fmt.data_len + mfld.len),
+                    }
+                );
+
+            }
+
+            fmt.data_len += mfld.len;
         }
 
-        fmt.data_len += size;
-        }
-
-        Ok(fmt)
+        fmt
     }
 
-    pub fn _to_string(&self, data: *const u8, offset: isize, len: usize) 
-        -> Result<String>  
-    {
-        if offset + len as isize > self.data_len as isize {
-            bail!("Data block not large enough");
+}
+
+// ------------------------------------------------------------------------
+/// Field mapped into a data offsets
+
+pub struct MapField {
+    pub field: &'static FieldDef,
+    pub range: (usize, usize),
+}
+
+
+impl MapField {
+
+    pub fn to_usize(&self, data: &[u8]) -> usize {
+
+        // Yes this could fail but panic is actuall an appropriate response
+        (self.field.usize_fn.unwrap())(&data[self.range.0..self.range.1])
+    }
+
+    pub fn to_string(&self, data: &[u8]) -> String {
+
+        // Yes this could fail but panic is actuall an appropriate response
+        (self.field.string_fn.unwrap())(&data[self.range.0..self.range.1])
+    }
+
+
+}
+
+// ------------------------------------------------------------------------
+/// Field definition
+
+type StringFn = dyn Fn(&[u8]) -> String;
+type UsizeFn = dyn Fn(&[u8]) -> usize;
+
+pub type ValEntry = (usize, &'static str);
+pub type ValTable = [ValEntry];
+
+pub struct FieldDef {
+    pub len: usize,
+    pub name: &'static str,
+    pub string_fn: Option<&'static StringFn>,
+    pub usize_fn: Option<&'static UsizeFn>,
+    pub val_tbl: Option<&'static ValTable>,
+    pub enter_no: Option<usize>,
+}
+
+impl FieldDef {
+
+    pub const fn new(
+        len: usize, 
+        name: &'static str, 
+        string_fn: Option<&'static StringFn>
+    ) -> FieldDef {
+        FieldDef {
+            len,
+            name,
+            string_fn,
+            enter_no: None,
+            usize_fn: None,
+            val_tbl: None,
         }
+    }
 
-        let fmt_str: String = self.fields
-            .iter()
-            .fold(String::from(""), 
-                    |fstr, field| {
-                    let slice: &[u8] = unsafe {
-                    std::slice::from_raw_parts( data.offset(field.offset), 
-                                                field.y_field.size)
-                };
-            fstr + (field.fmt_fn)(slice).as_str() + "\n"
-        });
+    pub const fn ignore(
+        len: usize
+    ) -> FieldDef {
+        FieldDef {
+            len,
+            name: "",
+            string_fn: None,
+            enter_no: None,
+            usize_fn: None,
+            val_tbl: None,
+        }
+    }
 
-        Ok(fmt_str)
+    pub const fn fn_usize(
+        mut self: FieldDef, 
+        uf: &'static UsizeFn, 
+    ) -> FieldDef {
+        self.usize_fn = Some(uf);
+        self
+    }
+
+    pub const fn val_tbl(
+        mut self: FieldDef, 
+        uf: &'static UsizeFn,
+        vt: &'static ValTable,
+    ) -> FieldDef {
+        self.usize_fn = Some(uf);
+        self.val_tbl = Some(vt);
+        self
+    }
+
+    pub const fn enter_no(
+        mut self: FieldDef, 
+        enter: usize
+    ) -> FieldDef {
+        self.enter_no = Some(enter);
+        self
+    }
+
+    pub fn lookup(
+        d: &[u8], 
+        ufn: &UsizeFn, 
+        table: &ValTable
+    ) -> Option<&'static str> {
+        let val = ufn(d);
+        if let Some((_,  s)) = table.iter().find(| v | v.0 == val ) {
+            Some(s)
+        } else {
+            None
+        }
     }
 
 }
@@ -207,295 +180,71 @@ pub fn center_in(width: usize, s: &str) -> (i32, String) {
 
 // ------------------------------------------------------------------------
 
-fn derive_fmt_fn<'a>(map: &'a Box<FmtMap>,
-                     y_field: &YamlField) 
-    -> Result<(&'a Box<DataToString>, usize)> 
-{
-
-    // Try with length first
-
-    match map.get(&(y_field.field_type, y_field.field_fmt, Some(y_field.size))) {
-
-        Some((fmt_fn, len_fn)) => Ok((fmt_fn, (*len_fn)(y_field.size))),
-
-        None => match map.get(&(y_field.field_type, y_field.field_fmt, None )) {
-
-            Some((fmt_fn, len_fn)) => Ok((fmt_fn, (*len_fn)(y_field.size))),
-
-            None => Err(anyhow!("No formatter for {}:  {:?} {:?} {}", 
-                        y_field.name, 
-                        y_field.field_type, 
-                        y_field.field_fmt, 
-                        y_field.size ))
-        }
-    }
-
+trait Converters {
+    fn to_hex(&self) -> String;
+    fn to_bits(&self) -> String;
 }
 
+impl Converters for &[u8] {
+    fn to_hex(&self) -> String {
+        self.iter()
+            .map(|byte| -> String { format!("{:02x}", byte) })
+            .collect::<Vec<_>>()
+            .join(" ") 
+    }
+    fn to_bits(&self) -> String {
+        self.iter()
+            .map(|byte| -> String { format!("{:08b}", byte) })
+            .collect::<Vec<_>>()
+            .join(" ") 
+    }
+}
 // ------------------------------------------------------------------------
+/// Formatting closures
 
-fn make_fmt_map() 
-    -> Box<FmtMap>
-{
+pub const BE_8_STRING:  &StringFn = &|d: &[u8]| u8::from_be_bytes(d.try_into().unwrap()).to_string();
+pub const BE_16_STRING: &StringFn = &|d: &[u8]| u16::from_be_bytes(d.try_into().unwrap()).to_string();
+pub const BE_32_STRING: &StringFn = &|d: &[u8]| u32::from_be_bytes(d.try_into().unwrap()).to_string();
+pub const BE_64_STRING: &StringFn = &|d: &[u8]| u64::from_be_bytes(d.try_into().unwrap()).to_string();
 
-    let map : FmtMap = HashMap::from([
-        ((FieldType::Be, FieldFormat::Int, Some(1)), 
-            (
-                Box::new(| d: &[u8]| d[0].to_string() ) as Box<DataToString>, 
-                Box::new(| _d | 3usize) as Box<DataLen>
-        )),
-        ((FieldType::Be, FieldFormat::Int, Some(2)), 
-            (
-                Box::new(| d: &[u8]| u16::from_be_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 5usize)
-        )),
-        ((FieldType::Be, FieldFormat::Int, Some(4)), 
-            (
-                Box::new(| d: &[u8]| u32::from_be_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 10usize)
-        )),
-        ((FieldType::Be, FieldFormat::Int, Some(8)), 
-            (
-                Box::new(| d: &[u8]| u64::from_be_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 12usize)
-        )),
-        ((FieldType::Be, FieldFormat::Ptr, Some(4)), 
-            (
-                Box::new(| d: &[u8]| 
-                    format!("{:p}", u32::from_be_bytes(d.try_into().unwrap()) as *const u32) ), 
-                Box::new(| _d | 10usize)
-        )),
-        ((FieldType::Be, FieldFormat::Ptr, Some(8)), 
-            (
-                Box::new(| d: &[u8]| 
-                    format!("{:p}", u64::from_be_bytes(d.try_into().unwrap()) as *const u64) ), 
-                Box::new(| _d | 18usize)
-        )),
-        ((FieldType::Be, FieldFormat::Hex, None), 
-            (
-                Box::new(| d: &[u8]| to_hex(d)), 
-                Box::new(| d | d * 3 - 1)
-        )),
-        ((FieldType::Be, FieldFormat::Binary, None), 
-            (
-                Box::new(| d: &[u8]| to_binary(d)), 
-                Box::new(| d | d * 9 - 1 )
-        )),
-        ((FieldType::Le, FieldFormat::Int, Some(1)), 
-            (
-                Box::new(| d: &[u8]| d[0].to_string() ) as Box<DataToString>, 
-                Box::new(| _d | 3usize) as Box<DataLen>
-        )),
-        ((FieldType::Le, FieldFormat::Int, Some(2)), 
-            (
-                Box::new(| d: &[u8]| u16::from_le_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 5usize)
-        )),
-        ((FieldType::Le, FieldFormat::Int, Some(4)), 
-            (
-                Box::new(| d: &[u8]| u32::from_le_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 10usize)
-        )),
-        ((FieldType::Le, FieldFormat::Int, Some(8)), 
-            (
-                Box::new(| d: &[u8]| u64::from_le_bytes(d.try_into().unwrap()).to_string() ), 
-                Box::new(| _d | 12usize)
-        )),
-        ((FieldType::Le, FieldFormat::Ptr, Some(4)), 
-            (
-                Box::new(| d: &[u8]| 
-                    format!("{:010p}", u32::from_le_bytes(d.try_into().unwrap()) as *const u32) ), 
-                Box::new(| _d | 10usize)
-        )),
-        ((FieldType::Le, FieldFormat::Ptr, Some(8)), 
-            (
-                Box::new(| d: &[u8]| 
-                    format!("{:018p}", u64::from_le_bytes(d.try_into().unwrap()) as *const u64) ), 
-                Box::new(| _d | 18usize)
-        )),
-        ((FieldType::Le, FieldFormat::Hex, Some(2)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_hex(
-                        u16::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 3 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Hex, Some(4)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_hex(
-                        u32::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 3 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Hex, Some(8)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_hex(
-                        u64::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 3 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Hex, None), 
-            (
-                Box::new(| d: &[u8]| to_hex(d)), 
-                Box::new(| d | d * 3 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Binary, Some(2)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_binary(
-                        u16::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 9 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Binary, Some(4)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_binary(
-                        u32::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 9 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Binary, Some(8)), 
-            (
-                Box::new(| d: &[u8]| 
-                    to_binary(
-                        u64::from_le_bytes(d.try_into().unwrap()).to_be_bytes()
-                                .as_slice())), 
-                Box::new(| d | d * 9 - 1)
-        )),
-        ((FieldType::Le, FieldFormat::Binary, None), 
-            (
-                Box::new(| d: &[u8]| to_binary(d)), 
-                Box::new(| d | d * 9 - 1 )
-        )),
-        ((FieldType::Bytes, FieldFormat::Binary, None), 
-            (
-                Box::new(| d: &[u8]| to_binary(d)), 
-                Box::new(| d | d * 9 - 1 )
-        )),
-        ((FieldType::Bytes, FieldFormat::Hex, None), 
-            (
-                Box::new(| d: &[u8]| to_hex(d)), 
-                Box::new(| d | d * 3 - 1 )
-        )),
-        ((FieldType::Bytes, FieldFormat::Char, None), 
-            (
-                Box::new(| d: &[u8]|     
-                    match std::str::from_utf8(d) {
-                        Ok(v) => format!("\"{}\"", v),
-                        Err(e) => e.to_string(),
-                    }), 
-                Box::new(| d | d )
-        )),
-    ]);
+pub const BE_8_USIZE:   &UsizeFn = &|d: &[u8]| u8::from_be_bytes(d.try_into().unwrap()).into();
+pub const BE_16_USIZE:  &UsizeFn = &|d: &[u8]| u16::from_be_bytes(d.try_into().unwrap()).into();
+pub const BE_32_USIZE:  &UsizeFn = &|d: &[u8]| u32::from_be_bytes(d.try_into().unwrap())
+        .try_into().unwrap();
+pub const BE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_be_bytes(d.try_into().unwrap())
+        .try_into().unwrap();
 
-    Box::new(map)
+pub const BE_HEX:    &StringFn = &|d: &[u8]| d.to_hex();
 
-}
+pub const BE_32_PTR:    &StringFn = &|d: &[u8]| format!("{:010p}", 
+    u32::from_be_bytes(d.try_into().unwrap()) as *const u32);
+pub const BE_64_PTR:    &StringFn = &|d: &[u8]| format!("{:018p}", 
+    u64::from_be_bytes(d.try_into().unwrap()) as *const u64);
 
-fn to_hex(d: &[u8]) -> String {
-    d.iter()
-        .map(|byte| -> String { format!("{:02x}", byte) })
-        .collect::<Vec<_>>()
-        .join(" ") 
-}
+pub const LE_8_STRING:  &StringFn = &|d: &[u8]| u8::from_le_bytes(d.try_into().unwrap()).to_string();
+pub const LE_16_STRING: &StringFn = &|d: &[u8]| u16::from_le_bytes(d.try_into().unwrap()).to_string();
+pub const LE_32_STRING: &StringFn = &|d: &[u8]| u32::from_le_bytes(d.try_into().unwrap()).to_string();
+pub const LE_64_STRING: &StringFn = &|d: &[u8]| u64::from_le_bytes(d.try_into().unwrap()).to_string();
 
-fn to_binary(d: &[u8]) -> String {
-    d.iter()
-        .map(|byte| -> String { format!("{:08b}", byte) })
-        .collect::<Vec<_>>()
-        .join(" ") 
-}
+pub const LE_8_HEX:     &StringFn = &|d: &[u8]| d.to_hex();
+pub const LE_16_HEX:    &StringFn = &|d: &[u8]| u16::from_le_bytes(d.try_into().unwrap())
+    .to_be_bytes()
+    .as_slice()
+    .to_hex();
+pub const LE_32_HEX:    &StringFn = &|d: &[u8]| u32::from_le_bytes(d.try_into().unwrap())
+    .to_be_bytes()
+    .as_slice()
+    .to_hex();
 
-// ------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    use hex_literal::hex;
-
-    const INTS: [u8; 29] = hex!(
-        "
-    01
-    0002 0200 
-    00000003 03000000 
-    00000000 00000004  04000000 00000000"
-    );
-
-    const STR: [u8; 19] = hex!(
-        "
-    00 ff 45
-    cf fc 32 23 00 ff
-    48656c6c6f576f726c64
-    "
-    );
-
-    #[test]
-    fn good_fmt_file() {
-        let fmt = Formatter::new();
-        let f = fmt.from_file("tests/SampleFormat.yaml").unwrap();
-
-        assert!(f.data_len == 9);
-    }
-
-    #[test]
-    fn ints_from_file() {
-        let fmt = Formatter::new();
-        let f = fmt.from_file("tests/Ints.yaml").unwrap();
-        let fstr = f._to_string(&INTS as *const u8, 0, INTS.len()).unwrap();
-        println!("{}", fstr);
-        assert!(
-            fstr == "1
-2
-2
-3
-3
-4
-4
-"
-        );
-    }
-
-    const YAMLSTRING : &str = "
----
-- size: 3
-  name: Binary bytes
-  type: !Bytes
-  format: !Binary 
-- size: 6
-  name: Hex Bytes
-  type: !Bytes
-  format: !Hex
-- size: 10
-  name: Character string
-  type: !Bytes
-  format: Char
-";
-
-    #[test]
-    fn strs_from_str() {
-        let fmt = Formatter::new();
-        let f = fmt.from_str(YAMLSTRING).unwrap();
-        let fstr = f._to_string(&STR as *const u8, 0, STR.len()).unwrap();
-        println!("{}", fstr);
-        assert!(
-            fstr == "00000000 11111111 01000101
-cf fc 32 23 00 ff
-\"HelloWorld\"
-"
-        );
-    }
-
-    #[test]
-    #[should_panic(expected="No such file or directory (os error 2)")]
-    fn missing_fmt_file() {
-        let fmt = Formatter::new();
-        let _f = fmt.from_file("missingfile.yaml").unwrap();
-    }
-
-}
+pub const LE_32_PTR:    &StringFn = &|d: &[u8]| format!("{:010p}", 
+    u32::from_le_bytes(d.try_into().unwrap()) as *const u32);
+pub const LE_64_PTR:    &StringFn = &|d: &[u8]| format!("{:018p}", 
+    u64::from_le_bytes(d.try_into().unwrap()) as *const u64);
+pub const BIN_STRING:   &StringFn = &|d: &[u8]| d.to_bits();
+    
+pub const LE_8_USIZE:   &UsizeFn = &|d: &[u8]| u8::from_le_bytes(d.try_into().unwrap()).into();
+pub const LE_16_USIZE:  &UsizeFn = &|d: &[u8]| u16::from_le_bytes(d.try_into().unwrap()).into();
+pub const LE_32_USIZE:  &UsizeFn = &|d: &[u8]| u32::from_le_bytes(d.try_into().unwrap())
+        .try_into().unwrap();
+pub const LE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_le_bytes(d.try_into().unwrap())
+        .try_into().unwrap();

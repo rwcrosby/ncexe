@@ -15,7 +15,6 @@ use ncexe::{
     color::Colors,
     exe_types,
     exe_types::ExeType,
-    formatter::Formatter,
     windows::{
         file_list_window,
         header_window,
@@ -54,12 +53,10 @@ fn main() -> Result<()> {
     let args: Arguments = Arguments::parse();
     let config = configuration::Configuration::new(&args)?;
 
-    let fmt = Formatter::new();
-
     // Setup the list of executable objects
     let mut executables: Vec<_> = args.exe_filename
         .iter()
-        .map(|fname| exe_types::new(fname, &fmt).unwrap())
+        .map(|fname| exe_types::new(fname).unwrap())
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
@@ -81,14 +78,12 @@ fn main() -> Result<()> {
         header_window::show(
             executables[0].deref(), 
             &screen, 
-            &fmt, 
             &colors
         )
     } else {
         file_list_window::show(
             &mut executables, 
             &screen, 
-            &fmt, 
             &colors
         )
     }

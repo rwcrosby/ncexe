@@ -11,10 +11,7 @@ use crate::{
         Executable, 
         ETYPE_LENGTH
     },
-    formatter::{
-        Formatter, 
-        center_in,
-    }, 
+    formatter::center_in, 
 };
 
 use super::{
@@ -30,7 +27,7 @@ use super::{
 
 // ------------------------------------------------------------------------
 
-type ExeItem<'a> = Box<dyn Executable + 'a>;
+type ExeItem<'a> = Box<dyn Executable>;
 type ExeList<'a> = Vec<ExeItem<'a>>;
 
 pub type FnameFn = dyn Fn(usize, &str) -> String;
@@ -40,7 +37,6 @@ pub type FnameFn = dyn Fn(usize, &str) -> String;
 pub fn show<'a>(
     executables: &'a mut ExeList, 
     screen: &'a Screen,
-    fmt: &'a Formatter,
     colors: &'a Colors,
 ) -> Result<()> {
 
@@ -103,7 +99,6 @@ pub fn show<'a>(
         header_window::show(
             line.as_executable(), 
             screen, 
-            fmt, 
             colors,
 
     );
