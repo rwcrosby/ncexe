@@ -56,7 +56,15 @@ fn main() -> Result<()> {
     // Setup the list of executable objects
     let mut executables: Vec<_> = args.exe_filename
         .iter()
-        .map(|fname| exe_types::new(fname).unwrap())
+        .map(|fname| 
+            match exe_types::new(fname) {
+                Ok(exe) => exe,
+                Err(err) => Box::new(exe_types::NotExecutable {
+                    filename: String::from(fname),
+                    msg: err.to_string(),
+                })
+            }
+        )
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 

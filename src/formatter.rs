@@ -72,6 +72,27 @@ impl MapField {
         (self.field.string_fn.unwrap())(&data[self.range.0..self.range.1])
     }
 
+    pub fn lookup(
+        &self,
+        d: &[u8], 
+    ) -> Option<&'static str> {
+
+        if let Some(vt) = self.field.val_tbl {
+
+            let ufn = self.field.usize_fn.unwrap();
+            let uv = ufn(&d[self.range.0..self.range.1]);
+
+            if let Some((_,  s)) = vt.iter().find(| v | v.0 == uv ) {
+                Some(s)
+            } else {
+                None
+            }
+
+        } else {
+            None
+        }
+
+    }
 
 }
 
@@ -147,19 +168,6 @@ impl FieldDef {
     ) -> FieldDef {
         self.enter_no = Some(enter);
         self
-    }
-
-    pub fn lookup(
-        d: &[u8], 
-        ufn: &UsizeFn, 
-        table: &ValTable
-    ) -> Option<&'static str> {
-        let val = ufn(d);
-        if let Some((_,  s)) = table.iter().find(| v | v.0 == val ) {
-            Some(s)
-        } else {
-            None
-        }
     }
 
 }

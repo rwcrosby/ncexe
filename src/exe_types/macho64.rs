@@ -215,7 +215,8 @@ impl<'a> Line for Box<CmdBlock<'a>> {
 const HEADER: &[FieldDef] = &[
 
     FieldDef::new(4, "Magic Number", Some(formatter::LE_32_HEX)),
-    FieldDef::new(4, "CPU Type", Some(formatter::LE_32_HEX) ),
+    FieldDef::new(4, "CPU Type", Some(formatter::LE_32_HEX) )
+        .val_tbl(formatter::LE_32_USIZE, CPU_TYPE),
     FieldDef::new(4, "CPU Sub-Type", Some(formatter::LE_32_HEX)),
     FieldDef::new(4, "File Type", Some(formatter::LE_32_HEX)),
     FieldDef::new(4, "Load Commands", Some(formatter::LE_32_STRING))
@@ -228,8 +229,19 @@ const HEADER: &[FieldDef] = &[
 ];
 
 const CMD_HEADER: &[FieldDef] = &[
+
     FieldDef::new(4, "Command Type", Some(formatter::LE_32_PTR))
        .fn_usize(formatter::LE_32_USIZE),
     FieldDef::new(4, "Command Length", Some(formatter::LE_32_HEX))
        .fn_usize(formatter::LE_32_USIZE),
+
+];
+
+const CPU_TYPE: &formatter::ValTable = &[
+
+    (0x7, "x86"),
+    (0x01000007, "64 Bit x86"),
+    (0xC, "ARM"),
+    (0x0100000C, "64 Bit ARM"),
+
 ];

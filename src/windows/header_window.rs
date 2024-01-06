@@ -2,6 +2,7 @@
 //! The executable file header window
 //!
 
+
 use anyhow::Result;
 
 use crate::{
@@ -120,7 +121,7 @@ impl<'a> Line for Box<HeaderLine<'a>> {
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.map_field;
 
-        Ok(Vec::from([
+        let mut pairs = Vec::from([
             (
                 Some(self.wc.text),
                 format!(
@@ -133,6 +134,18 @@ impl<'a> Line for Box<HeaderLine<'a>> {
                 Some(self.wc.value),
                 format!(" {}", (self.map_field.to_string(&self.exe.mmap()))),
             ),
-        ]))
+        ]);
+
+        if let Some(desc) = fld.lookup(&self.exe.mmap()) {
+            pairs.push(
+                (
+                    Some(self.wc.value),
+                    format!(" ({})",desc ),
+                )
+            );
+        };
+
+        Ok(pairs)
+
     }
 }
