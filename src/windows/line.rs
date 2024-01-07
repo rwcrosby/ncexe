@@ -18,6 +18,9 @@ pub trait Line {
     /// Return a set of attr/string pairs
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
+    /// Handle hitting enter on the line
+    fn on_enter(&self) -> Result<()> { Ok(()) }
+
 }
 
 // ------------------------------------------------------------------------

@@ -6,10 +6,7 @@
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::{
-    rc::Rc, 
-    ops::Deref
-};
+use std::ops::Deref;
 
 use crate::{
     color::{
@@ -18,13 +15,10 @@ use crate::{
     },
     formatter::{
         self,
+        FieldMap,
         FieldDef,
-        MapSet,
-        MapField,
     },
     windows::{
-        FSIZE_LENGTH,
-        file_list_window::FnameFn,
         list_window,
         line::{
             Line,
@@ -35,7 +29,6 @@ use crate::{
 };
 
 use super::{
-    ETYPE_LENGTH,
     Executable,
     ExeType,
 };
@@ -45,9 +38,6 @@ use super::{
 pub struct MachO64 {
     filename: String,
     mmap: Mmap,
-    fname_fn: Option<Rc<FnameFn>>,
-    hdr_map: Box<MapSet>,
-    cmd_hdr_map: Box<MapSet>,
 }
 
 // ------------------------------------------------------------------------
@@ -57,43 +47,12 @@ impl<'a> MachO64 {
     pub fn new( 
         filename: &'a str,
         mmap: Mmap,
-        // fmt: &'a Formatter,
     ) -> Result<Box<dyn Executable>> {
 
         Ok(Box::new(MachO64{
             filename: String::from(filename), 
             mmap, 
-            fname_fn: None,
-            hdr_map: MapSet::new(HEADER),
-            cmd_hdr_map: MapSet::new(CMD_HEADER),
         }))
-
-    }
-
-}
-
-// ------------------------------------------------------------------------
-
-// Return a file list line 
-
-impl<'a> Line for MachO64 {
-
-    fn as_executable(&self) -> &dyn Executable {
-        self
-    }
-
-    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
-
-        let fname_fn = self.fname_fn.as_ref().unwrap();
-
-        Ok(Vec::from([
-            (   None,
-                format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
-                    tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
-                    ml=FSIZE_LENGTH, size=self.mmap.len(),
-                    fname=fname_fn(sc, &self.filename)
-            ))
-        ]))
 
     }
 
@@ -115,68 +74,12 @@ impl<'a> Executable for MachO64 {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &MapSet {
-        &self.hdr_map
-    }
-
-    fn on_enter(
-        &self,
-        _efld_no: usize,
-        colors: & Colors,
-        screen: & Screen,
-    ) -> Result<()> {
-
-        let wsc = colors.get_window_set_colors("list")?;
-
-        let num_cmds = self.hdr_map.fields[4].to_usize(self.mmap());
-        let mut cmd_offset = self.hdr_map.data_len;
-
-        let mut cmds: Vec<Box<CmdBlock>> = Vec::with_capacity(num_cmds); 
-        for _ in 0..num_cmds {
-
-            let cmd_slice = &self.mmap()
-                [cmd_offset..cmd_offset+self.cmd_hdr_map.data_len];
-
-            let cmd_len: usize = self.cmd_hdr_map
-                .fields[1]
-                .to_usize(cmd_slice);
-
-            let cb = Box::new(CmdBlock{
-                exe: self,
-                fields: &self.cmd_hdr_map.fields,
-                wc: &wsc.scrollable_region,
-                data: &self.mmap[cmd_offset..cmd_offset + cmd_len],
-            });
-
-            cmds.push(cb);
-            cmd_offset += cmd_len;
-
-        }
-
-        let mut lines = cmds
-            .iter()
-            .map(|f| -> &dyn Line {f})
-            .collect();
-
-        list_window::show(
-            &mut lines,
-            "Mach-O Load Commands",
-            "Say something pithy, # commands, total len",
-            wsc,
-            screen,
-        )
-
+    fn header_map(&self) -> &FieldMap {
+        &HEADER_MAP
     }
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
-    }
-    fn to_line(&self) -> &dyn Line {
-        self
-    }
-
-    fn set_fname_fn(&mut self, fname_fn: Rc<FnameFn>) {
-        self.fname_fn = Some(fname_fn);
     }
 
 }
@@ -186,13 +89,13 @@ impl<'a> Executable for MachO64 {
 struct CmdBlock<'a> {
 
     exe: &'a dyn Executable,
-    fields: &'a Vec<MapField>,
+    fields: &'static [FieldDef],
     wc: &'a WindowColors,
     data: &'a [u8],
 
 }
 
-impl<'a> Line for Box<CmdBlock<'a>> {
+impl Line for CmdBlock<'_> {
     fn as_executable(&self) -> &dyn Executable {
         self.exe
     }
@@ -212,27 +115,80 @@ impl<'a> Line for Box<CmdBlock<'a>> {
 
 // ------------------------------------------------------------------------
 
-const HEADER: &[FieldDef] = &[
+fn load_commands_on_enter(
+    exe: &dyn Executable, 
+    colors: &Colors,
+    screen: &Screen,
+) -> Result<()> {
 
-    FieldDef::new(4, "Magic Number", Some(formatter::LE_32_HEX)),
-    FieldDef::new(4, "CPU Type", Some(formatter::LE_32_HEX) )
+    let wsc = colors.get_window_set_colors("list")?;
+
+    // let num_cmds = self.hdr_map.fields[4].to_usize(self.mmap());
+    let num_cmds = HEADER[4].to_usize(exe.mmap());
+    let mut cmd_offset = HEADER_MAP.data_len;
+
+    let mut cmds: Vec<CmdBlock> = Vec::with_capacity(num_cmds); 
+    for _ in 0..num_cmds {
+
+        let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset+ CMD_HEADER_MAP.data_len];
+
+        let cmd_len: usize = CMD_HEADER_MAP
+            .fields[1]
+            .to_usize(cmd_slice);
+
+        cmds.push(CmdBlock{
+            exe,
+            fields: CMD_HEADER,
+            wc: &wsc.scrollable_region,
+            data: &exe.mmap()[cmd_offset..cmd_offset + cmd_len],
+        });
+
+        cmd_offset += cmd_len;
+
+    }
+
+    let mut lines = cmds
+        .iter()
+        .map(| f | -> &dyn Line { f })
+        .collect();
+
+    list_window::show(
+        &mut lines,
+        "Mach-O Load Commands",
+        "Say something pithy, # commands, total len",
+        wsc,
+        screen,
+    )
+
+}
+
+// ------------------------------------------------------------------------
+
+const HEADER_MAP: FieldMap = FieldMap::new(HEADER);
+
+const HEADER: &[FieldDef] =  &[
+
+    FieldDef::new(0, 4, "Magic Number", Some(formatter::LE_32_HEX)),
+    FieldDef::new(4, 4, "CPU Type", Some(formatter::LE_32_HEX) )
         .val_tbl(formatter::LE_32_USIZE, CPU_TYPE),
-    FieldDef::new(4, "CPU Sub-Type", Some(formatter::LE_32_HEX)),
-    FieldDef::new(4, "File Type", Some(formatter::LE_32_HEX)),
-    FieldDef::new(4, "Load Commands", Some(formatter::LE_32_STRING))
-        .enter_no(0)
+    FieldDef::new(8, 4, "CPU Sub-Type", Some(formatter::LE_32_HEX)),
+    FieldDef::new(12, 4, "File Type", Some(formatter::LE_32_HEX)),
+    FieldDef::new(16, 4, "Load Commands", Some(formatter::LE_32_STRING))
+        .enter_fn(load_commands_on_enter)
         .fn_usize(formatter::LE_32_USIZE),
-    FieldDef::new(4, "Load Command Length", Some(formatter::LE_32_PTR)),
-    FieldDef::new(4, "Flags", Some(formatter::BIN_STRING)),
-    FieldDef::ignore(4),
+    FieldDef::new(20, 4, "Load Command Length", Some(formatter::LE_32_PTR)),
+    FieldDef::new(24, 4, "Flags", Some(formatter::BIN_STRING)),
+    FieldDef::ignore(28, 4),
 
 ];
 
+const CMD_HEADER_MAP: FieldMap = FieldMap::new(CMD_HEADER);
+
 const CMD_HEADER: &[FieldDef] = &[
 
-    FieldDef::new(4, "Command Type", Some(formatter::LE_32_PTR))
+    FieldDef::new(0, 4, "Command Type", Some(formatter::LE_32_PTR))
        .fn_usize(formatter::LE_32_USIZE),
-    FieldDef::new(4, "Command Length", Some(formatter::LE_32_HEX))
+    FieldDef::new(4, 4, "Command Length", Some(formatter::LE_32_HEX))
        .fn_usize(formatter::LE_32_USIZE),
 
 ];

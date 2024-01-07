@@ -3,7 +3,6 @@
 //!
 
 use anyhow::Result;
-use std::rc::Rc;
 
 use crate::{
     color::Colors,
@@ -19,7 +18,10 @@ use super::{
     WindowSet,
     footer::Footer,
     header::Header,
-    line::Line,
+    line::{
+        Line,
+        PairVec
+    },
     header_window,
     screen::Screen,
     scrollable_region::ScrollableRegion,
@@ -27,12 +29,10 @@ use super::{
 
 // ------------------------------------------------------------------------
 
-type ExeItem<'a> = Box<dyn Executable>;
-type ExeList<'a> = Vec<ExeItem<'a>>;
-
 pub type FnameFn = dyn Fn(usize, &str) -> String;
 
-// ------------------------------------------------------------------------
+type ExeItem = Box<dyn Executable>;
+type ExeList<'a> = Vec<ExeItem>;
 
 pub fn show<'a>(
     executables: &'a mut ExeList, 
@@ -74,7 +74,7 @@ pub fn show<'a>(
 
     // Create the scrollable window
         
-    let fname_fn = Rc::new(move | sc: usize, filename: &str | -> String {
+    let fname_fn = Box::new(move | sc: usize, filename: &str | -> String {
 
         let fal: i32 = sc as i32 - (3 + ETYPE_LENGTH + FSIZE_LENGTH) as i32;
 
@@ -93,30 +93,25 @@ pub fn show<'a>(
         }
 
     });
-
-    let enter_fn = | _idx: usize,  line: & dyn Line |
-
-        header_window::show(
-            line.as_executable(), 
-            screen, 
-            colors,
-
-    );
-
+ 
     let mut total_len = 0;
-    let mut lines = executables
-        .iter_mut()
-        .map(|e| {
-            e.set_fname_fn(fname_fn.clone());
-            total_len += e.len();
-            e.to_line()
+    let exes: Vec<FileLine> = executables
+        .iter()
+        .map(|exe| {
+            total_len += exe.len();
+            FileLine{
+                fname_fn: &fname_fn, 
+                exe: exe.as_ref(),
+            screen,
+            colors}
         })
         .collect();
+
+    let mut lines = exes.iter().map(|f| -> &dyn Line { f }).collect();
 
     let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         &mut lines,
-        Box::new(enter_fn),
     );
 
     // Create the footer window
@@ -146,5 +141,42 @@ pub fn show<'a>(
     );
 
     win_set.show()
+
+}
+
+// ------------------------------------------------------------------------
+/// Line in the file list
+
+struct FileLine<'a> {
+    exe: &'a dyn Executable,
+    fname_fn: &'a FnameFn,
+    screen: &'a Screen,
+    colors: &'a Colors,
+}
+
+impl Line for FileLine<'_> {
+
+    fn as_executable(&self) -> &dyn Executable {
+        self.exe
+    }
+
+    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
+
+        Ok(Vec::from([
+            (   None,
+                format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
+                    tl=ETYPE_LENGTH, etype=self.exe.exe_type().to_string(),
+                    ml=FSIZE_LENGTH, size=self.exe.len(),
+                    fname=(self.fname_fn)(sc, self.exe.filename())
+            ))
+        ]))
+
+    }
+
+    fn on_enter(&self) -> Result<()> {
+
+        header_window::show(self.exe, self.screen, self.colors)
+
+    }
 
 }

@@ -39,16 +39,9 @@ pub fn show<'a >(
 
     // Create the scrollable window
 
-    let enter_fn = Box::new( 
-        | _idx: usize, _line: &dyn Line | { 
-            Ok(())
-        } 
-    );
-
     let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-        enter_fn,
     );
 
     // Create the footer window

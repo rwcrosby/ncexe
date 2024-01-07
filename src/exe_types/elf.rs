@@ -7,28 +7,14 @@ use anyhow::{
     bail,
 };
 use memmap2::Mmap;
-use std::{
-    ops::Deref,
-    rc::Rc
-};
+use std::ops::Deref;
 
-use crate::{
-    windows::{
-        FSIZE_LENGTH,
-        file_list_window::FnameFn,
-        line::{
-            Line,
-            PairVec,
-        },
-    },
-    formatter::{
-        self,
-        FieldDef, 
-        MapSet,
-    },
+use crate::formatter::{
+    self,
+    FieldDef, 
+    FieldMap,
 };
 use super::{
-    ETYPE_LENGTH,
     Executable,
     ExeType,
 };
@@ -38,8 +24,7 @@ use super::{
 pub struct ELF {
     filename: String,
     mmap: Mmap,
-    fname_fn: Option<Rc<FnameFn>>,
-    hdr_map: Box<MapSet>,
+    hdr_map: &'static FieldMap,
 }
 
 // ------------------------------------------------------------------------
@@ -53,51 +38,26 @@ impl<'a> ELF {
 
         let mmap_slice = mmap.deref();
 
-        let hdr_map = MapSet::new(match mmap_slice[4] {
+        let hdr_map = match mmap_slice[4] {
             1 => match mmap_slice[5] {
-                1 => HDR_32_LE,
-                2 => HDR_32_BE,
+                1 => &HEADER_MAP_32_LE,
+                2 => &HEADER_MAP_32_BE,
                 v => bail!("Invalid ELF endianness {:02x}", v)
             }
             2 => match mmap_slice[5] {
-                1 => HDR_64_LE,
-                2 => HDR_64_BE,
+                1 => &HEADER_MAP_64_LE,
+                2 => &HEADER_MAP_64_BE,
                 v => bail!("Invalid ELF endianness {:02x}", v)
             }
             v => bail!("Invalid ELF bit length {:02x}", v)
-        });
+        };
 
         Ok(Box::new(ELF{
             filename: String::from(filename), 
             mmap, 
-            fname_fn: None,
+            // fname_fn: None,
             hdr_map
         }))
-
-    }
-
-}
-
-// ------------------------------------------------------------------------
-
-impl<'a> Line for ELF {
-
-    fn as_executable(&self) -> &dyn Executable {
-        self
-    }
-
-    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
-
-        let fname_fn = self.fname_fn.as_ref().unwrap();
-
-        Ok(Vec::from([
-            (None, 
-             format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
-                tl=ETYPE_LENGTH, etype=self.exe_type().to_string(),
-                ml=FSIZE_LENGTH, size=self.mmap.len(),
-                fname=fname_fn(sc, &self.filename)
-            ))
-        ]))
 
     }
 
@@ -119,113 +79,111 @@ impl Executable for ELF {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &MapSet {
+    fn header_map(&self) -> &FieldMap {
         &self.hdr_map
     }
 
     fn to_string(&self) -> String {
         format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
     }
-    fn to_line(&self) -> &dyn Line {
-        self
-    }
-
-    fn set_fname_fn(&mut self, fname_fn: Rc<FnameFn>) {
-        self.fname_fn = Some(fname_fn);
-    }
 
 }
 
 // ------------------------------------------------------------------------
 
-const HDR_32_LE: &[FieldDef] = &[
-	FieldDef::new(4, "Magic Number", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Bit Length", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "Endianness", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "ELF Version", Some(formatter::LE_8_STRING)),
-	FieldDef::new(1, "Operating System ABI", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "ABI Version", Some(formatter::LE_8_HEX)),
-	FieldDef::ignore(7),
-	FieldDef::new(2, "Object File Type", Some(formatter::LE_16_HEX)),
-	FieldDef::new(2, "Instruction Set Architecture", Some(formatter::LE_16_HEX)),
-	FieldDef::new(4, "ELF Version", Some(formatter::LE_32_STRING)),
-	FieldDef::new(4, "Entry Point Address", Some(formatter::LE_32_PTR)),
-	FieldDef::new(4, "Program Header Offset", Some(formatter::LE_32_PTR)),
-	FieldDef::new(4, "Segment Header Offset", Some(formatter::LE_32_PTR)),
-	FieldDef::new(4, "Flags", Some(formatter::BIN_STRING)),
-	FieldDef::new(2, "Header Size", Some(formatter::LE_32_STRING)),
-	FieldDef::new(2, "Program Header Size", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "# of Program Headers", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "Segment Header Size", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "# of Segment Headers", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "Section Name Index", Some(formatter::LE_16_STRING)),
+const HEADER_MAP_32_LE: FieldMap = FieldMap::new(HDR_32_LE);
+const HEADER_MAP_32_BE: FieldMap = FieldMap::new(HDR_32_BE);
+const HEADER_MAP_64_LE: FieldMap = FieldMap::new(HDR_64_LE);
+const HEADER_MAP_64_BE: FieldMap = FieldMap::new(HDR_64_BE);
+
+const HDR_32_LE: & [FieldDef] = &[
+	FieldDef::new(0, 4, "Magic Number", Some(formatter::BE_HEX)),
+	FieldDef::new(4, 1, "Bit Length", Some(formatter::LE_8_HEX)),
+	FieldDef::new(5, 1, "Endianness", Some(formatter::LE_8_HEX)),
+	FieldDef::new(6, 1, "ELF Version", Some(formatter::LE_8_STRING)),
+	FieldDef::new(7, 1, "Operating System ABI", Some(formatter::LE_8_HEX)),
+	FieldDef::new(8, 1, "ABI Version", Some(formatter::LE_8_HEX)),
+	FieldDef::ignore(9, 7),
+	FieldDef::new(16, 2, "Object File Type", Some(formatter::LE_16_HEX)),
+	FieldDef::new(18, 2, "Instruction Set Architecture", Some(formatter::LE_16_HEX)),
+	FieldDef::new(20, 4, "ELF Version", Some(formatter::LE_32_STRING)),
+	FieldDef::new(24, 4, "Entry Point Address", Some(formatter::LE_32_PTR)),
+	FieldDef::new(38, 4, "Program Header Offset", Some(formatter::LE_32_PTR)),
+	FieldDef::new(32, 4, "Segment Header Offset", Some(formatter::LE_32_PTR)),
+	FieldDef::new(36, 4, "Flags", Some(formatter::BIN_STRING)),
+	FieldDef::new(40, 2, "Header Size", Some(formatter::LE_32_STRING)),
+	FieldDef::new(42, 2, "Program Header Size", Some(formatter::LE_16_STRING)),
+	FieldDef::new(44, 2, "# of Program Headers", Some(formatter::LE_16_STRING)),
+	FieldDef::new(46, 2, "Segment Header Size", Some(formatter::LE_16_STRING)),
+	FieldDef::new(48, 2, "# of Segment Headers", Some(formatter::LE_16_STRING)),
+	FieldDef::new(50, 2, "Section Name Index", Some(formatter::LE_16_STRING)),
 ];
 
 const HDR_32_BE: &[FieldDef] = &[
-	FieldDef::new(4, "Magic Number", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Bit Length", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Endianness", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "ELF Version", Some(formatter::BE_8_STRING)),
-	FieldDef::new(1, "Operating System ABI", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "ABI Version", Some(formatter::BE_HEX)),
-	FieldDef::ignore(7),
-	FieldDef::new(2, "Object File Type", Some(formatter::BE_HEX)),
-	FieldDef::new(2, "Instruction Set Architecture", Some(formatter::BE_HEX)),
-	FieldDef::new(4, "ELF Version", Some(formatter::BE_32_STRING)),
-	FieldDef::new(4, "Entry Point Address", Some(formatter::BE_32_PTR)),
-	FieldDef::new(4, "Program Header Offset", Some(formatter::BE_32_PTR)),
-	FieldDef::new(4, "Segment Header Offset", Some(formatter::BE_32_PTR)),
-	FieldDef::new(4, "Flags", Some(formatter::BIN_STRING)),
-	FieldDef::new(2, "Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Program Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "# of Program Headers", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Segment Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "# of Segment Headers", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Section Name Index", Some(formatter::BE_16_STRING)),
+	FieldDef::new(0, 4, "Magic Number", Some(formatter::BE_HEX)),
+	FieldDef::new(4, 1, "Bit Length", Some(formatter::BE_HEX)),
+	FieldDef::new(5, 1, "Endianness", Some(formatter::BE_HEX)),
+	FieldDef::new(6, 1, "ELF Version", Some(formatter::BE_8_STRING)),
+	FieldDef::new(7, 1, "Operating System ABI", Some(formatter::BE_HEX)),
+	FieldDef::new(8, 1, "ABI Version", Some(formatter::BE_HEX)),
+	FieldDef::ignore(9, 7),
+	FieldDef::new(16, 2, "Object File Type", Some(formatter::BE_HEX)),
+	FieldDef::new(18, 2, "Instruction Set Architecture", Some(formatter::BE_HEX)),
+	FieldDef::new(20, 4, "ELF Version", Some(formatter::BE_32_STRING)),
+	FieldDef::new(24, 4, "Entry Point Address", Some(formatter::BE_32_PTR)),
+	FieldDef::new(28, 4, "Program Header Offset", Some(formatter::BE_32_PTR)),
+	FieldDef::new(32, 4, "Segment Header Offset", Some(formatter::BE_32_PTR)),
+	FieldDef::new(36, 4, "Flags", Some(formatter::BIN_STRING)),
+	FieldDef::new(40, 2, "Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(42, 2, "Program Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(44, 2, "# of Program Headers", Some(formatter::BE_16_STRING)),
+	FieldDef::new(46, 2, "Segment Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(48, 2, "# of Segment Headers", Some(formatter::BE_16_STRING)),
+	FieldDef::new(50, 2, "Section Name Index", Some(formatter::BE_16_STRING)),
 ];
 
 const HDR_64_LE: &[FieldDef] = &[
-	FieldDef::new(4, "Magic Number", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Bit Length", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "Endianness", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "ELF Version", Some(formatter::LE_8_STRING)),
-	FieldDef::new(1, "Operating System ABI", Some(formatter::LE_8_HEX)),
-	FieldDef::new(1, "ABI Version", Some(formatter::LE_8_HEX)),
-	FieldDef::ignore(7),
-	FieldDef::new(2, "Object File Type", Some(formatter::LE_16_HEX)),
-	FieldDef::new(2, "Instruction Set Architecture", Some(formatter::LE_16_HEX)),
-	FieldDef::new(4, "ELF Version", Some(formatter::LE_32_STRING)),
-	FieldDef::new(8, "Entry Point Address", Some(formatter::LE_64_PTR)),
-	FieldDef::new(8, "Program Header Offset", Some(formatter::LE_64_PTR)),
-	FieldDef::new(8, "Segment Header Offset", Some(formatter::LE_64_PTR)),
-	FieldDef::new(4, "Flags", Some(formatter::BIN_STRING)),
-	FieldDef::new(2, "Header Size", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "Program Header Size", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "# of Program Headers", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "Segment Header Size", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "# of Segment Headers", Some(formatter::LE_16_STRING)),
-	FieldDef::new(2, "Section Name Index", Some(formatter::LE_16_STRING)),
+	FieldDef::new(0, 4, "Magic Number", Some(formatter::BE_HEX)),
+	FieldDef::new(4, 1, "Bit Length", Some(formatter::LE_8_HEX)),
+	FieldDef::new(5, 1, "Endianness", Some(formatter::LE_8_HEX)),
+	FieldDef::new(6, 1, "ELF Version", Some(formatter::LE_8_STRING)),
+	FieldDef::new(7, 1, "Operating System ABI", Some(formatter::LE_8_HEX)),
+	FieldDef::new(8, 1, "ABI Version", Some(formatter::LE_8_HEX)),
+	FieldDef::ignore(9, 7),
+	FieldDef::new(16, 2, "Object File Type", Some(formatter::LE_16_HEX)),
+	FieldDef::new(18, 2, "Instruction Set Architecture", Some(formatter::LE_16_HEX)),
+	FieldDef::new(20, 4, "ELF Version", Some(formatter::LE_32_STRING)),
+	FieldDef::new(24, 8, "Entry Point Address", Some(formatter::LE_64_PTR)),
+	FieldDef::new(32, 8, "Program Header Offset", Some(formatter::LE_64_PTR)),
+	FieldDef::new(40, 8, "Segment Header Offset", Some(formatter::LE_64_PTR)),
+	FieldDef::new(48, 4, "Flags", Some(formatter::BIN_STRING)),
+	FieldDef::new(50, 2, "Header Size", Some(formatter::LE_16_STRING)),
+	FieldDef::new(52, 2, "Program Header Size", Some(formatter::LE_16_STRING)),
+	FieldDef::new(54, 2, "# of Program Headers", Some(formatter::LE_16_STRING)),
+	FieldDef::new(56, 2, "Segment Header Size", Some(formatter::LE_16_STRING)),
+	FieldDef::new(58, 2, "# of Segment Headers", Some(formatter::LE_16_STRING)),
+	FieldDef::new(60, 2, "Section Name Index", Some(formatter::LE_16_STRING)),
 ];
 
 const HDR_64_BE: &[FieldDef] = &[
-	FieldDef::new(4, "Magic Number", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Bit Length", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "Endianness", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "ELF Version", Some(formatter::BE_8_STRING)),
-	FieldDef::new(1, "Operating System ABI", Some(formatter::BE_HEX)),
-	FieldDef::new(1, "ABI Version", Some(formatter::BE_HEX)),
-	FieldDef::ignore(7),
-	FieldDef::new(2, "Object File Type", Some(formatter::BE_HEX)),
-	FieldDef::new(2, "Instruction Set Architecture", Some(formatter::BE_HEX)),
-	FieldDef::new(4, "ELF Version", Some(formatter::BE_32_STRING)),
-	FieldDef::new(8, "Entry Point Address", Some(formatter::BE_64_PTR)),
-	FieldDef::new(8, "Program Header Offset", Some(formatter::BE_64_PTR)),
-	FieldDef::new(8, "Segment Header Offset", Some(formatter::BE_64_PTR)),
-	FieldDef::new(4, "Flags", Some(formatter::BIN_STRING)),
-	FieldDef::new(2, "Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Program Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "# of Program Headers", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Segment Header Size", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "# of Segment Headers", Some(formatter::BE_16_STRING)),
-	FieldDef::new(2, "Section Name Index", Some(formatter::BE_16_STRING)),
+	FieldDef::new(0, 4,  "Magic Number", Some(formatter::BE_HEX)),
+	FieldDef::new(4, 1,  "Bit Length", Some(formatter::BE_HEX)),
+	FieldDef::new(5, 1,  "Endianness", Some(formatter::BE_HEX)),
+	FieldDef::new(6, 1,  "ELF Version", Some(formatter::BE_8_STRING)),
+	FieldDef::new(7, 1,  "Operating System ABI", Some(formatter::BE_HEX)),
+	FieldDef::new(8, 1,  "ABI Version", Some(formatter::BE_HEX)),
+	FieldDef::ignore(9, 7),
+	FieldDef::new(16, 2, "Object File Type", Some(formatter::BE_HEX)),
+	FieldDef::new(18, 2, "Instruction Set Architecture", Some(formatter::BE_HEX)),
+	FieldDef::new(20, 4, "ELF Version", Some(formatter::BE_32_STRING)),
+	FieldDef::new(24, 8, "Entry Point Address", Some(formatter::BE_64_PTR)),
+	FieldDef::new(32, 8, "Program Header Offset", Some(formatter::BE_64_PTR)),
+	FieldDef::new(40, 8, "Segment Header Offset", Some(formatter::BE_64_PTR)),
+	FieldDef::new(48, 4, "Flags", Some(formatter::BIN_STRING)),
+	FieldDef::new(50, 2, "Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(52, 2, "Program Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(54, 2, "# of Program Headers", Some(formatter::BE_16_STRING)),
+	FieldDef::new(56, 2, "Segment Header Size", Some(formatter::BE_16_STRING)),
+	FieldDef::new(58, 2, "# of Segment Headers", Some(formatter::BE_16_STRING)),
+	FieldDef::new(60, 2, "Section Name Index", Some(formatter::BE_16_STRING)),
 ];

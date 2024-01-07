@@ -32,7 +32,7 @@ fn main() {
 
     let hdr_fn = move | _sc: usize | (0, hdr.clone());
 
-    let enter_fn = Box::new(| _idx: usize, _line: &dyn Line | Ok(()) );
+    // let enter_fn = Box::new(| _idx: usize, _line: &dyn Line | Ok(()) );
 
     let footer_fn = move | sc: usize| {
 
@@ -57,9 +57,9 @@ fn main() {
     let hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
     let scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
-        &mut lines,
-        Box::new(enter_fn),
+        &mut lines
     );
+    
     let ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
     let mut win_set = WindowSet::new(

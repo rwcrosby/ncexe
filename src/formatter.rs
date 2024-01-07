@@ -2,98 +2,58 @@
 //! Format a block of memory into a window
 //! 
 
-use std::cmp;
+use anyhow::Result;
+
+use crate::{
+    color::Colors, 
+    windows::screen::Screen, 
+    exe_types::Executable
+};
 
 // ------------------------------------------------------------------------
-/// Set of mapping fields
 
-pub struct MapSet {
-    pub fields: Vec<MapField>,
+pub trait EnterHandler{
+    fn on_enter(
+        &self,
+        colors: &Colors,
+        screen: &Screen,
+    ) -> Result<()>;
+}
+
+type EnterFn = fn(
+    &dyn Executable,
+    &Colors, 
+    &Screen,
+) -> Result<()>;
+
+// ------------------------------------------------------------------------
+pub struct FieldMap {
+    pub fields: &'static [FieldDef],
     pub data_len: usize,
     pub max_text_len: usize,
 }
 
-impl<'a> MapSet {
+impl FieldMap {
+    pub const fn new(fields: &'static [FieldDef]) -> Self {
 
-    pub fn new(
-        map_flds: &'static [FieldDef],
-    ) -> Box<MapSet> {
+        let mut fld_idx = 0;
+        let mut data_len = 0;
+        let mut max_text_len = 0;
 
-        let mut fmt = Box::new(
-            MapSet {
-                fields: Vec::with_capacity(map_flds.len()),
-                data_len: 0,
-                max_text_len: 0,
-         });
+        while fld_idx < fields.len() {
+            let field = &fields[fld_idx];
 
-        for mfld in map_flds.iter() {
-
-            if let Some(_) = mfld.string_fn {
-
-                fmt.max_text_len = cmp::max(mfld.name.len(), fmt.max_text_len);
-
-                fmt.fields.push(
-                    MapField { 
-                        field: mfld,
-                        range: (fmt.data_len, fmt.data_len + mfld.len),
-                    }
-                );
-
+            data_len += field.range.1 - field.range.0;
+            if field.name.len() > max_text_len {
+                max_text_len = field.name.len()
             }
 
-            fmt.data_len += mfld.len;
+            fld_idx += 1;
         }
 
-        fmt
-    }
-
-}
-
-// ------------------------------------------------------------------------
-/// Field mapped into a data offsets
-
-pub struct MapField {
-    pub field: &'static FieldDef,
-    pub range: (usize, usize),
-}
-
-
-impl MapField {
-
-    pub fn to_usize(&self, data: &[u8]) -> usize {
-
-        // Yes this could fail but panic is actuall an appropriate response
-        (self.field.usize_fn.unwrap())(&data[self.range.0..self.range.1])
-    }
-
-    pub fn to_string(&self, data: &[u8]) -> String {
-
-        // Yes this could fail but panic is actuall an appropriate response
-        (self.field.string_fn.unwrap())(&data[self.range.0..self.range.1])
-    }
-
-    pub fn lookup(
-        &self,
-        d: &[u8], 
-    ) -> Option<&'static str> {
-
-        if let Some(vt) = self.field.val_tbl {
-
-            let ufn = self.field.usize_fn.unwrap();
-            let uv = ufn(&d[self.range.0..self.range.1]);
-
-            if let Some((_,  s)) = vt.iter().find(| v | v.0 == uv ) {
-                Some(s)
-            } else {
-                None
-            }
-
-        } else {
-            None
-        }
+        Self{fields, data_len, max_text_len}
 
     }
-
 }
 
 // ------------------------------------------------------------------------
@@ -106,41 +66,44 @@ pub type ValEntry = (usize, &'static str);
 pub type ValTable = [ValEntry];
 
 pub struct FieldDef {
-    pub len: usize,
+    pub range: (usize, usize),
     pub name: &'static str,
     pub string_fn: Option<&'static StringFn>,
     pub usize_fn: Option<&'static UsizeFn>,
     pub val_tbl: Option<&'static ValTable>,
-    pub enter_no: Option<usize>,
+    pub enter_fn: Option<EnterFn>,
 }
 
 impl FieldDef {
 
     pub const fn new(
+        offset: usize,
         len: usize, 
         name: &'static str, 
         string_fn: Option<&'static StringFn>
-    ) -> FieldDef {
-        FieldDef {
-            len,
+    ) -> Self {
+        Self {
+            range: (offset, offset + len),
             name,
             string_fn,
-            enter_no: None,
             usize_fn: None,
             val_tbl: None,
+            enter_fn: None,
+            
         }
     }
 
     pub const fn ignore(
+        offset: usize,
         len: usize
-    ) -> FieldDef {
-        FieldDef {
-            len,
+    ) -> Self {
+        Self {
+            range: (offset, offset+len),
             name: "",
             string_fn: None,
-            enter_no: None,
             usize_fn: None,
             val_tbl: None,
+            enter_fn: None,
         }
     }
 
@@ -156,18 +119,52 @@ impl FieldDef {
         mut self: FieldDef, 
         uf: &'static UsizeFn,
         vt: &'static ValTable,
-    ) -> FieldDef {
+    ) -> Self {
         self.usize_fn = Some(uf);
         self.val_tbl = Some(vt);
         self
     }
 
-    pub const fn enter_no(
+    pub const fn enter_fn(
         mut self: FieldDef, 
-        enter: usize
-    ) -> FieldDef {
-        self.enter_no = Some(enter);
+        enter: EnterFn,
+    ) -> Self {
+        self.enter_fn = Some(enter);
         self
+    }
+
+    pub fn to_usize(&self, data: &[u8]) -> usize {
+
+        // Yes this could fail but panic is actualy an appropriate response
+        (self.usize_fn.unwrap())(&data[self.range.0..self.range.1])
+    }
+
+    pub fn to_string(&self, data: &[u8]) -> String {
+
+        // Yes this could fail but panic is actually an appropriate response
+        (self.string_fn.unwrap())(&data[self.range.0..self.range.1])
+    }
+
+    pub fn lookup(
+        &self,
+        d: &[u8], 
+    ) -> Option<&'static str> {
+
+        if let Some(vt) = self.val_tbl {
+
+            let ufn = self.usize_fn.unwrap();
+            let uv = ufn(&d[self.range.0..self.range.1]);
+
+            if let Some((_,  s)) = vt.iter().find(| v | v.0 == uv ) {
+                Some(s)
+            } else {
+                None
+            }
+
+        } else {
+            None
+        }
+
     }
 
 }

@@ -13,7 +13,7 @@ use crate::{
     exe_types::Executable,
     formatter::{
         center_in, 
-        MapField
+        FieldDef
     },
 };
 
@@ -49,31 +49,24 @@ pub fn show<'a>(
     // Create the scrollable window
 
     let hdr_map = exe.header_map();
-    // let fmt_blk = fmt.from_mapfields(hdr_map)?;
 
     let fields: Vec<Box<HeaderLine>> = hdr_map
         .fields
         .iter()
+        .filter(| f | f.string_fn.is_some() )
         .map(|map_field| HeaderLine::new(
             exe, 
             map_field, 
             &wsc.scrollable_region, 
-            exe.header_map().max_text_len))
+            exe.header_map().max_text_len,
+            colors,
+            screen,
+        ))
         .collect();
 
-    let mut lines = fields.iter().map(|f| -> &dyn Line { f }).collect();
+    let mut lines = fields.iter().map(|f| -> &dyn Line { f.as_ref() }).collect();
 
-    let enter_fn = Box::new(|idx: usize, _line: &dyn Line| {
-        let hdr = &fields[idx];
-
-        if let Some(efld_no) = hdr.map_field.field.enter_no {
-            hdr.exe.on_enter(efld_no, colors, screen)
-        } else {
-            Ok(())
-        }
-    });
-
-    let scr_win = ScrollableRegion::new(&wsc.scrollable_region, &mut lines, enter_fn);
+    let scr_win = ScrollableRegion::new(&wsc.scrollable_region, &mut lines);
 
     // Create the footer window
 
@@ -92,34 +85,40 @@ pub fn show<'a>(
 
 struct HeaderLine<'a> {
     exe: &'a dyn Executable,
-    map_field: &'a MapField,
+    field_def: &'a FieldDef,
     wc: &'a WindowColors,
     max_text_len: usize,
+    colors: &'a Colors,
+    screen: &'a Screen,
 }
 
 impl<'a> HeaderLine<'a> {
     fn new(
         exe: &'a dyn Executable,
-        map_field: &'a MapField,
+        field_def: &'a FieldDef,
         wc: &'a WindowColors,
         max_text_len: usize,
-    ) -> Box<HeaderLine<'a>> {
-        Box::new(HeaderLine {
+        colors: &'a Colors,
+        screen: &'a Screen,
+    ) -> Box<Self> {
+        Box::new(Self{
             exe,
-            map_field,
+            field_def,
             wc,
             max_text_len,
+            colors,
+            screen,
         })
     }
 }
 
-impl<'a> Line for Box<HeaderLine<'a>> {
+impl<'a> Line for HeaderLine<'a> {
     fn as_executable(&self) -> &dyn Executable {
         self.exe
     }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        let fld = self.map_field;
+        let fld = self.field_def;
 
         let mut pairs = Vec::from([
             (
@@ -127,12 +126,12 @@ impl<'a> Line for Box<HeaderLine<'a>> {
                 format!(
                     " {fld:l$.l$} :",
                     l = self.max_text_len,
-                    fld = fld.field.name,
+                    fld = fld.name,
                 ),
             ),
             (
                 Some(self.wc.value),
-                format!(" {}", (self.map_field.to_string(&self.exe.mmap()))),
+                format!(" {}", (self.field_def.to_string(&self.exe.mmap()))),
             ),
         ]);
 
@@ -147,5 +146,17 @@ impl<'a> Line for Box<HeaderLine<'a>> {
 
         Ok(pairs)
 
+    }
+
+    fn on_enter(&self) -> Result<()> {
+        if let Some(efn) = self.field_def.enter_fn {
+            efn(
+                self.exe,
+                self.colors,
+                self.screen,
+            )
+        } else {
+            Ok(())
+        }
     }
 }

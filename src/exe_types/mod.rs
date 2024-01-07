@@ -11,21 +11,9 @@ use memmap2::Mmap;
 use std::{
     fmt, 
     fs::File, 
-    rc::Rc
 };
 
-use crate::{
-    color::Colors,
-    formatter::MapSet,
-    windows::{
-        file_list_window::FnameFn,
-        line::{
-            Line, 
-            PairVec
-        },
-        screen::Screen,
-    },
-};
+use crate::formatter::FieldMap;
 
 use elf::ELF;
 use macho32::Macho32Formatter;
@@ -44,28 +32,17 @@ pub trait Executable {
     fn filename(&self) -> &str {
         ""
     }
-    fn header_map(&self) -> &MapSet {
+    fn header_map(&self) -> &FieldMap {
         todo!("Default trait method called")
     }
     fn mmap(&self) -> &[u8] {
         &[]
     }
 
-    fn on_enter(
-        &self,
-        _efld_no: usize,
-        _colors: &Colors,
-        _screen: &Screen,
-    ) -> Result<()> {
-        Ok(())
-    }
-
-    fn to_line(&self) -> &dyn Line;
     fn to_string(&self) -> String {
         String::from("")
     }
 
-    fn set_fname_fn(&mut self, _fname_dn: Rc<FnameFn>) {}
 }
 
 // ------------------------------------------------------------------------
@@ -97,45 +74,7 @@ impl fmt::Display for ExeType {
 }
 
 // ------------------------------------------------------------------------
-
-pub const ETYPE_LENGTH: usize = "Portable Executable".len();
-
-// ------------------------------------------------------------------------
-/// Basic trait implementation for a non-executable file
-///
-
-#[derive(Debug)]
-pub struct NotExecutable {
-    pub filename: String,
-    pub msg: String,
-}
-
-impl Executable for NotExecutable {
-    fn to_string(&self) -> String {
-        format!("Not an Executable: {}: {}", self.filename, self.msg)
-    }
-    fn exe_type(&self) -> ExeType {
-        ExeType::NOPE
-    }
-    fn filename(&self) -> &str {
-        &self.filename
-    }
-    fn to_line(&self) -> &dyn Line {
-        self
-    }
-}
-
-impl<'a> Line for NotExecutable {
-    fn as_executable(&self) -> &dyn Executable {
-        self
-    }
-
-    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        Ok(Vec::from([(None, String::from(" Not Executable"))]))
-    }
-}
-
-// ------------------------------------------------------------------------
+// Constructor for an executable object
 
 pub fn new(
     filename: &str
@@ -166,3 +105,29 @@ pub fn new(
         })),
     }
 }
+// ------------------------------------------------------------------------
+
+pub const ETYPE_LENGTH: usize = "Portable Executable".len();
+
+// ------------------------------------------------------------------------
+/// Basic trait implementation for a non-executable file
+///
+
+#[derive(Debug)]
+pub struct NotExecutable {
+    pub filename: String,
+    pub msg: String,
+}
+
+impl Executable for NotExecutable {
+    fn to_string(&self) -> String {
+        format!("Not an Executable: {}: {}", self.filename, self.msg)
+    }
+    fn exe_type(&self) -> ExeType {
+        ExeType::NOPE
+    }
+    fn filename(&self) -> &str {
+        &self.filename
+    }
+}
+

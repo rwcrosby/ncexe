@@ -68,9 +68,5 @@ impl Executable for Macho32Formatter {
         self.mmap.len()
     }
 
-    fn to_line(&self) -> &dyn Line {
-        self
-    }
-
 }
 

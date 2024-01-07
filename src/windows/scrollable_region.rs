@@ -15,8 +15,6 @@ use super::{
     line::Line,
 };
 
-pub type EnterFn<'a> = Box<dyn Fn(usize, &dyn Line) -> Result<()> + 'a>;
-
 // ------------------------------------------------------------------------
 
 pub struct ScrollableRegion<'a> {
@@ -37,9 +35,6 @@ pub struct ScrollableRegion<'a> {
     /// Index into the window of the currently selected line
     win_idx: usize,
 
-    /// Function to call on enter
-    enter_fn: EnterFn<'a>,
-
 }
 
 impl<'a> ScrollableRegion<'a> {
@@ -49,7 +44,7 @@ impl<'a> ScrollableRegion<'a> {
     pub fn new (
         window_colors: &'a WindowColors,
         lines: &'a mut Vec<&'a dyn Line>,
-        enter_fn: EnterFn<'a>,
+        // enter_fn: EnterFn<'a>,
     ) -> Box<ScrollableRegion<'a>> 
     {
         let pwin = pancurses::newwin(1, 1, 2, 0); 
@@ -60,7 +55,7 @@ impl<'a> ScrollableRegion<'a> {
             pwin,
             size: Coords{y: 0, x: 0},
             lines,
-            enter_fn,
+            // enter_fn,
             top_idx: 0,
             win_idx: 0,
         })
@@ -262,7 +257,7 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        (self.enter_fn)(idx, self.lines[idx])
+        self.lines[idx].on_enter()
 
     }
 
