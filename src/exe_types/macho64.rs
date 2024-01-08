@@ -19,13 +19,13 @@ use crate::{
         FieldDef,
     },
     windows::{
-        list_window,
         line::{
             Line,
             PairVec,
         },
         screen::Screen
     },
+    screens::details_list,
 };
 
 use super::{
@@ -152,7 +152,7 @@ fn load_commands_on_enter(
         .map(| f | -> &dyn Line { f })
         .collect();
 
-    list_window::show(
+    details_list::show(
         &mut lines,
         "Mach-O Load Commands",
         "Say something pithy, # commands, total len",

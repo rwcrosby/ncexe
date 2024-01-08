@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "ncexe"
-version = "0.2.0"
+version = "24.1.0"
 dependencies = [
  "anyhow",
  "clap",

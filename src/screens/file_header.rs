@@ -15,19 +15,20 @@ use crate::{
         center_in, 
         FieldDef
     },
+    windows::{
+        footer::Footer,
+        header::Header,
+        line::{
+            Line, 
+            PairVec
+        },
+        screen::Screen,
+        scrollable_region::ScrollableRegion,
+        WindowSet,
+    
+    }
 };
 
-use super::{
-    footer::Footer,
-    header::Header,
-    line::{
-        Line, 
-        PairVec
-    },
-    screen::Screen,
-    scrollable_region::ScrollableRegion,
-    WindowSet,
-};
 
 // ------------------------------------------------------------------------
 

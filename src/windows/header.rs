@@ -9,6 +9,9 @@ use crate::{
     windows::Coords,
 };
 
+const NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 // ------------------------------------------------------------------------
 
 type LineFn<'a> = Box<dyn Fn(usize) -> (i32, String) + 'a>;
@@ -61,7 +64,7 @@ impl Header<'_> {
         };
 
         let line1 = make_title(
-            "ncexe v23.12.1", 
+            &format!("{} v{}", NAME, VERSION), 
             "",
             "Use the arrow keys to navigate, q to go back",
             size.x

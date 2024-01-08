@@ -7,15 +7,15 @@ use anyhow::Result;
 use crate::{
     color::WindowSetColors,
     formatter::center_in,
-};
-
-use super::{
-    WindowSet,
-    footer::Footer,
-    header::Header,
-    line::Line,
-    screen::Screen,
-    scrollable_region::ScrollableRegion,
+    windows::{
+        WindowSet,
+        footer::Footer,
+        header::Header,
+        line::Line,
+        screen::Screen,
+        scrollable_region::ScrollableRegion,
+            
+    },
 };
 
 // ------------------------------------------------------------------------

@@ -11,21 +11,21 @@ use crate::{
         ETYPE_LENGTH
     },
     formatter::center_in, 
+    windows::{
+        FSIZE_LENGTH,
+        WindowSet,
+        footer::Footer,
+        header::Header,
+        line::{
+            Line,
+            PairVec
+        },
+        screen::Screen,
+        scrollable_region::ScrollableRegion,
+    },
 };
 
-use super::{
-    FSIZE_LENGTH,
-    WindowSet,
-    footer::Footer,
-    header::Header,
-    line::{
-        Line,
-        PairVec
-    },
-    header_window,
-    screen::Screen,
-    scrollable_region::ScrollableRegion,
-};
+use super::file_header;
 
 // ------------------------------------------------------------------------
 
@@ -175,7 +175,7 @@ impl Line for FileLine<'_> {
 
     fn on_enter(&self) -> Result<()> {
 
-        header_window::show(self.exe, self.screen, self.colors)
+        file_header::show(self.exe, self.screen, self.colors)
 
     }
 

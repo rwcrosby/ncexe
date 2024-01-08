@@ -44,7 +44,6 @@ impl<'a> ScrollableRegion<'a> {
     pub fn new (
         window_colors: &'a WindowColors,
         lines: &'a mut Vec<&'a dyn Line>,
-        // enter_fn: EnterFn<'a>,
     ) -> Box<ScrollableRegion<'a>> 
     {
         let pwin = pancurses::newwin(1, 1, 2, 0); 
@@ -55,7 +54,6 @@ impl<'a> ScrollableRegion<'a> {
             pwin,
             size: Coords{y: 0, x: 0},
             lines,
-            // enter_fn,
             top_idx: 0,
             win_idx: 0,
         })

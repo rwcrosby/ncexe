@@ -4,11 +4,8 @@
 
 // #![allow(dead_code)]
 
-pub mod file_list_window;
 pub mod footer;
 pub mod header;
-pub mod header_window;
-pub mod list_window;
 pub mod line;
 pub mod screen;
 pub mod scrollable_region;

@@ -15,11 +15,12 @@ use ncexe::{
     color::Colors,
     exe_types,
     exe_types::ExeType,
-    windows::{
-        file_list_window,
-        header_window,
-        screen::Screen,
+    screens::{
+        file_list,
+        file_header,
+
     },
+    windows::screen::Screen,
 };
 
 // ------------------------------------------------------------------------
@@ -83,13 +84,13 @@ fn main() -> Result<()> {
 
     // Display file info
     if executables.len() == 1 {
-        header_window::show(
+        file_header::show(
             executables[0].deref(), 
             &screen, 
             &colors
         )
     } else {
-        file_list_window::show(
+        file_list::show(
             &mut executables, 
             &screen, 
             &colors
