@@ -62,7 +62,7 @@ impl FieldMap {
 type StringFn = dyn Fn(&[u8]) -> String;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
 
-pub type ValEntry = (usize, &'static str);
+pub type ValEntry = (usize, &'static str, Option<&'static FieldMap>);
 pub type ValTable = [ValEntry];
 
 pub struct FieldDef {
@@ -148,18 +148,14 @@ impl FieldDef {
     pub fn lookup(
         &self,
         d: &[u8], 
-    ) -> Option<&'static str> {
+    ) -> Option<&ValEntry> {
 
         if let Some(vt) = self.val_tbl {
 
             let ufn = self.usize_fn.unwrap();
             let uv = ufn(&d[self.range.0..self.range.1]);
 
-            if let Some((_,  s)) = vt.iter().find(| v | v.0 == uv ) {
-                Some(s)
-            } else {
-                None
-            }
+            vt.iter().find(| v | v.0 == uv )
 
         } else {
             None
@@ -219,7 +215,8 @@ pub const BE_32_USIZE:  &UsizeFn = &|d: &[u8]| u32::from_be_bytes(d.try_into().u
 pub const BE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_be_bytes(d.try_into().unwrap())
         .try_into().unwrap();
 
-pub const BE_HEX:    &StringFn = &|d: &[u8]| d.to_hex();
+pub const BE_HEX:       &StringFn = &|d: &[u8]| d.to_hex();
+pub const BE_CHAR:      &StringFn = &|d: &[u8]| String::from_utf8_lossy(d).to_string();
 
 pub const BE_32_PTR:    &StringFn = &|d: &[u8]| format!("{:010p}", 
     u32::from_be_bytes(d.try_into().unwrap()) as *const u32);

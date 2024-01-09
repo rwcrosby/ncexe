@@ -16,7 +16,7 @@ use crate::{
     formatter::{
         self,
         FieldMap,
-        FieldDef,
+        FieldDef, ValEntry,
     },
     windows::{
         line::{
@@ -89,6 +89,7 @@ impl<'a> Executable for MachO64 {
 struct CmdBlock<'a> {
 
     exe: &'a dyn Executable,
+    val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
     wc: &'a WindowColors,
     data: &'a [u8],
@@ -108,17 +109,36 @@ impl Line for CmdBlock<'_> {
             ( Some(self.wc.text), self.fields[0].to_string(self.data) ),
         ]);
 
-        if let Some(desc) = self.fields[0].lookup(&self.data) {
+        if let Some(desc) = self.val_entry {
             pairs.push(
                 (
                     Some(self.wc.value),
-                    format!(" ({})",desc ),
+                    format!(" ({})",desc.1 ),
                 )
             );
         };
 
         Ok(pairs)
 
+    }
+
+    fn on_enter(&self) -> Result<()> {
+        
+        if let Some(_val_entry) = self.val_entry {
+
+            // todo!()
+
+        };
+
+        Ok(())
+
+    }
+
+    fn line_ind(&self) -> Option<char> {
+        match self.val_entry {
+            Some(_) => Some('+'),
+            None => None
+        }
     }
 
 }
@@ -150,6 +170,7 @@ fn load_commands_on_enter(
         cmds.push(CmdBlock{
             exe,
             fields: CMD_HEADER,
+            val_entry: CMD_HEADER[0].lookup(cmd_slice),
             wc: &wsc.scrollable_region,
             data: &exe.mmap()[cmd_offset..cmd_offset + cmd_len],
         });
@@ -210,16 +231,34 @@ const CMD_HEADER: &[FieldDef] = &[
 
 const CPU_TYPE: &formatter::ValTable = &[
 
-    (0x7, "x86"),
-    (0x01000007, "64 Bit x86"),
-    (0xC, "ARM"),
-    (0x0100000C, "64 Bit ARM"),
+    (0x7, "x86", None),
+    (0x01000007, "64 Bit x86", None),
+    (0xC, "ARM", None),
+    (0x0100000C, "64 Bit ARM", None),
 
 ];
 
 const CMD_TYPE: &formatter::ValTable = &[
 
-    (0x19, "Segment Load"),
-    (0x0C, "Dynamic Link Library"),
+    (0x19, "Segment Load", Some(&SEGMENT_LOAD_MAP64)),
+    (0x0C, "Dynamic Link Library", None),
+
+];
+
+const SEGMENT_LOAD_MAP64: FieldMap = FieldMap::new(SEGMENT_LOAD64);
+
+const SEGMENT_LOAD64: &[FieldDef] = &[
+
+    FieldDef::ignore(0, 4),
+    FieldDef::ignore(4, 4),
+    FieldDef::new(8, 16, "Segment Name", Some(formatter::BE_CHAR)),
+    FieldDef::new(24, 8, "Address", Some(formatter::LE_64_PTR)),
+    FieldDef::new(32, 8, "Address Size", Some(formatter::LE_64_PTR)),
+    FieldDef::new(40, 8, "File Offset", Some(formatter::LE_64_PTR)),
+    FieldDef::new(48, 8, "Size", Some(formatter::LE_64_PTR)),
+    FieldDef::new(56, 4, "Maximum Memory Protections", Some(formatter::LE_32_PTR)),
+    FieldDef::new(60, 4, "Initial Memory Protections", Some(formatter::LE_32_PTR)),
+    FieldDef::new(64, 4, "Number of Sections", Some(formatter::LE_32_STRING)),
+    FieldDef::new(68, 4, "Flags", Some(formatter::BIN_STRING)),
 
 ];

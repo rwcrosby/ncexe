@@ -140,7 +140,7 @@ impl<'a> Line for HeaderLine<'a> {
             pairs.push(
                 (
                     Some(self.wc.value),
-                    format!(" ({})",desc ),
+                    format!(" ({})",desc.1 ),
                 )
             );
         };
