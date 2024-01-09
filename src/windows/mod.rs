@@ -123,14 +123,18 @@ impl WindowSet<'_> {
     // --------------------------------------------------------------------
 
     fn repaint(&mut self) -> Result<()> {
+
         let size: Coords = self.screen.win.get_max_yx().into();
+
         self.hdr_win.pwin.touch();
         self.hdr_win.resize(&size)?;
         self.scr_win.pwin.touch();
         self.scr_win.resize(&size)?;
         self.ftr_win.pwin.touch();
         self.ftr_win.resize(&size)?;
+
         pancurses::doupdate();
+        
         Ok(())
     }
 

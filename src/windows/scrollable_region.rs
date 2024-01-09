@@ -12,7 +12,10 @@ use crate::color::WindowColors;
 
 use super::{
     Coords,
-    line::Line,
+    line::{
+        Line,
+        ToScreen,
+    },
 };
 
 // ------------------------------------------------------------------------
@@ -93,7 +96,7 @@ impl<'a> ScrollableRegion<'a> {
 
     fn highlight(&self,  highlight: bool) -> Result<()> {
 
-        for p in 1..self.size.x {
+        for p in 1..self.size.x - 1 {
 
             let ch = self.pwin.mvinch(
                 i32::try_from(self.win_idx)?, 
@@ -290,13 +293,15 @@ impl<'a> ScrollableRegion<'a> {
 
     fn set_indicators(&self) {
 
+        let last_col = self.size.x as i32 - 1;
+
         self.pwin.mvprintw(
-            0, 0,
+            0, last_col,
             if self.top_idx > 0 { "\u{21d1}" } else { " " }
         );
 
         self.pwin.mvprintw(
-            i32::try_from(self.size.y).unwrap() - 1, 0,
+            i32::try_from(self.size.y).unwrap() - 1, last_col,
             if self.size.y + self.top_idx >= self.lines.len() { 
                 " " 
             } else {
@@ -324,30 +329,10 @@ impl<'a> ScrollableRegion<'a> {
             .enumerate()
         {
 
-            self.pwin.mv(i32::try_from(y)?, 0);
-            line.as_pairs(self.size.x)?
-                .iter()
-                .for_each(| lp | {
-
-                    let x = self.pwin.get_cur_x();
-                    let max_x = self.pwin.get_max_x();
-
-                    if x <= max_x {
-
-                        if let Some(attr) = lp.0 {
-                            self.pwin.attrset(attr);
-                        }
-
-                        if x + lp.1.len() as i32 <= max_x {
-                            self.pwin.printw(&lp.1); 
-                        } else {
-                            self.pwin.printw(&lp.1[0..(max_x - x) as usize]); 
-                        }
-
-                    }
-
-                })
-
+            if let Some(ind) = line.line_ind() {
+                self.pwin.mvaddch(y as i32, 0, ind);
+            }
+            line.as_pairs(self.size.x)?.show(&self.pwin, Coords{y: y, x: 1});
         }
 
         self.set_indicators();

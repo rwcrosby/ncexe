@@ -30,7 +30,7 @@ pub fn show<'a >(
 
     // Create header window
 
-    let hdr_fn = move | sc: usize | center_in(sc, title );
+    let hdr_fn = move | _sc: usize | (1, title.into());
 
     let hdr_win = Header::new(
         &wsc.header, 

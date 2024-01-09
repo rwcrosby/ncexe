@@ -8,7 +8,7 @@ use crate::{
     color::Colors,
     exe_types::{
         Executable, 
-        ETYPE_LENGTH
+        ETYPE_LENGTH, ExeType
     },
     formatter::center_in, 
     windows::{
@@ -28,8 +28,6 @@ use crate::{
 use super::file_header;
 
 // ------------------------------------------------------------------------
-
-pub type FnameFn = dyn Fn(usize, &str) -> String;
 
 type ExeItem = Box<dyn Executable>;
 type ExeList<'a> = Vec<ExeItem>;
@@ -55,8 +53,6 @@ pub fn show<'a>(
                 sfn = std::cmp::min(sfn, exe.filename().len());
         });
     
-    let mfn = std::cmp::min(20, sfn);
-
     // Create header window
 
     let hdr = format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {filename}", 
@@ -74,36 +70,16 @@ pub fn show<'a>(
 
     // Create the scrollable window
         
-    let fname_fn = Box::new(move | sc: usize, filename: &str | -> String {
-
-        let fal: i32 = sc as i32 - (3 + ETYPE_LENGTH + FSIZE_LENGTH) as i32;
-
-        if fal  < mfn as i32 {
-            format!("{filename:l$.l$}", l=mfn)
-        } else if fal < lfn as i32 {
-            if filename.len() <= fal as usize {
-                format!("{filename:l$.l$}", l=fal as usize)
-            } else {
-                format!("{rtrunc:l$.l$}", 
-                    l=fal as usize,
-                    rtrunc=&filename[(filename.len() - fal as usize)..])
-            }
-        } else {
-            format!("{filename:l$.l$}", l=fal as usize)
-        }
-
-    });
- 
     let mut total_len = 0;
     let exes: Vec<FileLine> = executables
         .iter()
         .map(|exe| {
             total_len += exe.len();
             FileLine{
-                fname_fn: &fname_fn, 
                 exe: exe.as_ref(),
-            screen,
-            colors}
+                screen,
+                colors
+            }
         })
         .collect();
 
@@ -149,7 +125,6 @@ pub fn show<'a>(
 
 struct FileLine<'a> {
     exe: &'a dyn Executable,
-    fname_fn: &'a FnameFn,
     screen: &'a Screen,
     colors: &'a Colors,
 }
@@ -160,22 +135,54 @@ impl Line for FileLine<'_> {
         self.exe
     }
 
-    fn as_pairs(&self, sc: usize) -> Result<PairVec> {
+    fn as_pairs(&self, width: usize) -> Result<PairVec> {
+
+        let max_fname = width as isize - (ETYPE_LENGTH + FSIZE_LENGTH + 2) as isize;
+        let fname = self.exe.filename();
+
+        let first_part = format!("{etype:<tl$.tl$} {size:>ml$.ml$} ", 
+            tl=ETYPE_LENGTH, etype=self.exe.exe_type().to_string(),
+            ml=FSIZE_LENGTH, size=self.exe.len());
+
+        let line =  &(first_part + if max_fname < FSIZE_LENGTH as isize {
+
+            &fname[(fname.len() - width)..]
+
+        }
+        else {
+
+            let start = max_fname - fname.len() as isize;
+
+            if start < 0 {
+                &fname[(-start as usize)..]
+            } else {
+                fname
+            }
+
+        });
+
+        let line = if width < line.len() {
+            &line[..width]
+        } else {
+            line
+        };
+
 
         Ok(Vec::from([
             (   None,
-                format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {fname}", 
-                    tl=ETYPE_LENGTH, etype=self.exe.exe_type().to_string(),
-                    ml=FSIZE_LENGTH, size=self.exe.len(),
-                    fname=(self.fname_fn)(sc, self.exe.filename())
-            ))
+                line.into(),
+            )
         ]))
 
     }
 
     fn on_enter(&self) -> Result<()> {
-
-        file_header::show(self.exe, self.screen, self.colors)
+    
+        if self.exe.exe_type() != ExeType::NOPE {
+            file_header::show(self.exe, self.screen, self.colors)
+        } else {
+            Ok(())
+        }
 
     }
 

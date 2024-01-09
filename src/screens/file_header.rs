@@ -125,7 +125,7 @@ impl<'a> Line for HeaderLine<'a> {
             (
                 Some(self.wc.text),
                 format!(
-                    " {fld:l$.l$} :",
+                    "{fld:l$.l$} :",
                     l = self.max_text_len,
                     fld = fld.name,
                 ),
@@ -160,4 +160,13 @@ impl<'a> Line for HeaderLine<'a> {
             Ok(())
         }
     }
+
+    fn line_ind(&self) -> Option<char> {
+        match self.field_def.enter_fn {
+            Some(_) => Some('='),
+            None => None
+        }
+    }
+
+
 }

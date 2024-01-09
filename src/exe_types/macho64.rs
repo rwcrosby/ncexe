@@ -102,12 +102,22 @@ impl Line for CmdBlock<'_> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
-        Ok(Vec::from([
+        let mut pairs = Vec::from([
+            ( Some(self.wc.text), format!("{:6}", self.fields[1].to_usize(self.data) )),
             ( Some(self.wc.text), String::from(" ") ),
             ( Some(self.wc.text), self.fields[0].to_string(self.data) ),
-            ( Some(self.wc.text), String::from(" ") ),
-            ( Some(self.wc.text), self.fields[1].to_string(self.data) ),
-        ]))
+        ]);
+
+        if let Some(desc) = self.fields[0].lookup(&self.data) {
+            pairs.push(
+                (
+                    Some(self.wc.value),
+                    format!(" ({})",desc ),
+                )
+            );
+        };
+
+        Ok(pairs)
 
     }
 
@@ -125,6 +135,7 @@ fn load_commands_on_enter(
 
     // let num_cmds = self.hdr_map.fields[4].to_usize(self.mmap());
     let num_cmds = HEADER[4].to_usize(exe.mmap());
+    let cmds_len = HEADER[5].to_usize(exe.mmap());
     let mut cmd_offset = HEADER_MAP.data_len;
 
     let mut cmds: Vec<CmdBlock> = Vec::with_capacity(num_cmds); 
@@ -152,10 +163,12 @@ fn load_commands_on_enter(
         .map(| f | -> &dyn Line { f })
         .collect();
 
+    let footer = format!("Mach-O Load Commands: {} commands, {} bytes", num_cmds, cmds_len );
+
     details_list::show(
         &mut lines,
-        "Mach-O Load Commands",
-        "Say something pithy, # commands, total len",
+        "Length Command",
+        &footer,
         wsc,
         screen,
     )
@@ -176,7 +189,8 @@ const HEADER: &[FieldDef] =  &[
     FieldDef::new(16, 4, "Load Commands", Some(formatter::LE_32_STRING))
         .enter_fn(load_commands_on_enter)
         .fn_usize(formatter::LE_32_USIZE),
-    FieldDef::new(20, 4, "Load Command Length", Some(formatter::LE_32_PTR)),
+    FieldDef::new(20, 4, "Load Command Length", Some(formatter::LE_32_PTR))
+        .fn_usize(formatter::LE_32_USIZE),
     FieldDef::new(24, 4, "Flags", Some(formatter::BIN_STRING)),
     FieldDef::ignore(28, 4),
 
@@ -187,8 +201,9 @@ const CMD_HEADER_MAP: FieldMap = FieldMap::new(CMD_HEADER);
 const CMD_HEADER: &[FieldDef] = &[
 
     FieldDef::new(0, 4, "Command Type", Some(formatter::LE_32_PTR))
-       .fn_usize(formatter::LE_32_USIZE),
-    FieldDef::new(4, 4, "Command Length", Some(formatter::LE_32_HEX))
+       .fn_usize(formatter::LE_32_USIZE)
+       .val_tbl(formatter::LE_32_USIZE, CMD_TYPE),
+    FieldDef::new(4, 4, "Command Length", Some(formatter::LE_32_STRING))
        .fn_usize(formatter::LE_32_USIZE),
 
 ];
@@ -199,5 +214,12 @@ const CPU_TYPE: &formatter::ValTable = &[
     (0x01000007, "64 Bit x86"),
     (0xC, "ARM"),
     (0x0100000C, "64 Bit ARM"),
+
+];
+
+const CMD_TYPE: &formatter::ValTable = &[
+
+    (0x19, "Segment Load"),
+    (0x0C, "Dynamic Link Library"),
 
 ];
