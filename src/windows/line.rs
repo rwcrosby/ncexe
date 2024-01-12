@@ -10,6 +10,11 @@ use crate::exe_types::Executable;
 use super::Coords;
 
 // ------------------------------------------------------------------------
+
+pub type LineVec<'a> = Vec<&'a dyn Line>;
+pub type MaybeLineVec<'a> = Option<LineVec<'a>>;
+
+// ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
 
 pub trait Line {
@@ -22,7 +27,7 @@ pub trait Line {
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
     /// Handle hitting enter on the line
-    fn on_enter(&self) -> Result<()> { Ok(()) }
+    fn on_enter(&self) -> Result<MaybeLineVec> { Ok(None) }
 
     /// Show any line indicator
     fn line_ind(&self) -> Option<char> { None }
@@ -30,11 +35,10 @@ pub trait Line {
 }
 
 // ------------------------------------------------------------------------
-/// The actual line is a vector of tuples(attribute,string)
+/// The generated line to be displayed is a vector of tuples(attribute,string)
 
 pub type Pair = (Option<chtype>, String);
 pub type PairVec = Vec<Pair>;
-
 
 // ------------------------------------------------------------------------
 /// Just write a set of pairs, without any bound checking to the window

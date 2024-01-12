@@ -258,7 +258,11 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        self.lines[idx].on_enter()
+        if let Some(_new_lines) = self.lines[idx].on_enter()? {
+
+        }
+
+        Ok(())
 
     }
 

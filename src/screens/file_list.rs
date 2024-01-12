@@ -18,7 +18,7 @@ use crate::{
         header::Header,
         line::{
             Line,
-            PairVec
+            PairVec, MaybeLineVec
         },
         screen::Screen,
         scrollable_region::ScrollableRegion,
@@ -176,13 +176,12 @@ impl Line for FileLine<'_> {
 
     }
 
-    fn on_enter(&self) -> Result<()> {
+    fn on_enter(&self) -> Result<MaybeLineVec> {
     
         if self.exe.exe_type() != ExeType::NOPE {
-            file_header::show(self.exe, self.screen, self.colors)
-        } else {
-            Ok(())
-        }
+            file_header::show(self.exe, self.screen, self.colors)?;
+        } 
+        Ok(None)
 
     }
 

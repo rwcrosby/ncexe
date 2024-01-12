@@ -20,7 +20,7 @@ use crate::{
         header::Header,
         line::{
             Line, 
-            PairVec
+            PairVec, MaybeLineVec
         },
         screen::Screen,
         scrollable_region::ScrollableRegion,
@@ -149,16 +149,15 @@ impl<'a> Line for HeaderLine<'a> {
 
     }
 
-    fn on_enter(&self) -> Result<()> {
+    fn on_enter(&self) -> Result<MaybeLineVec> {
         if let Some(efn) = self.field_def.enter_fn {
             efn(
                 self.exe,
                 self.colors,
                 self.screen,
-            )
-        } else {
-            Ok(())
+            )?;
         }
+        Ok(None)
     }
 
     fn line_ind(&self) -> Option<char> {

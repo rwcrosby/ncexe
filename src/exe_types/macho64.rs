@@ -21,6 +21,7 @@ use crate::{
     windows::{
         line::{
             Line,
+            MaybeLineVec,
             PairVec,
         },
         screen::Screen
@@ -86,7 +87,7 @@ impl<'a> Executable for MachO64 {
 
 // ------------------------------------------------------------------------
 
-struct CmdBlock<'a> {
+struct CmdLine<'a> {
 
     exe: &'a dyn Executable,
     val_entry: Option<&'a ValEntry>,
@@ -96,7 +97,7 @@ struct CmdBlock<'a> {
 
 }
 
-impl Line for CmdBlock<'_> {
+impl Line for CmdLine<'_> {
     fn as_executable(&self) -> &dyn Executable {
         self.exe
     }
@@ -122,15 +123,19 @@ impl Line for CmdBlock<'_> {
 
     }
 
-    fn on_enter(&self) -> Result<()> {
+    fn on_enter(&self) -> Result<MaybeLineVec> {
         
-        if let Some(_val_entry) = self.val_entry {
+        if let Some(val_entry) = self.val_entry {
 
-            // todo!()
+            if let Some(_detail_tbl) = val_entry.2 {
+
+                todo!("Create the lines to add")   
+
+            }            
 
         };
 
-        Ok(())
+        Ok(None)
 
     }
 
@@ -141,6 +146,24 @@ impl Line for CmdBlock<'_> {
         }
     }
 
+}
+
+// ------------------------------------------------------------------------
+
+struct CmdDetailLine<'a> {
+    exe: &'a dyn Executable,
+
+}
+
+impl Line for CmdDetailLine<'_> {
+
+    fn as_executable(&self) -> &dyn Executable {
+        self.exe
+    }
+
+    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
+        todo!()
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -158,7 +181,7 @@ fn load_commands_on_enter(
     let cmds_len = HEADER[5].to_usize(exe.mmap());
     let mut cmd_offset = HEADER_MAP.data_len;
 
-    let mut cmds: Vec<CmdBlock> = Vec::with_capacity(num_cmds); 
+    let mut cmds: Vec<CmdLine> = Vec::with_capacity(num_cmds); 
     for _ in 0..num_cmds {
 
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset+ CMD_HEADER_MAP.data_len];
@@ -167,7 +190,7 @@ fn load_commands_on_enter(
             .fields[1]
             .to_usize(cmd_slice);
 
-        cmds.push(CmdBlock{
+        cmds.push(CmdLine{
             exe,
             fields: CMD_HEADER,
             val_entry: CMD_HEADER[0].lookup(cmd_slice),
