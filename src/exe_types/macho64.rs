@@ -6,7 +6,10 @@
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::{
+    ops::Deref, 
+    rc::Rc
+};
 
 use crate::{
     color::{
@@ -48,11 +51,12 @@ impl<'a> MachO64 {
     pub fn new( 
         filename: &'a str,
         mmap: Mmap,
-    ) -> Result<Box<dyn Executable>> {
+    ) -> Result<Rc<dyn Executable>> {
 
-        Ok(Box::new(MachO64{
-            filename: String::from(filename), 
-            mmap, 
+        Ok(Rc::new(
+            MachO64{
+                filename: String::from(filename), 
+                mmap, 
         }))
 
     }
@@ -79,17 +83,13 @@ impl<'a> Executable for MachO64 {
         &HEADER_MAP
     }
 
-    fn to_string(&self) -> String {
-        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
-    }
-
 }
 
 // ------------------------------------------------------------------------
 
 struct CmdLine<'a> {
 
-    exe: &'a dyn Executable,
+    exe: Rc<dyn Executable>,
     val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
     wc: &'a WindowColors,
@@ -98,9 +98,9 @@ struct CmdLine<'a> {
 }
 
 impl Line for CmdLine<'_> {
-    fn as_executable(&self) -> &dyn Executable {
-        self.exe
-    }
+    // fn as_executable(&self) -> Rc<dyn Executable> {
+    //     self.exe
+    // }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
@@ -129,11 +129,19 @@ impl Line for CmdLine<'_> {
 
             if let Some(_detail_tbl) = val_entry.2 {
 
-                todo!("Create the lines to add")   
+                let mut cmds: Vec<Box<dyn Line>> = Vec::from([]);
 
-            }            
+                for _ in 0..5 {
 
-        };
+                    cmds.push(Box::new(CmdDetailLine{_exe: self.exe.clone()}));
+
+                }
+
+                return Ok(Some(cmds));
+
+            }
+
+        }
 
         Ok(None)
 
@@ -150,26 +158,33 @@ impl Line for CmdLine<'_> {
 
 // ------------------------------------------------------------------------
 
-struct CmdDetailLine<'a> {
-    exe: &'a dyn Executable,
+struct CmdDetailLine {
+    _exe: Rc<dyn Executable>,
 
 }
 
-impl Line for CmdDetailLine<'_> {
+impl Line for CmdDetailLine {
 
-    fn as_executable(&self) -> &dyn Executable {
-        self.exe
-    }
+    // fn as_executable(&self) -> Rc<dyn Executable> {
+    //     self.exe
+    // }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        todo!()
+        
+        Ok(Vec::from([
+            (
+                None,
+                "Blah".into()
+            )
+        ]))
+
     }
 }
 
 // ------------------------------------------------------------------------
 
 fn load_commands_on_enter(
-    exe: &dyn Executable, 
+    exe: Rc<dyn Executable>, 
     colors: &Colors,
     screen: &Screen,
 ) -> Result<()> {
@@ -185,13 +200,10 @@ fn load_commands_on_enter(
     for _ in 0..num_cmds {
 
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset+ CMD_HEADER_MAP.data_len];
-
-        let cmd_len: usize = CMD_HEADER_MAP
-            .fields[1]
-            .to_usize(cmd_slice);
+        let cmd_len: usize = CMD_HEADER[1].to_usize(cmd_slice);
 
         cmds.push(CmdLine{
-            exe,
+            exe: exe.clone(),
             fields: CMD_HEADER,
             val_entry: CMD_HEADER[0].lookup(cmd_slice),
             wc: &wsc.scrollable_region,

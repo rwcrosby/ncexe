@@ -2,6 +2,8 @@
 //! Show the file list window
 //!
 
+use std::rc::Rc;
+
 use anyhow::Result;
 
 use crate::{
@@ -29,7 +31,7 @@ use super::file_header;
 
 // ------------------------------------------------------------------------
 
-type ExeItem = Box<dyn Executable>;
+type ExeItem = Rc<dyn Executable>;
 type ExeList<'a> = Vec<ExeItem>;
 
 pub fn show<'a>(
@@ -76,7 +78,7 @@ pub fn show<'a>(
         .map(|exe| {
             total_len += exe.len();
             FileLine{
-                exe: exe.as_ref(),
+                exe: exe.clone(),
                 screen,
                 colors
             }
@@ -124,16 +126,16 @@ pub fn show<'a>(
 /// Line in the file list
 
 struct FileLine<'a> {
-    exe: &'a dyn Executable,
+    exe: Rc<dyn Executable>,
     screen: &'a Screen,
     colors: &'a Colors,
 }
 
 impl Line for FileLine<'_> {
 
-    fn as_executable(&self) -> &dyn Executable {
-        self.exe
-    }
+    // fn as_executable(&self) -> Rc<dyn Executable> {
+    //     Rc::clone(&self.exe)
+    // }
 
     fn as_pairs(&self, width: usize) -> Result<PairVec> {
 
@@ -179,7 +181,7 @@ impl Line for FileLine<'_> {
     fn on_enter(&self) -> Result<MaybeLineVec> {
     
         if self.exe.exe_type() != ExeType::NOPE {
-            file_header::show(self.exe, self.screen, self.colors)?;
+            file_header::show(self.exe.clone(), self.screen, self.colors)?;
         } 
         Ok(None)
 

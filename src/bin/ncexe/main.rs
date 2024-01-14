@@ -7,8 +7,7 @@ mod configuration;
 use anyhow::Result;
 use clap::Parser;
 use std::{
-    ops::Deref,
-    path::PathBuf, 
+    path::PathBuf, rc::Rc, 
 };
 
 use ncexe::{
@@ -60,7 +59,7 @@ fn main() -> Result<()> {
         .map(|fname| 
             match exe_types::new(fname) {
                 Ok(exe) => exe,
-                Err(err) => Box::new(exe_types::NotExecutable {
+                Err(err) => Rc::new(exe_types::NotExecutable {
                     filename: String::from(fname),
                     msg: err.to_string(),
                 })
@@ -85,7 +84,7 @@ fn main() -> Result<()> {
     // Display file info
     if executables.len() == 1 {
         file_header::show(
-            executables[0].deref(), 
+            executables[0].clone(), 
             &screen, 
             &colors
         )

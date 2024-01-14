@@ -7,7 +7,7 @@ use anyhow::{
     bail,
 };
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::{ops::Deref, rc::Rc};
 
 use crate::formatter::{
     self,
@@ -34,7 +34,7 @@ impl<'a> ELF {
     pub fn new( 
         filename : &'a str,
         mmap : Mmap,
-    ) -> Result<Box<dyn Executable>> {
+    ) -> Result<Rc<dyn Executable>> {
 
         let mmap_slice = mmap.deref();
 
@@ -52,7 +52,7 @@ impl<'a> ELF {
             v => bail!("Invalid ELF bit length {:02x}", v)
         };
 
-        Ok(Box::new(ELF{
+        Ok(Rc::new(ELF{
             filename: String::from(filename), 
             mmap, 
             // fname_fn: None,
@@ -81,10 +81,6 @@ impl Executable for ELF {
     }
     fn header_map(&self) -> &FieldMap {
         &self.hdr_map
-    }
-
-    fn to_string(&self) -> String {
-        format!("Mach-O 64: {:30} {:?}", self.filename, self.mmap)
     }
 
 }

@@ -10,7 +10,7 @@ use anyhow::Result;
 use memmap2::Mmap;
 use std::{
     fmt, 
-    fs::File, 
+    fs::File, rc::Rc, 
 };
 
 use crate::formatter::FieldMap;
@@ -23,25 +23,12 @@ use macho64::MachO64;
 /// Trait to be implemented by the various executable handlers
 
 pub trait Executable {
-    fn exe_type(&self) -> ExeType {
-        ExeType::NOPE
-    }
-    fn len(&self) -> usize {
-        0
-    }
-    fn filename(&self) -> &str {
-        ""
-    }
-    fn header_map(&self) -> &FieldMap {
-        todo!("Default trait method called")
-    }
-    fn mmap(&self) -> &[u8] {
-        &[]
-    }
 
-    fn to_string(&self) -> String {
-        String::from("")
-    }
+    fn exe_type(&self) -> ExeType;
+    fn filename(&self) -> &str;
+    fn len(&self) -> usize;
+    fn mmap(&self) -> &[u8];
+    fn header_map(&self) -> &FieldMap;
 
 }
 
@@ -78,13 +65,13 @@ impl fmt::Display for ExeType {
 
 pub fn new(
     filename: &str
-) -> Result<Box<dyn Executable>> {
+) -> Result<Rc<dyn Executable>> {
     let fd = File::open(&filename)?;
 
     let mmap = unsafe { Mmap::map(&fd) }?;
 
     if mmap.len() < 4 {
-        return Ok(Box::new(NotExecutable {
+        return Ok(Rc::new(NotExecutable {
             filename: String::from(filename),
             msg: format!("Too small: {}", mmap.len()),
         }));
@@ -99,7 +86,7 @@ pub fn new(
         0x464c457f => ELF::new(filename, mmap),
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
-        v => Ok(Box::new(NotExecutable {
+        v => Ok(Rc::new(NotExecutable {
             filename: String::from(filename),
             msg: format!("Invalid magic number: {:x}", v),
         })),
@@ -113,21 +100,28 @@ pub const ETYPE_LENGTH: usize = "Portable Executable".len();
 /// Basic trait implementation for a non-executable file
 ///
 
-#[derive(Debug)]
 pub struct NotExecutable {
     pub filename: String,
     pub msg: String,
 }
 
 impl Executable for NotExecutable {
-    fn to_string(&self) -> String {
-        format!("Not an Executable: {}: {}", self.filename, self.msg)
-    }
     fn exe_type(&self) -> ExeType {
         ExeType::NOPE
     }
     fn filename(&self) -> &str {
         &self.filename
     }
+    fn len(&self) -> usize {
+        0
+    }
+    fn mmap(&self) -> &[u8] {
+        panic!("Mmap called on non-executable")
+    }
+    fn header_map(&self) -> &FieldMap {
+        panic!("Header map called on non-executable")
+    }
+
+
 }
 

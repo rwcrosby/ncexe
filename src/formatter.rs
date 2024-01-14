@@ -2,6 +2,8 @@
 //! Format a block of memory into a window
 //! 
 
+use std::rc::Rc;
+
 use anyhow::Result;
 
 use crate::{
@@ -21,7 +23,7 @@ pub trait EnterHandler{
 }
 
 type EnterFn = fn(
-    &dyn Executable,
+    Rc<dyn Executable>,
     &Colors, 
     &Screen,
 ) -> Result<()>;
@@ -62,7 +64,10 @@ impl FieldMap {
 type StringFn = dyn Fn(&[u8]) -> String;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
 
-pub type ValEntry = (usize, &'static str, Option<&'static FieldMap>);
+pub type ValEntry = (
+    usize, &'static str, 
+    Option<&'static FieldMap>
+);
 pub type ValTable = [ValEntry];
 
 pub struct FieldDef {

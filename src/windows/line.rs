@@ -2,25 +2,22 @@
 //! Container for the line trait
 //! 
 
+
 use anyhow::Result;
 use pancurses::chtype;
-
-use crate::exe_types::Executable;
 
 use super::Coords;
 
 // ------------------------------------------------------------------------
 
-pub type LineVec<'a> = Vec<&'a dyn Line>;
+pub type LineVec<'a> = Vec<Box<dyn Line>>;
+// pub type LineVec<'a> = Vec<&'a dyn Line>;
 pub type MaybeLineVec<'a> = Option<LineVec<'a>>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
 
 pub trait Line {
-
-    /// Return the Executable trait for this line
-    fn as_executable(&self) -> &dyn Executable;
 
     /// Return a set of attr/string pairs
     /// The total length is guaranteed not to exceed the specified value

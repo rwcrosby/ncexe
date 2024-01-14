@@ -3,6 +3,8 @@
 //!
 
 
+use std::rc::Rc;
+
 use anyhow::Result;
 
 use crate::{
@@ -33,7 +35,7 @@ use crate::{
 // ------------------------------------------------------------------------
 
 pub fn show<'a>(
-    exe: &'a dyn Executable,
+    exe: Rc<dyn Executable>,
     screen: &'a Screen,
     colors: &'a Colors,
 ) -> Result<()> {
@@ -56,7 +58,7 @@ pub fn show<'a>(
         .iter()
         .filter(| f | f.string_fn.is_some() )
         .map(|map_field| HeaderLine::new(
-            exe, 
+            exe.clone(), 
             map_field, 
             &wsc.scrollable_region, 
             exe.header_map().max_text_len,
@@ -85,7 +87,7 @@ pub fn show<'a>(
 // ------------------------------------------------------------------------
 
 struct HeaderLine<'a> {
-    exe: &'a dyn Executable,
+    exe: Rc<dyn Executable>,
     field_def: &'a FieldDef,
     wc: &'a WindowColors,
     max_text_len: usize,
@@ -95,7 +97,7 @@ struct HeaderLine<'a> {
 
 impl<'a> HeaderLine<'a> {
     fn new(
-        exe: &'a dyn Executable,
+        exe: Rc<dyn Executable>,
         field_def: &'a FieldDef,
         wc: &'a WindowColors,
         max_text_len: usize,
@@ -114,9 +116,9 @@ impl<'a> HeaderLine<'a> {
 }
 
 impl<'a> Line for HeaderLine<'a> {
-    fn as_executable(&self) -> &dyn Executable {
-        self.exe
-    }
+    // fn as_executable(&self) -> Rc<dyn Executable> {
+    //     self.exe
+    // }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
@@ -152,7 +154,7 @@ impl<'a> Line for HeaderLine<'a> {
     fn on_enter(&self) -> Result<MaybeLineVec> {
         if let Some(efn) = self.field_def.enter_fn {
             efn(
-                self.exe,
+                self.exe.clone(),
                 self.colors,
                 self.screen,
             )?;
