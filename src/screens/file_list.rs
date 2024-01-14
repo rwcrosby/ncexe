@@ -2,15 +2,15 @@
 //! Show the file list window
 //!
 
-use std::rc::Rc;
-
 use anyhow::Result;
+use std::rc::Rc;
 
 use crate::{
     color::Colors,
     exe_types::{
+        ETYPE_LENGTH, 
         Executable, 
-        ETYPE_LENGTH, ExeType
+        ExeType,
     },
     formatter::center_in, 
     windows::{
@@ -20,7 +20,8 @@ use crate::{
         header::Header,
         line::{
             Line,
-            PairVec, MaybeLineVec
+            MaybeLineVec,
+            PairVec, 
         },
         screen::Screen,
         scrollable_region::ScrollableRegion,
@@ -73,23 +74,20 @@ pub fn show<'a>(
     // Create the scrollable window
         
     let mut total_len = 0;
-    let exes: Vec<FileLine> = executables
+    let lines: Vec<Box<dyn Line>> = executables
         .iter()
-        .map(|exe| {
-            total_len += exe.len();
-            FileLine{
-                exe: exe.clone(),
-                screen,
-                colors
-            }
-        })
+        .map(| e | -> Box<dyn Line> {
+            total_len += e.len();
+            Box::new(FileLine{
+                exe: e.clone(),
+        })})
         .collect();
-
-    let mut lines = exes.iter().map(|f| -> &dyn Line { f }).collect();
 
     let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
-        &mut lines,
+        lines,
+        screen,
+        colors,
     );
 
     // Create the footer window
@@ -125,17 +123,11 @@ pub fn show<'a>(
 // ------------------------------------------------------------------------
 /// Line in the file list
 
-struct FileLine<'a> {
+struct FileLine {
     exe: Rc<dyn Executable>,
-    screen: &'a Screen,
-    colors: &'a Colors,
 }
 
-impl Line for FileLine<'_> {
-
-    // fn as_executable(&self) -> Rc<dyn Executable> {
-    //     Rc::clone(&self.exe)
-    // }
+impl Line for FileLine {
 
     fn as_pairs(&self, width: usize) -> Result<PairVec> {
 
@@ -178,10 +170,18 @@ impl Line for FileLine<'_> {
 
     }
 
-    fn on_enter(&self) -> Result<MaybeLineVec> {
+    fn on_enter(
+        &self,
+        screen: &Screen, 
+        colors: &Colors, 
+    ) -> Result<MaybeLineVec> {
     
         if self.exe.exe_type() != ExeType::NOPE {
-            file_header::show(self.exe.clone(), self.screen, self.colors)?;
+            file_header::show(
+                self.exe.clone(), 
+                screen, 
+                colors
+            )?;
         } 
         Ok(None)
 

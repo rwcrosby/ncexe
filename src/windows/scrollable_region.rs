@@ -8,14 +8,17 @@ use pancurses::{
     Input
 };
 
-use crate::color::WindowColors;
+use crate::color::{
+    Colors,
+    WindowColors, 
+};
 
 use super::{
     Coords,
     line::{
         Line,
         ToScreen,
-    },
+    }, screen::Screen,
 };
 
 // ------------------------------------------------------------------------
@@ -30,13 +33,16 @@ pub struct ScrollableRegion<'a> {
     size: Coords,
 
     /// set of line objects to display
-    lines : &'a mut Vec<&'a dyn Line>,
+    lines : Vec<Box<dyn Line>>,
 
     /// Index into lines of the top line in the window
     top_idx: usize,
 
     /// Index into the window of the currently selected line
     win_idx: usize,
+
+    screen: &'a Screen,
+    colors: &'a Colors,
 
 }
 
@@ -46,9 +52,11 @@ impl<'a> ScrollableRegion<'a> {
 
     pub fn new (
         window_colors: &'a WindowColors,
-        lines: &'a mut Vec<&'a dyn Line>,
-    ) -> Box<ScrollableRegion<'a>> 
-    {
+        lines: Vec<Box<dyn Line>>,
+        screen: &'a Screen,
+        colors: &'a Colors,
+    ) -> Box<ScrollableRegion<'a>> {
+
         let pwin = pancurses::newwin(1, 1, 2, 0); 
         pwin.keypad(true);
 
@@ -59,7 +67,10 @@ impl<'a> ScrollableRegion<'a> {
             lines,
             top_idx: 0,
             win_idx: 0,
+            colors,
+            screen,
         })
+
     }
 
     // --------------------------------------------------------------------
@@ -258,7 +269,9 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        if let Some(_new_lines) = self.lines[idx].on_enter()? {
+        if let Some(_new_lines) = self.lines[idx].on_enter(
+            self.screen, 
+            self.colors)? {
 
         }
 

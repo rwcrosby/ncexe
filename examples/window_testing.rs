@@ -52,12 +52,14 @@ fn main() {
 
     };
 
-    let mut lines: Vec<&dyn Line> = Vec::from([]);
+    let lines: Vec<Box<dyn Line>> = Vec::from([]);
 
     let hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
     let scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
-        &mut lines
+        lines,
+        &screen,
+        &colors,
     );
     
     let ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));

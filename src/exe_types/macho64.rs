@@ -19,7 +19,8 @@ use crate::{
     formatter::{
         self,
         FieldMap,
-        FieldDef, ValEntry,
+        FieldDef, 
+        ValEntry,
     },
     windows::{
         line::{
@@ -92,22 +93,21 @@ struct CmdLine<'a> {
     exe: Rc<dyn Executable>,
     val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
-    wc: &'a WindowColors,
-    data: &'a [u8],
+    wc: WindowColors,
+    range: (usize, usize)
 
 }
 
 impl Line for CmdLine<'_> {
-    // fn as_executable(&self) -> Rc<dyn Executable> {
-    //     self.exe
-    // }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
+        let data = &self.exe.mmap()[self.range.0..self.range.1];
+
         let mut pairs = Vec::from([
-            ( Some(self.wc.text), format!("{:6}", self.fields[1].to_usize(self.data) )),
+            ( Some(self.wc.text), format!("{:6}", self.fields[1].to_usize(data) )),
             ( Some(self.wc.text), String::from(" ") ),
-            ( Some(self.wc.text), self.fields[0].to_string(self.data) ),
+            ( Some(self.wc.text), self.fields[0].to_string(data) ),
         ]);
 
         if let Some(desc) = self.val_entry {
@@ -123,7 +123,11 @@ impl Line for CmdLine<'_> {
 
     }
 
-    fn on_enter(&self) -> Result<MaybeLineVec> {
+    fn on_enter(
+        &self, 
+        _screen: &Screen,
+        _colors: &Colors,
+    ) -> Result<MaybeLineVec> {
         
         if let Some(val_entry) = self.val_entry {
 
@@ -165,10 +169,6 @@ struct CmdDetailLine {
 
 impl Line for CmdDetailLine {
 
-    // fn as_executable(&self) -> Rc<dyn Executable> {
-    //     self.exe
-    // }
-
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         
         Ok(Vec::from([
@@ -191,42 +191,43 @@ fn load_commands_on_enter(
 
     let wsc = colors.get_window_set_colors("list")?;
 
-    // let num_cmds = self.hdr_map.fields[4].to_usize(self.mmap());
     let num_cmds = HEADER[4].to_usize(exe.mmap());
     let cmds_len = HEADER[5].to_usize(exe.mmap());
     let mut cmd_offset = HEADER_MAP.data_len;
 
-    let mut cmds: Vec<CmdLine> = Vec::with_capacity(num_cmds); 
+    let mut lines: Vec<Box<dyn Line>> = Vec::with_capacity(num_cmds); 
     for _ in 0..num_cmds {
 
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset+ CMD_HEADER_MAP.data_len];
         let cmd_len: usize = CMD_HEADER[1].to_usize(cmd_slice);
 
-        cmds.push(CmdLine{
-            exe: exe.clone(),
-            fields: CMD_HEADER,
-            val_entry: CMD_HEADER[0].lookup(cmd_slice),
-            wc: &wsc.scrollable_region,
-            data: &exe.mmap()[cmd_offset..cmd_offset + cmd_len],
-        });
+        lines.push(
+            Box::new(
+                CmdLine{
+                    exe: exe.clone(),
+                    fields: CMD_HEADER,
+                    val_entry: CMD_HEADER[0].lookup(cmd_slice),
+                    wc: wsc.scrollable_region.clone(),
+                    range: (cmd_offset, cmd_offset + cmd_len),
+                }
+            )
+        );
 
         cmd_offset += cmd_len;
 
     }
 
-    let mut lines = cmds
-        .iter()
-        .map(| f | -> &dyn Line { f })
-        .collect();
-
-    let footer = format!("Mach-O Load Commands: {} commands, {} bytes", num_cmds, cmds_len );
+    let footer = format!("Mach-O Load Commands: {} commands, {} bytes", 
+        num_cmds, 
+        cmds_len);
 
     details_list::show(
-        &mut lines,
+        lines,
         "Length Command",
         &footer,
         wsc,
         screen,
+        colors,
     )
 
 }

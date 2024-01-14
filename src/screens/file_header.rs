@@ -3,42 +3,41 @@
 //!
 
 
-use std::rc::Rc;
-
 use anyhow::Result;
+use std::rc::Rc;
 
 use crate::{
     color::{
         Colors, 
-        WindowColors
+        WindowColors,
     },
     exe_types::Executable,
     formatter::{
+        FieldDef,
         center_in, 
-        FieldDef
     },
     windows::{
         footer::Footer,
         header::Header,
         line::{
             Line, 
-            PairVec, MaybeLineVec
+            MaybeLineVec,
+            PairVec, 
         },
         screen::Screen,
         scrollable_region::ScrollableRegion,
         WindowSet,
-    
-    }
+    },
 };
-
 
 // ------------------------------------------------------------------------
 
-pub fn show<'a>(
+pub fn show(
     exe: Rc<dyn Executable>,
-    screen: &'a Screen,
-    colors: &'a Colors,
+    screen: &Screen,
+    colors: &Colors,
 ) -> Result<()> {
+
     let wsc = colors.get_window_set_colors("file_header")?;
 
     // Create header window
@@ -53,35 +52,46 @@ pub fn show<'a>(
 
     let hdr_map = exe.header_map();
 
-    let fields: Vec<Box<HeaderLine>> = hdr_map
+    let wc = wsc.scrollable_region;
+
+    let lines: Vec<Box<dyn Line>> = hdr_map
         .fields
         .iter()
         .filter(| f | f.string_fn.is_some() )
-        .map(|map_field| HeaderLine::new(
-            exe.clone(), 
-            map_field, 
-            &wsc.scrollable_region, 
-            exe.header_map().max_text_len,
-            colors,
-            screen,
-        ))
+        .map(|map_field| -> Box<dyn Line> {
+            Box::new(HeaderLine{
+                exe: exe.clone(),
+                field_def: map_field,
+                wc: wc.clone(),
+                max_text_len: exe.header_map().max_text_len,
+        })})
         .collect();
 
-    let mut lines = fields.iter().map(|f| -> &dyn Line { f.as_ref() }).collect();
-
-    let scr_win = ScrollableRegion::new(&wsc.scrollable_region, &mut lines);
+    let scr_win = ScrollableRegion::new(
+        &wsc.scrollable_region, 
+        lines, 
+        screen, 
+        colors
+    );
 
     // Create the footer window
 
-    let footer_fn = |sc: usize| center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
+    let footer_fn = |sc: usize| 
+        center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
 
     let ftr_win = Footer::new(&wsc.footer, Box::new(footer_fn));
 
     // Create and show the set of windows
 
-    let mut win_set = WindowSet::new(&screen, hdr_win, scr_win, ftr_win);
+    let mut win_set = WindowSet::new(
+        &screen, 
+        hdr_win, 
+        scr_win, 
+        ftr_win
+    );
 
     win_set.show()
+
 }
 
 // ------------------------------------------------------------------------
@@ -89,36 +99,11 @@ pub fn show<'a>(
 struct HeaderLine<'a> {
     exe: Rc<dyn Executable>,
     field_def: &'a FieldDef,
-    wc: &'a WindowColors,
+    wc: WindowColors,
     max_text_len: usize,
-    colors: &'a Colors,
-    screen: &'a Screen,
-}
-
-impl<'a> HeaderLine<'a> {
-    fn new(
-        exe: Rc<dyn Executable>,
-        field_def: &'a FieldDef,
-        wc: &'a WindowColors,
-        max_text_len: usize,
-        colors: &'a Colors,
-        screen: &'a Screen,
-    ) -> Box<Self> {
-        Box::new(Self{
-            exe,
-            field_def,
-            wc,
-            max_text_len,
-            colors,
-            screen,
-        })
-    }
 }
 
 impl<'a> Line for HeaderLine<'a> {
-    // fn as_executable(&self) -> Rc<dyn Executable> {
-    //     self.exe
-    // }
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
@@ -151,12 +136,16 @@ impl<'a> Line for HeaderLine<'a> {
 
     }
 
-    fn on_enter(&self) -> Result<MaybeLineVec> {
+    fn on_enter(
+        &self, 
+        screen: &Screen, 
+        colors: &Colors,
+    ) -> Result<MaybeLineVec> {
         if let Some(efn) = self.field_def.enter_fn {
             efn(
                 self.exe.clone(),
-                self.colors,
-                self.screen,
+                colors,
+                screen,
             )?;
         }
         Ok(None)

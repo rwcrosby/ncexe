@@ -44,7 +44,7 @@ use std::{
 // ------------------------------------------------------------------------
 /// Curses attribute definitions for a window's colors
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct WindowColors {
     pub bkgr: chtype,
     pub title: chtype,
@@ -95,8 +95,10 @@ impl Colors {
 
     }
 
-    pub fn get_window_set_colors(&self, name: &str) 
-        -> Result<&WindowSetColors> {
+    pub fn get_window_set_colors(
+        &self, 
+        name: &str
+    ) -> Result<&WindowSetColors> {
 
         self.window_sets.get(name)
             .ok_or(anyhow!("Colorset {} not found", name))

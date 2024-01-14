@@ -5,7 +5,7 @@
 use anyhow::Result;
 
 use crate::{
-    color::WindowSetColors,
+    color::{WindowSetColors, Colors},
     formatter::center_in,
     windows::{
         WindowSet,
@@ -21,11 +21,12 @@ use crate::{
 // ------------------------------------------------------------------------
 
 pub fn show<'a >(
-    lines: &'a mut Vec<&'a dyn Line>,
+    lines: Vec<Box<dyn Line>>,
     title: &'a str,
     trailer: &'a str,
     wsc: &'a WindowSetColors,
     screen : &'a Screen,
+    colors : &'a Colors,
 ) -> Result<()> {
 
     // Create header window
@@ -42,6 +43,8 @@ pub fn show<'a >(
     let scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
+        screen,
+        colors,
     );
 
     // Create the footer window

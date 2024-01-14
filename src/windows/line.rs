@@ -6,7 +6,9 @@
 use anyhow::Result;
 use pancurses::chtype;
 
-use super::Coords;
+use crate::color::Colors;
+
+use super::{Coords, screen::Screen};
 
 // ------------------------------------------------------------------------
 
@@ -24,7 +26,11 @@ pub trait Line {
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
     /// Handle hitting enter on the line
-    fn on_enter(&self) -> Result<MaybeLineVec> { Ok(None) }
+    fn on_enter(
+        &self,
+        _screen: &Screen,
+        _colors: &Colors,
+    ) -> Result<MaybeLineVec> { Ok(None) }
 
     /// Show any line indicator
     fn line_ind(&self) -> Option<char> { None }
