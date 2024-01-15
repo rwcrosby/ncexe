@@ -5,15 +5,18 @@
 
 use anyhow::Result;
 use pancurses::chtype;
+use std::cell::Cell;
 
 use crate::color::Colors;
 
-use super::{Coords, screen::Screen};
+use super::{
+    Coords, 
+    screen::Screen
+};
 
 // ------------------------------------------------------------------------
 
 pub type LineVec<'a> = Vec<Box<dyn Line>>;
-// pub type LineVec<'a> = Vec<&'a dyn Line>;
 pub type MaybeLineVec<'a> = Option<LineVec<'a>>;
 
 // ------------------------------------------------------------------------
@@ -32,8 +35,27 @@ pub trait Line {
         _colors: &Colors,
     ) -> Result<MaybeLineVec> { Ok(None) }
 
-    /// Show any line indicator
+    /// Show any line indicators
     fn line_ind(&self) -> Option<char> { None }
+
+    /// Get the line identifier if it exists
+    fn line_id(&self) -> Option<usize> { None }
+
+}
+
+// --------------------------------------------------------------------
+/// Get a thread unique id for the line
+
+pub fn get_id() -> usize {
+
+    thread_local! {
+        static ID: Cell<usize> = Cell::new(0);
+    }
+
+    let old = ID.get();
+    ID.set( old + 1);
+
+    old
 
 }
 

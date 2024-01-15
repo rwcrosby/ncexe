@@ -26,7 +26,7 @@ use crate::{
         line::{
             Line,
             MaybeLineVec,
-            PairVec,
+            PairVec, self,
         },
         screen::Screen
     },
@@ -94,7 +94,8 @@ struct CmdLine<'a> {
     val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
     wc: WindowColors,
-    range: (usize, usize)
+    range: (usize, usize),
+    id: usize,
 
 }
 
@@ -158,6 +159,10 @@ impl Line for CmdLine<'_> {
         }
     }
 
+    fn line_id(&self) -> Option<usize> {
+        Some(self.id)
+    }
+
 }
 
 // ------------------------------------------------------------------------
@@ -209,6 +214,7 @@ fn load_commands_on_enter(
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
                     wc: wsc.scrollable_region.clone(),
                     range: (cmd_offset, cmd_offset + cmd_len),
+                    id: line::get_id(),
                 }
             )
         );

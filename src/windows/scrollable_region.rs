@@ -25,9 +25,9 @@ use super::{
 
 pub struct ScrollableRegion<'a> {
 
-    window_colors: &'a WindowColors,
-
     pub pwin: pancurses::Window,
+    screen: &'a Screen,
+    colors: &'a Colors,
 
     /// Dimensions of the window
     size: Coords,
@@ -41,9 +41,19 @@ pub struct ScrollableRegion<'a> {
     /// Index into the window of the currently selected line
     win_idx: usize,
 
-    screen: &'a Screen,
-    colors: &'a Colors,
+    /// Colors to use for this scrollable region
+    window_colors: &'a WindowColors,
 
+    /// Regions that have been expanded inline
+    expanded_sets: Vec<ExpandedRegion>,
+
+}
+
+// --------------------------------------------------------------------
+
+struct ExpandedRegion {
+    line_id: usize,
+    num_lines: usize,
 }
 
 impl<'a> ScrollableRegion<'a> {
@@ -61,14 +71,15 @@ impl<'a> ScrollableRegion<'a> {
         pwin.keypad(true);
 
         Box::new(ScrollableRegion{ 
-            window_colors, 
             pwin,
-            size: Coords{y: 0, x: 0},
-            lines,
-            top_idx: 0,
-            win_idx: 0,
             colors,
             screen,
+            lines,
+            size: Coords{y: 0, x: 0},
+            top_idx: 0,
+            win_idx: 0,
+            window_colors, 
+            expanded_sets: Vec::from([])
         })
 
     }
@@ -269,9 +280,50 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        if let Some(_new_lines) = self.lines[idx].on_enter(
-            self.screen, 
-            self.colors)? {
+        let line = &self.lines[idx];
+
+
+        if let Some(er_idx) = self.expanded_sets
+                .iter()
+                .position(| er | 
+                
+                    match line.line_id() {
+                        None => false,
+                        Some(n) => n == er.line_id
+                    }
+
+                ) {
+
+            // If this line is in the list of expanded lines, delete the lines
+            // and remove from the list
+
+            let er = &self.expanded_sets[er_idx];
+
+            let line_slice = &mut self.lines[idx+1..];
+
+            line_slice.rotate_left(er.num_lines);
+            self.lines.truncate(self.lines.len() - er.num_lines);
+
+            self.expanded_sets.swap_remove(er_idx);
+
+        } else if let Some(mut new_lines) = self.lines[idx].on_enter(
+                self.screen, 
+                self.colors)? {
+                
+            // If the enter handler returned some lines to add...
+
+            let num_lines = new_lines.len();
+            let line_id = line.line_id().unwrap(); // Panic if logic error
+            self.lines.append(&mut new_lines);
+
+            let line_slice = &mut self.lines[idx+1..];
+            line_slice.rotate_right(num_lines);
+
+            self.expanded_sets.push(
+                ExpandedRegion{
+                    line_id,
+                    num_lines,
+            });
 
         }
 
