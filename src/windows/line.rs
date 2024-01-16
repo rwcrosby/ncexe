@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use pancurses::chtype;
-use std::cell::Cell;
 
 use crate::color::Colors;
 
@@ -35,28 +34,26 @@ pub trait Line {
         _colors: &Colors,
     ) -> Result<MaybeLineVec> { Ok(None) }
 
-    /// Show any line indicators
-    fn line_ind(&self) -> Option<char> { None }
+    /// Open a new window?
+    fn new_window(&self) -> bool { false }
 
-    /// Get the line identifier if it exists
-    fn line_id(&self) -> Option<usize> { None }
+    /// Function to open a full new window
+    fn new_window_fn<'a>(
+        &'a self,
+        _screen: &'a Screen,
+        _colors: &'a Colors,
+    ) -> Result<()> { Ok(()) }
 
-}
+    /// Expand in-line??
+    fn expand(&self) -> bool { false }
 
-// --------------------------------------------------------------------
-/// Get a thread unique id for the line
-
-pub fn get_id() -> usize {
-
-    thread_local! {
-        static ID: Cell<usize> = Cell::new(0);
-    }
-
-    let old = ID.get();
-    ID.set( old + 1);
-
-    old
-
+    /// Function to expand 
+    fn expand_fn<'a>(
+        &'a self,
+        _screen: &'a Screen,
+        _colors: &'a Colors,
+    ) -> Result<MaybeLineVec> { Ok(None) }
+    
 }
 
 // ------------------------------------------------------------------------
@@ -86,7 +83,9 @@ impl ToScreen for PairVec {
     ) {
 
         pwin.mv(start_pt.y as i32, start_pt.x as i32);
-        self.iter().for_each(| lp | {
+        
+        self.iter()
+                .for_each(| lp | {
 
             if let Some(attr) = lp.0 {
                 pwin.attrset(attr);

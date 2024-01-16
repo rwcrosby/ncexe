@@ -21,7 +21,6 @@ use crate::{
         header::Header,
         line::{
             Line, 
-            MaybeLineVec,
             PairVec, 
         },
         screen::Screen,
@@ -54,8 +53,7 @@ pub fn show(
 
     let wc = wsc.scrollable_region;
 
-    let lines: Vec<Box<dyn Line>> = hdr_map
-        .fields
+    let lines: Vec<Box<dyn Line>> = hdr_map.fields
         .iter()
         .filter(| f | f.string_fn.is_some() )
         .map(|map_field| -> Box<dyn Line> {
@@ -136,11 +134,16 @@ impl<'a> Line for HeaderLine<'a> {
 
     }
 
-    fn on_enter(
-        &self, 
-        screen: &Screen, 
-        colors: &Colors,
-    ) -> Result<MaybeLineVec> {
+    fn new_window(&self) -> bool {
+        self.field_def.enter_fn.is_some()
+    }
+
+    fn new_window_fn<'b>(
+        &'b self,
+        screen: &'b Screen,
+        colors: &'b Colors,
+    ) -> Result<()> {
+        
         if let Some(efn) = self.field_def.enter_fn {
             efn(
                 self.exe.clone(),
@@ -148,14 +151,8 @@ impl<'a> Line for HeaderLine<'a> {
                 screen,
             )?;
         }
-        Ok(None)
-    }
+        Ok(())
 
-    fn line_ind(&self) -> Option<char> {
-        match self.field_def.enter_fn {
-            Some(_) => Some('='),
-            None => None
-        }
     }
 
 

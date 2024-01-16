@@ -20,7 +20,6 @@ use crate::{
         header::Header,
         line::{
             Line,
-            MaybeLineVec,
             PairVec, 
         },
         screen::Screen,
@@ -170,20 +169,21 @@ impl Line for FileLine {
 
     }
 
-    fn on_enter(
+    fn new_window(&self) -> bool {
+        self.exe.exe_type() != ExeType::NOPE
+    }
+
+    fn new_window_fn<'a>(
         &self,
         screen: &Screen, 
         colors: &Colors, 
-    ) -> Result<MaybeLineVec> {
+    ) -> Result<()> {
     
-        if self.exe.exe_type() != ExeType::NOPE {
-            file_header::show(
-                self.exe.clone(), 
-                screen, 
-                colors
-            )?;
-        } 
-        Ok(None)
+        file_header::show(
+            self.exe.clone(), 
+            screen, 
+            colors
+        )
 
     }
 

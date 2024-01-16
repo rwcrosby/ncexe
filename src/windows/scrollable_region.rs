@@ -17,9 +17,51 @@ use super::{
     Coords,
     line::{
         Line,
-        ToScreen,
-    }, screen::Screen,
+        ToScreen, LineVec,
+    }, 
+    screen::Screen,
 };
+
+// --------------------------------------------------------------------
+
+type ScrollableRegionLines = Vec<Box<ScrollableRegionLine>>;
+
+enum EnterType {
+    NewWindow,
+    Expandable(usize),
+    None,
+}
+
+struct ScrollableRegionLine {
+
+    /// Ownership of the Line is passed here
+    line: Box<dyn Line>,
+
+    /// What to do on enter on the line
+    enter: EnterType
+
+}
+ 
+fn make_scrollable_lines (lines: LineVec) -> ScrollableRegionLines {
+
+    lines
+        .into_iter()
+        .map(| line | {
+
+            let enter = if line.new_window() {
+                EnterType::NewWindow
+            } else if line.expand() {
+                EnterType::Expandable(0)
+            } else {
+                EnterType::None
+            };
+
+            Box::new(ScrollableRegionLine{line, enter } )
+
+            })
+        .collect()
+
+}
 
 // ------------------------------------------------------------------------
 
@@ -32,8 +74,8 @@ pub struct ScrollableRegion<'a> {
     /// Dimensions of the window
     size: Coords,
 
-    /// set of line objects to display
-    lines : Vec<Box<dyn Line>>,
+    /// Set of lines to display
+    lines: ScrollableRegionLines,
 
     /// Index into lines of the top line in the window
     top_idx: usize,
@@ -44,21 +86,9 @@ pub struct ScrollableRegion<'a> {
     /// Colors to use for this scrollable region
     window_colors: &'a WindowColors,
 
-    /// Regions that have been expanded inline
-    expanded_sets: Vec<ExpandedRegion>,
-
-}
-
-// --------------------------------------------------------------------
-
-struct ExpandedRegion {
-    line_id: usize,
-    num_lines: usize,
 }
 
 impl<'a> ScrollableRegion<'a> {
-
-    // --------------------------------------------------------------------
 
     pub fn new (
         window_colors: &'a WindowColors,
@@ -74,12 +104,11 @@ impl<'a> ScrollableRegion<'a> {
             pwin,
             colors,
             screen,
-            lines,
+            lines: make_scrollable_lines(lines),
             size: Coords{y: 0, x: 0},
             top_idx: 0,
             win_idx: 0,
             window_colors, 
-            expanded_sets: Vec::from([])
         })
 
     }
@@ -280,51 +309,48 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        let line = &self.lines[idx];
+        
+        let line = &mut self.lines[idx];
 
+        match line.enter {
 
-        if let Some(er_idx) = self.expanded_sets
-                .iter()
-                .position(| er | 
+            EnterType::NewWindow => {
                 
-                    match line.line_id() {
-                        None => false,
-                        Some(n) => n == er.line_id
-                    }
+                let line = &self.lines[idx];
+                line.line.new_window_fn(self.screen, self.colors)?;
 
-                ) {
+            }
 
-            // If this line is in the list of expanded lines, delete the lines
-            // and remove from the list
-
-            let er = &self.expanded_sets[er_idx];
-
-            let line_slice = &mut self.lines[idx+1..];
-
-            line_slice.rotate_left(er.num_lines);
-            self.lines.truncate(self.lines.len() - er.num_lines);
-
-            self.expanded_sets.swap_remove(er_idx);
-
-        } else if let Some(mut new_lines) = self.lines[idx].on_enter(
-                self.screen, 
-                self.colors)? {
+            EnterType::Expandable(num_lines) => {
                 
-            // If the enter handler returned some lines to add...
+                if num_lines > 0 {
+                    
+                    line.enter = EnterType::Expandable(0);
 
-            let num_lines = new_lines.len();
-            let line_id = line.line_id().unwrap(); // Panic if logic error
-            self.lines.append(&mut new_lines);
+                    let line_slice = &mut self.lines[idx+1..];
+        
+                    line_slice.rotate_left(num_lines);
+                    self.lines.truncate(self.lines.len() - num_lines);
+        
 
-            let line_slice = &mut self.lines[idx+1..];
-            line_slice.rotate_right(num_lines);
+                } else if let Some(new_lines) = line.line.expand_fn(
+                        self.screen, 
+                        self.colors)? {
 
-            self.expanded_sets.push(
-                ExpandedRegion{
-                    line_id,
-                    num_lines,
-            });
+                    let num_lines = new_lines.len();
+                    line.enter = EnterType::Expandable(num_lines);
+        
+                    let mut to_append = make_scrollable_lines(new_lines);
+        
+                    self.lines.append(&mut to_append);
+        
+                    let line_slice = &mut self.lines[idx+1..];
+                    line_slice.rotate_right(num_lines);
+                
+                }
 
+            }
+            EnterType::None => (),
         }
 
         Ok(())
@@ -365,12 +391,18 @@ impl<'a> ScrollableRegion<'a> {
         let last_col = self.size.x as i32 - 1;
 
         self.pwin.mvprintw(
-            0, last_col,
-            if self.top_idx > 0 { "\u{21d1}" } else { " " }
+            0, 
+            last_col,
+            if self.top_idx > 0 { 
+                "\u{21d1}" 
+            } else { 
+                " " 
+            }
         );
 
         self.pwin.mvprintw(
-            i32::try_from(self.size.y).unwrap() - 1, last_col,
+            self.size.y as i32 - 1, 
+            last_col,
             if self.size.y + self.top_idx >= self.lines.len() { 
                 " " 
             } else {
@@ -398,10 +430,23 @@ impl<'a> ScrollableRegion<'a> {
             .enumerate()
         {
 
-            if let Some(ind) = line.line_ind() {
-                self.pwin.mvaddch(y as i32, 0, ind);
-            }
-            line.as_pairs(self.size.x)?.show(&self.pwin, Coords{y: y, x: 1});
+            match line.enter {
+                EnterType::Expandable(num_lines) => 
+                    self.pwin.mvaddch(y as i32, 0, 
+                        if num_lines > 0 {
+                            '-'
+                        } else {
+                            '+'
+                        }),
+                EnterType::NewWindow => 
+                    self.pwin.mvaddch(y as i32, 0, '='),
+                EnterType::None => 
+                    self.pwin.mvaddch(y as i32, 0, ' '),
+            };
+
+            line.line
+                .as_pairs(self.size.x)?
+                .show(&self.pwin, Coords{y: y, x: 1});
         }
 
         self.set_indicators();

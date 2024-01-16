@@ -1,8 +1,8 @@
 //!
 //! Formatter for the MacOS Mach-O format
 //! 
-//! https://github.com/aidansteele/osx-abi-macho-file-format-reference
-//! https://en.wikipedia.org/wiki/Mach-O
+//! - <https://github.com/aidansteele/osx-abi-macho-file-format-reference>
+//! - <https://en.wikipedia.org/wiki/Mach-O>
 
 use anyhow::Result;
 use memmap2::Mmap;
@@ -26,7 +26,7 @@ use crate::{
         line::{
             Line,
             MaybeLineVec,
-            PairVec, self,
+            PairVec, 
         },
         screen::Screen
     },
@@ -87,6 +87,7 @@ impl<'a> Executable for MachO64 {
 }
 
 // ------------------------------------------------------------------------
+/// Load commands line
 
 struct CmdLine<'a> {
 
@@ -95,7 +96,6 @@ struct CmdLine<'a> {
     fields: &'static [FieldDef],
     wc: WindowColors,
     range: (usize, usize),
-    id: usize,
 
 }
 
@@ -124,7 +124,15 @@ impl Line for CmdLine<'_> {
 
     }
 
-    fn on_enter(
+    fn expand(&self) -> bool {
+        if let Some(val_entry) = self.val_entry {
+            val_entry.2.is_some()
+        } else {
+            false 
+        }
+    }
+
+    fn expand_fn<'a>(
         &self, 
         _screen: &Screen,
         _colors: &Colors,
@@ -152,20 +160,10 @@ impl Line for CmdLine<'_> {
 
     }
 
-    fn line_ind(&self) -> Option<char> {
-        match self.val_entry {
-            Some(_) => Some('+'),
-            None => None
-        }
-    }
-
-    fn line_id(&self) -> Option<usize> {
-        Some(self.id)
-    }
-
 }
 
 // ------------------------------------------------------------------------
+/// Line definition for expanded load command detail
 
 struct CmdDetailLine {
     _exe: Rc<dyn Executable>,
@@ -214,7 +212,6 @@ fn load_commands_on_enter(
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
                     wc: wsc.scrollable_region.clone(),
                     range: (cmd_offset, cmd_offset + cmd_len),
-                    id: line::get_id(),
                 }
             )
         );

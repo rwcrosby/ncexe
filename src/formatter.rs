@@ -22,7 +22,7 @@ pub trait EnterHandler{
     ) -> Result<()>;
 }
 
-type EnterFn = fn(
+pub type EnterFn = fn(
     Rc<dyn Executable>,
     &Colors, 
     &Screen,
