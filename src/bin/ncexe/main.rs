@@ -7,7 +7,8 @@ mod configuration;
 use anyhow::Result;
 use clap::Parser;
 use std::{
-    path::PathBuf, rc::Rc, 
+    path::PathBuf, 
+    rc::Rc, 
 };
 
 use ncexe::{
@@ -86,13 +87,13 @@ fn main() -> Result<()> {
         file_header::show(
             executables[0].clone(), 
             &screen, 
-            &colors
+            &colors,
         )
     } else {
         file_list::show(
             &mut executables, 
             &screen, 
-            &colors
+            &colors,
         )
     }
 

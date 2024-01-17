@@ -27,13 +27,6 @@ pub trait Line {
     /// The total length is guaranteed not to exceed the specified value
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
-    /// Handle hitting enter on the line
-    fn on_enter(
-        &self,
-        _screen: &Screen,
-        _colors: &Colors,
-    ) -> Result<MaybeLineVec> { Ok(None) }
-
     /// Open a new window?
     fn new_window(&self) -> bool { false }
 
@@ -48,11 +41,7 @@ pub trait Line {
     fn expand(&self) -> Option<usize> { None }
 
     /// Function to expand 
-    fn expand_fn<'a>(
-        &'a self,
-        _screen: &'a Screen,
-        _colors: &'a Colors,
-    ) -> Result<MaybeLineVec> { Ok(None) }
+    fn expand_fn<'a>(&'a self) -> Result<MaybeLineVec> { Ok(None) }
     
 }
 

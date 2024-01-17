@@ -1,10 +1,12 @@
 //! 
-//! Format a block of memory into a window
+//! Definitions for the static data mappings
 //! 
 
-use std::rc::Rc;
-
 use anyhow::Result;
+use std::{
+    rc::Rc,
+    ffi::CStr,
+};
 
 use crate::{
     color::Colors, 
@@ -13,22 +15,7 @@ use crate::{
 };
 
 // ------------------------------------------------------------------------
-
-pub trait EnterHandler{
-    fn on_enter(
-        &self,
-        colors: &Colors,
-        screen: &Screen,
-    ) -> Result<()>;
-}
-
-pub type EnterFn = fn(
-    Rc<dyn Executable>,
-    &Colors, 
-    &Screen,
-) -> Result<()>;
-
-// ------------------------------------------------------------------------
+/// Header for a memory block mapping
 pub struct FieldMap {
     pub fields: &'static [FieldDef],
     pub data_len: usize,
@@ -63,14 +50,24 @@ impl FieldMap {
 
 type StringFn = dyn Fn(&[u8]) -> String;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
+type EnterFn = fn(
+    Rc<dyn Executable>,
+    &Colors, 
+    &Screen,
+) -> Result<()>;
 
+
+/// Entry in the table of values for a field
 pub type ValEntry = (
     usize, 
     &'static str, 
     Option<&'static FieldMap>
 );
+
+/// Fixed table of value entries
 pub type ValTable = [ValEntry];
 
+/// Map a scalar field in image
 pub struct FieldDef {
     pub range: (usize, usize),
     pub name: &'static str,
@@ -190,6 +187,7 @@ pub fn center_in(width: usize, s: &str) -> (i32, String) {
 trait Converters {
     fn to_hex(&self) -> String;
     fn to_bits(&self) -> String;
+    fn to_string(&self) -> String;
 }
 
 impl Converters for &[u8] {
@@ -205,7 +203,13 @@ impl Converters for &[u8] {
             .collect::<Vec<_>>()
             .join(" ") 
     }
+    fn to_string(&self) -> String {
+        let mut data: Vec<u8> = self.to_vec();
+        data.append(&mut Vec::from([0]));
+        CStr::from_bytes_until_nul(&data).unwrap().to_str().unwrap().into()
+    }
 }
+
 // ------------------------------------------------------------------------
 /// Formatting closures
 
@@ -222,7 +226,7 @@ pub const BE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_be_bytes(d.try_into().u
         .try_into().unwrap();
 
 pub const BE_HEX:       &StringFn = &|d: &[u8]| d.to_hex();
-pub const BE_CHAR:      &StringFn = &|d: &[u8]| String::from_utf8_lossy(d).to_string();
+pub const BE_CHAR:      &StringFn = &|d: &[u8]| d.to_string();
 
 pub const BE_32_PTR:    &StringFn = &|d: &[u8]| format!("{:010p}", 
     u32::from_be_bytes(d.try_into().unwrap()) as *const u32);
@@ -256,3 +260,4 @@ pub const LE_32_USIZE:  &UsizeFn = &|d: &[u8]| u32::from_le_bytes(d.try_into().u
         .try_into().unwrap();
 pub const LE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_le_bytes(d.try_into().unwrap())
         .try_into().unwrap();
+    

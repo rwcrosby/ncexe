@@ -78,7 +78,7 @@ fn make_scrollable_lines (
 
             Box::new(ScrollableRegionLine{line, enter, indent } )
 
-            })
+        })
         .collect()
 
 }
@@ -329,19 +329,18 @@ impl<'a> ScrollableRegion<'a> {
     fn key_enter_handler(&mut self) -> Result<()> {
 
         let idx = self.top_idx + self.win_idx;
-        
         let line = &mut self.lines[idx];
 
         match line.enter {
 
-            EnterType::NewWindow => {
+            EnterType::NewWindow =>
                 
-                let line = &self.lines[idx];
-                line.line.new_window_fn(self.screen, self.colors)?;
+                self.lines[idx].line.new_window_fn(
+                    self.screen, 
+                    self.colors
+                )?,
 
-            }
-
-            EnterType::Expandable((num_lines, indent)) => {
+            EnterType::Expandable((num_lines, indent)) => 
                 
                 if num_lines > 0 {
                     
@@ -353,9 +352,7 @@ impl<'a> ScrollableRegion<'a> {
                     self.lines.truncate(self.lines.len() - num_lines);
         
 
-                } else if let Some(new_lines) = line.line.expand_fn(
-                        self.screen, 
-                        self.colors)? {
+                } else if let Some(new_lines) = line.line.expand_fn()? {
 
                     let num_lines = new_lines.len();
                     line.enter.set_num_lines(num_lines);
@@ -367,9 +364,8 @@ impl<'a> ScrollableRegion<'a> {
                     let line_slice = &mut self.lines[idx+1..];
                     line_slice.rotate_right(num_lines);
                 
-                }
+                },
 
-            }
             EnterType::None => (),
         }
 
