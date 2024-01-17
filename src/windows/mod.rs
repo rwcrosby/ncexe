@@ -4,6 +4,7 @@
 
 // #![allow(dead_code)]
 
+pub mod details;
 pub mod footer;
 pub mod header;
 pub mod line;
@@ -65,7 +66,7 @@ impl WindowSet<'_> {
 
     // --------------------------------------------------------------------
 
-    pub fn show(& mut self) -> Result<()> {
+    pub fn show(&mut self) -> Result<()> {
 
         let size: Coords = self.screen.win.get_max_yx().into();
 

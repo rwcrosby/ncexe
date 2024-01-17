@@ -32,7 +32,6 @@ pub fn show<'a >(
     // Create header window
 
     let hdr_fn = move | _sc: usize | (1, title.into());
-
     let hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn),
@@ -49,9 +48,7 @@ pub fn show<'a >(
 
     // Create the footer window
 
-    let footer_fn = | sc: usize | 
-        center_in(sc, trailer );
-
+    let footer_fn = | sc: usize | center_in(sc, trailer );
     let ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn)
@@ -59,13 +56,11 @@ pub fn show<'a >(
 
     // Create and show the set of windows
 
-    let mut win_set = WindowSet::new(
+    WindowSet::new(
         screen, 
         hdr_win, 
         scr_win, 
         ftr_win,
-    );
-
-    win_set.show()
+    ).show()
 
 }

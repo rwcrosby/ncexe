@@ -28,7 +28,7 @@ use crate::{
             MaybeLineVec,
             PairVec, 
         },
-        screen::Screen
+        screen::Screen, details
     },
     screens::details_list,
 };
@@ -87,11 +87,12 @@ impl<'a> Executable for MachO64 {
 }
 
 // ------------------------------------------------------------------------
-/// Load commands line
+/// Load commands line -> new window listing the load commands
 
 struct CmdLine<'a> {
 
     exe: Rc<dyn Executable>,
+    data: (usize, usize),
     val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
     wc: WindowColors,
@@ -135,31 +136,25 @@ impl Line for CmdLine<'_> {
         None
     }
 
-    fn expand_fn<'a>(
-        &self, 
-        _screen: &Screen,
-        _colors: &Colors,
-    ) -> Result<MaybeLineVec> {
-        
+    fn expand_fn(&self) -> Result<MaybeLineVec> {
+
+        let mut rc = None;
+
         if let Some(val_entry) = self.val_entry {
+            if let Some(detail_map) = val_entry.2 {
 
-            if let Some(_detail_tbl) = val_entry.2 {
-
-                let mut cmds: Vec<Box<dyn Line>> = Vec::from([]);
-
-                for _ in 0..5 {
-
-                    cmds.push(Box::new(CmdDetailLine{_exe: self.exe.clone()}));
-
-                }
-
-                return Ok(Some(cmds));
+                let cmds = details::to_lines(
+                    self.exe.clone(), 
+                    self.data,
+                    detail_map, 
+                    self.wc
+                );
+                rc = Some(cmds?);
 
             }
-
         }
 
-        Ok(None)
+        Ok(rc)
 
     }
 
@@ -211,6 +206,7 @@ fn load_commands_on_enter(
             Box::new(
                 CmdLine{
                     exe: exe.clone(),
+                    data: (cmd_offset, cmd_offset+cmd_len),
                     fields: CMD_HEADER,
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
                     wc: wsc.scrollable_region.clone(),
@@ -259,6 +255,17 @@ const HEADER: &[FieldDef] =  &[
 
 ];
 
+const CPU_TYPE: &formatter::ValTable = &[
+
+    (0x7, "x86", None),
+    (0x01000007, "64 Bit x86", None),
+    (0xC, "ARM", None),
+    (0x0100000C, "64 Bit ARM", None),
+
+];
+
+// ------------------------------------------------------------------------
+
 const CMD_HEADER_MAP: FieldMap = FieldMap::new(CMD_HEADER);
 
 const CMD_HEADER: &[FieldDef] = &[
@@ -271,21 +278,14 @@ const CMD_HEADER: &[FieldDef] = &[
 
 ];
 
-const CPU_TYPE: &formatter::ValTable = &[
-
-    (0x7, "x86", None),
-    (0x01000007, "64 Bit x86", None),
-    (0xC, "ARM", None),
-    (0x0100000C, "64 Bit ARM", None),
-
-];
-
 const CMD_TYPE: &formatter::ValTable = &[
 
     (0x19, "Segment Load", Some(&SEGMENT_LOAD_MAP64)),
     (0x0C, "Dynamic Link Library", None),
 
 ];
+
+// ------------------------------------------------------------------------
 
 const SEGMENT_LOAD_MAP64: FieldMap = FieldMap::new(SEGMENT_LOAD64);
 

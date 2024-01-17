@@ -48,11 +48,7 @@ pub trait Line {
     fn expand(&self) -> Option<usize> { None }
 
     /// Function to expand 
-    fn expand_fn<'a>(
-        &'a self,
-        _screen: &'a Screen,
-        _colors: &'a Colors,
-    ) -> Result<MaybeLineVec> { Ok(None) }
+    fn expand_fn<'a>(&'a self) -> Result<MaybeLineVec> { Ok(None) }
     
 }
 
