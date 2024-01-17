@@ -26,10 +26,24 @@ use super::{
 
 type ScrollableRegionLines = Vec<Box<ScrollableRegionLine>>;
 
+#[derive(Debug)]
 enum EnterType {
     NewWindow,
-    Expandable(usize),
+    /// Tuple is number of expanded lines, amount to indent
+    Expandable((usize, usize)),
     None,
+}
+
+impl EnterType {
+    fn set_num_lines(&mut self, new_num_lines: usize) -> usize {
+        if let EnterType::Expandable(mut enter_type) = self {
+            enter_type.0 = new_num_lines;
+            *self = EnterType::Expandable(enter_type);
+            enter_type.0
+        } else {        
+            panic!("set_num called on invalid type {:?}", self)
+        }
+    }
 }
 
 struct ScrollableRegionLine {
@@ -38,11 +52,17 @@ struct ScrollableRegionLine {
     line: Box<dyn Line>,
 
     /// What to do on enter on the line
-    enter: EnterType
+    enter: EnterType,
+
+    /// Indent for THIS line
+    indent: usize,
 
 }
  
-fn make_scrollable_lines (lines: LineVec) -> ScrollableRegionLines {
+fn make_scrollable_lines (
+    lines: LineVec,
+    indent: usize
+) -> ScrollableRegionLines {
 
     lines
         .into_iter()
@@ -50,13 +70,13 @@ fn make_scrollable_lines (lines: LineVec) -> ScrollableRegionLines {
 
             let enter = if line.new_window() {
                 EnterType::NewWindow
-            } else if line.expand() {
-                EnterType::Expandable(0)
+            } else if let Some(indent) = line.expand() {
+                EnterType::Expandable((0, indent))
             } else {
                 EnterType::None
             };
 
-            Box::new(ScrollableRegionLine{line, enter } )
+            Box::new(ScrollableRegionLine{line, enter, indent } )
 
             })
         .collect()
@@ -104,7 +124,7 @@ impl<'a> ScrollableRegion<'a> {
             pwin,
             colors,
             screen,
-            lines: make_scrollable_lines(lines),
+            lines: make_scrollable_lines(lines, 0),
             size: Coords{y: 0, x: 0},
             top_idx: 0,
             win_idx: 0,
@@ -321,11 +341,11 @@ impl<'a> ScrollableRegion<'a> {
 
             }
 
-            EnterType::Expandable(num_lines) => {
+            EnterType::Expandable((num_lines, indent)) => {
                 
                 if num_lines > 0 {
                     
-                    line.enter = EnterType::Expandable(0);
+                    line.enter.set_num_lines(0);
 
                     let line_slice = &mut self.lines[idx+1..];
         
@@ -338,9 +358,9 @@ impl<'a> ScrollableRegion<'a> {
                         self.colors)? {
 
                     let num_lines = new_lines.len();
-                    line.enter = EnterType::Expandable(num_lines);
+                    line.enter.set_num_lines(num_lines);
         
-                    let mut to_append = make_scrollable_lines(new_lines);
+                    let mut to_append = make_scrollable_lines(new_lines, indent);
         
                     self.lines.append(&mut to_append);
         
@@ -431,7 +451,7 @@ impl<'a> ScrollableRegion<'a> {
         {
 
             match line.enter {
-                EnterType::Expandable(num_lines) => 
+                EnterType::Expandable((num_lines, _)) => 
                     self.pwin.mvaddch(y as i32, 0, 
                         if num_lines > 0 {
                             '-'
@@ -445,8 +465,8 @@ impl<'a> ScrollableRegion<'a> {
             };
 
             line.line
-                .as_pairs(self.size.x)?
-                .show(&self.pwin, Coords{y: y, x: 1});
+                .as_pairs(self.size.x - line.indent - 1)?
+                .show(&self.pwin, Coords{y: y, x: line.indent + 1});
         }
 
         self.set_indicators();

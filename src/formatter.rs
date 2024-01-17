@@ -65,7 +65,8 @@ type StringFn = dyn Fn(&[u8]) -> String;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
 
 pub type ValEntry = (
-    usize, &'static str, 
+    usize, 
+    &'static str, 
     Option<&'static FieldMap>
 );
 pub type ValTable = [ValEntry];

@@ -99,6 +99,8 @@ struct CmdLine<'a> {
 
 }
 
+const DTL_INDENT: usize = 7;
+
 impl Line for CmdLine<'_> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
@@ -124,12 +126,13 @@ impl Line for CmdLine<'_> {
 
     }
 
-    fn expand(&self) -> bool {
+    fn expand(&self) -> Option<usize> {
         if let Some(val_entry) = self.val_entry {
-            val_entry.2.is_some()
-        } else {
-            false 
+            if val_entry.2.is_some() {
+                return Some(DTL_INDENT);
+            }
         }
+        None
     }
 
     fn expand_fn<'a>(

@@ -44,8 +44,8 @@ pub trait Line {
         _colors: &'a Colors,
     ) -> Result<()> { Ok(()) }
 
-    /// Expand in-line??
-    fn expand(&self) -> bool { false }
+    /// Expand in-line?? Return the indention amount
+    fn expand(&self) -> Option<usize> { None }
 
     /// Function to expand 
     fn expand_fn<'a>(
