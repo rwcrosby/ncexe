@@ -1,8 +1,8 @@
 extern crate ncexe;
 
 use ncexe::exe_types::ETYPE_LENGTH;
+use ncexe::windows;
 use ncexe::windows::line::Line;
-use ncexe::windows::WindowSet;
 use ncexe::windows::screen::Screen;
 use ncexe::windows::header;
 use ncexe::windows::scrollable_region;
@@ -54,22 +54,20 @@ fn main() {
 
     let lines: Vec<Box<dyn Line>> = Vec::from([]);
 
-    let hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
-    let scr_win = scrollable_region::ScrollableRegion::new(
+    let mut hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
+    let mut scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
         lines,
         &screen,
         &colors,
     );
     
-    let ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
+    let mut ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
-    let mut win_set = WindowSet::new(
+    windows::show(
         &screen, 
-        hdr_win, 
-        scr_win, 
-        ftr_win);
-
-    win_set.show().unwrap();
+        &mut hdr_win, 
+        &mut scr_win, 
+        &mut ftr_win).unwrap();
 
 }

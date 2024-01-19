@@ -15,7 +15,6 @@ use crate::{
     formatter::center_in, 
     windows::{
         FSIZE_LENGTH,
-        WindowSet,
         footer::Footer,
         header::Header,
         line::{
@@ -23,7 +22,7 @@ use crate::{
             PairVec, 
         },
         screen::Screen,
-        scrollable_region::ScrollableRegion,
+        scrollable_region::ScrollableRegion, self,
     },
 };
 
@@ -65,7 +64,7 @@ pub fn show<'a>(
 
     let hdr_fn = | _sc: usize | (0, hdr.clone());
     
-    let hdr_win = Header::new(
+    let mut hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn),
     );
@@ -82,7 +81,7 @@ pub fn show<'a>(
         })})
         .collect();
 
-    let scr_win = ScrollableRegion::new(
+    let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
         screen,
@@ -101,21 +100,19 @@ pub fn show<'a>(
 
     };
 
-    let ftr_win = Footer::new(
+    let mut ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn),
     );
     
     // Create and show the set of windows
 
-    let mut win_set = WindowSet::new(
-        &screen, 
-        hdr_win, 
-        scr_win, 
-        ftr_win,
-    );
-
-    win_set.show()
+    windows::show(
+        screen, 
+        &mut hdr_win, 
+        &mut scr_win, 
+        &mut ftr_win
+    )
 
 }
 

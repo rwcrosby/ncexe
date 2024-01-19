@@ -8,13 +8,12 @@ use crate::{
     color::{WindowSetColors, Colors},
     formatter::center_in,
     windows::{
-        WindowSet,
         footer::Footer,
         header::Header,
         line::Line,
         screen::Screen,
         scrollable_region::ScrollableRegion,
-            
+        self,
     },
 };
 
@@ -32,14 +31,14 @@ pub fn show<'a >(
     // Create header window
 
     let hdr_fn = move | _sc: usize | (1, title.into());
-    let hdr_win = Header::new(
+    let mut hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn),
     );
 
     // Create the scrollable window
 
-    let scr_win = ScrollableRegion::new(
+    let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
         screen,
@@ -49,18 +48,18 @@ pub fn show<'a >(
     // Create the footer window
 
     let footer_fn = | sc: usize | center_in(sc, trailer );
-    let ftr_win = Footer::new(
+    let mut ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn)
     );
 
     // Create and show the set of windows
 
-    WindowSet::new(
+    windows::show(
         screen, 
-        hdr_win, 
-        scr_win, 
-        ftr_win,
-    ).show()
+        &mut hdr_win, 
+        &mut scr_win, 
+        &mut ftr_win,
+    )
 
 }

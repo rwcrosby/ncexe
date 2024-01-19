@@ -41,102 +41,67 @@ impl From<(i32, i32)> for Coords {
 pub const FSIZE_LENGTH: usize = 10;
 
 // ------------------------------------------------------------------------
-/// The set of widnows (header, scrollable region, footer)
 
-pub struct WindowSet<'a> {
-
+pub fn show<'a>(
     screen: &'a Screen,
-    hdr_win: Box<Header<'a>>,
-    scr_win: Box<ScrollableRegion<'a>>,
-    ftr_win: Box<Footer<'a>>,
+    hdr_win: &mut Header<'a>,
+    scr_win: &mut ScrollableRegion,
+    ftr_win: &mut Footer,
+) -> Result<()> {
 
-}
+    let size: Coords = screen.win.get_max_yx().into();
 
-impl WindowSet<'_> {
-
-    pub fn new<'a>(
-        screen: &'a Screen,
-        hdr_win: Box<Header<'a>>,
-        scr_win: Box<ScrollableRegion<'a>>,
-        ftr_win: Box<Footer<'a>>,
-    ) -> Box<WindowSet<'a>> 
-    {
-        Box::new(WindowSet{screen, hdr_win, scr_win, ftr_win})
-    }
-
-    // --------------------------------------------------------------------
-
-    pub fn show(&mut self) -> Result<()> {
-
-        let size: Coords = self.screen.win.get_max_yx().into();
-
-        self.hdr_win.show(&size)?;
-        self.scr_win.show(&size)?;
-        self.ftr_win.show(&size)?;
-        pancurses::doupdate();
-        
-        // Loop handling keystrokes
-
-        loop {
-
-            let ch = self.scr_win.pwin.getch();
-
-            match ch {
-
-                Some(Input::KeyResize) => self.key_resize_handler()?,
-
-                Some(Input::Character(c)) => match c {
-                    'q' | '\u{1b}' => break,
-                    '\n' => {
-                        self.scr_win.handle_key(Input::KeyEnter)?;
-                        self.repaint()?;
-                    }
-                    _ => (),
-                    },
-
-                Some(c) => self.scr_win.handle_key(c)?,
-                None => (),
+    hdr_win.show(&size)?;
+    scr_win.show(&size)?;
+    ftr_win.show(&size)?;
+    pancurses::doupdate();
     
-            };
+    // Loop handling keystrokes
 
-        }
+    loop {
 
-        Ok(())
+        let ch = scr_win.pwin.getch();
+
+        match ch {
+
+            Some(Input::KeyResize) =>
+            {
+                let new_size: Coords = screen.win.get_max_yx().into();
+        
+                hdr_win.resize(&new_size)?;
+                scr_win.resize(&new_size)?;
+                ftr_win.resize(&new_size)?;
+                
+                pancurses::doupdate();
+        
+            }
+
+            Some(Input::Character(c)) => match c {
+                'q' | '\u{1b}' => break,
+                '\n' => {
+                    scr_win.handle_key(Input::KeyEnter)?;
+
+                    let new_size: Coords = screen.win.get_max_yx().into();
+
+                    hdr_win.pwin.touch();
+                    hdr_win.resize(&new_size)?;
+                    scr_win.pwin.touch();
+                    scr_win.resize(&new_size)?;
+                    ftr_win.pwin.touch();
+                    ftr_win.resize(&new_size)?;
+            
+                    pancurses::doupdate();
+
+                }
+                _ => (),
+                },
+
+            Some(c) => scr_win.handle_key(c)?,
+            None => (),
+
+        };
 
     }
 
-    // --------------------------------------------------------------------
-    
-    fn key_resize_handler(&mut  self) -> Result<()> {
-        
-        let new_size: Coords = self.screen.win.get_max_yx().into();
-        
-        self.hdr_win.resize(&new_size)?;
-        self.scr_win.resize(&new_size)?;
-        self.ftr_win.resize(&new_size)?;
-        
-        pancurses::doupdate();
-        
-        Ok(())
-        
-    }
-
-    // --------------------------------------------------------------------
-
-    fn repaint(&mut self) -> Result<()> {
-
-        let size: Coords = self.screen.win.get_max_yx().into();
-
-        self.hdr_win.pwin.touch();
-        self.hdr_win.resize(&size)?;
-        self.scr_win.pwin.touch();
-        self.scr_win.resize(&size)?;
-        self.ftr_win.pwin.touch();
-        self.ftr_win.resize(&size)?;
-
-        pancurses::doupdate();
-        
-        Ok(())
-    }
-
+    Ok(())
 }

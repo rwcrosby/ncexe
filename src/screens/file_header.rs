@@ -16,7 +16,7 @@ use crate::{
         header::Header,
         screen::Screen,
         scrollable_region::ScrollableRegion,
-        WindowSet,
+        self,
     },
 };
 
@@ -34,7 +34,7 @@ pub fn show(
 
     let etype = exe.exe_type();
     let hdr_fn = move |sc: usize| center_in(sc, &etype.to_string());
-    let hdr_win = Header::new(
+    let mut hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn)
     );
@@ -46,7 +46,7 @@ pub fn show(
         (0, exe.mmap().len()),
         exe.header_map(), 
         wsc.scrollable_region)?;
-    let scr_win = ScrollableRegion::new(
+    let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines, 
         screen, 
@@ -57,18 +57,18 @@ pub fn show(
 
     let footer_fn = |sc: usize| 
         center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
-    let ftr_win = Footer::new(
+    let mut ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn)
     );
 
     // Create and show the set of windows
 
-    WindowSet::new(
+    windows::show(
         &screen, 
-        hdr_win, 
-        scr_win, 
-        ftr_win
-    ).show()
+        &mut hdr_win, 
+        &mut scr_win, 
+        &mut ftr_win
+    )
 
 }
