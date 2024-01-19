@@ -45,7 +45,7 @@ pub fn show(
         exe.clone(), 
         (0, exe.mmap().len()),
         exe.header_map(), 
-        wsc.scrollable_region)?;
+        wsc.scrollable_region);
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines, 

@@ -22,7 +22,8 @@ use crate::{
             PairVec, 
         },
         screen::Screen,
-        scrollable_region::ScrollableRegion, self,
+        scrollable_region::ScrollableRegion, 
+        self,
     },
 };
 
@@ -31,10 +32,10 @@ use super::file_header;
 // ------------------------------------------------------------------------
 
 type ExeItem = Rc<dyn Executable>;
-type ExeList<'a> = Vec<ExeItem>;
+type ExeList = Vec<ExeItem>;
 
 pub fn show<'a>(
-    executables: &'a mut ExeList, 
+    executables: &'a ExeList, 
     screen: &'a Screen,
     colors: &'a Colors,
 ) -> Result<()> {

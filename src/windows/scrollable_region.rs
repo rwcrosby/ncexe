@@ -115,12 +115,12 @@ impl<'a> ScrollableRegion<'a> {
         lines: Vec<Box<dyn Line>>,
         screen: &'a Screen,
         colors: &'a Colors,
-    ) -> Box<ScrollableRegion<'a>> {
+    ) -> ScrollableRegion<'a> {
 
         let pwin = pancurses::newwin(1, 1, 2, 0); 
         pwin.keypad(true);
 
-        Box::new(ScrollableRegion{ 
+        ScrollableRegion{ 
             pwin,
             colors,
             screen,
@@ -129,7 +129,7 @@ impl<'a> ScrollableRegion<'a> {
             top_idx: 0,
             win_idx: 0,
             window_colors, 
-        })
+        }
 
     }
 

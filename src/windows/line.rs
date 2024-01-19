@@ -2,7 +2,6 @@
 //! Container for the line trait
 //! 
 
-
 use anyhow::Result;
 use pancurses::chtype;
 
@@ -15,8 +14,8 @@ use super::{
 
 // ------------------------------------------------------------------------
 
-pub type LineVec<'a> = Vec<Box<dyn Line>>;
-pub type MaybeLineVec<'a> = Option<LineVec<'a>>;
+pub type LineVec = Vec<Box<dyn Line>>;
+pub type MaybeLineVec = Option<LineVec>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window

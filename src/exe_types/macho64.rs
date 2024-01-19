@@ -149,7 +149,7 @@ impl Line for CmdLine<'_> {
                     detail_map, 
                     self.wc
                 );
-                rc = Some(cmds?);
+                rc = Some(cmds);
 
             }
         }

@@ -24,10 +24,10 @@ impl Footer<'_> {
     pub fn new<'a> (
         window_colors: &'a WindowColors, 
         line_fn: LineFn<'a>,
-    ) -> Box<Footer<'a>> 
+    ) -> Footer<'a>
     {
         let pwin = pancurses::newwin(1, 1, 0, 0);
-        Box::new(Footer{ window_colors, pwin, line_fn })
+        Footer{ window_colors, pwin, line_fn }
     }
 
     pub fn show(&mut self, size: &Coords) -> Result<()> {

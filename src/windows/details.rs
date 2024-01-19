@@ -33,9 +33,9 @@ pub fn to_lines<'a>(
     data: (usize, usize),
     map: &FieldMap,
     wc: WindowColors,
-) -> Result<LineVec<'a>> {
+) -> LineVec {
 
-    Ok(map.fields
+    map.fields
         .iter()
         .filter(| f | f.string_fn.is_some() )
         .map(|map_field| -> Box<dyn Line> {
@@ -46,7 +46,7 @@ pub fn to_lines<'a>(
                 wc: wc.clone(),
                 max_text_len: map.max_text_len,
         })})
-        .collect())
+        .collect()
 
 }
 

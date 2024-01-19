@@ -32,10 +32,10 @@ impl Header<'_> {
     pub fn new<'a> (
         window_colors: &'a WindowColors, 
         line2_fn: LineFn<'a>,
-    ) -> Box<Header<'a>> 
+    ) -> Header<'a> 
     {
         let pwin = pancurses::newwin(2, 1, 0, 0);
-        Box::new(Header{ window_colors, pwin, line2_fn })
+        Header{ window_colors, pwin, line2_fn }
     }
 
     // --------------------------------------------------------------------
