@@ -47,18 +47,18 @@ pub struct MachO64 {
 
 // ------------------------------------------------------------------------
 
-impl<'a> MachO64 {
+impl MachO64 {
 
     pub fn new( 
-        filename: &'a str,
+        filename: &str,
         mmap: Mmap,
-    ) -> Result<Rc<dyn Executable>> {
+    ) -> Rc<MachO64> {
 
-        Ok(Rc::new(
+        Rc::new(
             MachO64{
                 filename: String::from(filename), 
                 mmap, 
-        }))
+        })
 
     }
 
@@ -66,7 +66,7 @@ impl<'a> MachO64 {
 
 // ------------------------------------------------------------------------
 
-impl<'a> Executable for MachO64 {
+impl Executable for MachO64 {
 
     fn exe_type(&self) -> super::ExeType {
         ExeType::MachO64
@@ -161,28 +161,6 @@ impl Line for CmdLine<'_> {
 }
 
 // ------------------------------------------------------------------------
-/// Line definition for expanded load command detail
-
-struct CmdDetailLine {
-    _exe: Rc<dyn Executable>,
-
-}
-
-impl Line for CmdDetailLine {
-
-    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        
-        Ok(Vec::from([
-            (
-                None,
-                "Blah".into()
-            )
-        ]))
-
-    }
-}
-
-// ------------------------------------------------------------------------
 
 fn load_commands_on_enter(
     exe: Rc<dyn Executable>, 
@@ -209,7 +187,7 @@ fn load_commands_on_enter(
                     data: (cmd_offset, cmd_offset+cmd_len),
                     fields: CMD_HEADER,
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
-                    wc: wsc.scrollable_region.clone(),
+                    wc: wsc.scrollable_region,
                     range: (cmd_offset, cmd_offset + cmd_len),
                 }
             )

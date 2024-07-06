@@ -28,7 +28,7 @@ use super::{
 
 // ------------------------------------------------------------------------
 
-pub fn to_lines<'a>(
+pub fn to_lines(
     exe: Rc<dyn Executable>, 
     data: (usize, usize),
     map: &FieldMap,
@@ -40,10 +40,10 @@ pub fn to_lines<'a>(
         .filter(| f | f.string_fn.is_some() )
         .map(|map_field| -> Box<dyn Line> {
             Box::new(DetailLine{
-                exe: exe.clone(),
+                exe: Rc::clone(&exe),
                 data,
                 field_def: map_field,
-                wc: wc.clone(),
+                wc,
                 max_text_len: map.max_text_len,
         })})
         .collect()

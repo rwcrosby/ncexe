@@ -61,7 +61,7 @@ pub struct WindowSetColors {
     pub footer: WindowColors,
 }
 
-/// Map of colors for the various windows, window name is the keu
+/// Map of colors for the various windows, window name is the key
 pub type WindowSets = HashMap<String, WindowSetColors>;
 
 /// Map keyed by theme name
@@ -73,7 +73,7 @@ pub type ColorThemes = HashMap<String, Rc<WindowSets>>;
 
 pub struct Colors {
 
-    _themes: Box<ColorThemes>,
+    _themes: ColorThemes,
     window_sets: Rc<WindowSets>,
 
 }
@@ -82,16 +82,21 @@ impl Colors {
 
     pub fn new(theme: &str) -> Result<Colors> {
 
-        let _ = pancurses::has_colors()  || bail!("Colors not supported");
+        if !pancurses::has_colors() {
+            bail!("Colors not supported");
+        }
+
         pancurses::start_color();
 
         let yml: YamlColorThemes = serde_yaml::from_str(YAML).unwrap();
         let themes = to_color_themes(&yml, 10)?;
+        
+        let window_sets = match themes.get(theme) {
+            Some(ws) => ws.clone(),
+            None => bail!("Theme {} not found", theme)
+        };
 
-        let window_sets = themes.get(theme)
-            .ok_or(anyhow!("Theme {} not found", theme))?.clone();
-
-        Ok(Colors{_themes: themes, window_sets  })
+        Ok(Colors{_themes: themes, window_sets})
 
     }
 
@@ -105,7 +110,9 @@ impl Colors {
 
     }
 
-    pub fn bkgr(&self) -> Result<chtype> {
+    pub fn bkgr(
+        &self
+    ) -> Result<chtype> {
 
         let ws = self.window_sets.get("file_list")
             .ok_or(anyhow!("No file list window set"))?;
@@ -159,10 +166,10 @@ type YamlColorThemes = HashMap<String, HashMap<String, YamlWindowSetColors>>;
 fn to_color_themes(
     yml: &YamlColorThemes,  
     mut pair_no: u32
-) -> Result<Box<ColorThemes>> 
+) -> Result<ColorThemes> 
 {
 
-    let mut ct: Box<ColorThemes> = Box::new(HashMap::from([]));
+    let mut ct: ColorThemes = HashMap::new();
 
     for (theme_name,  theme_value) in yml.iter() {
 
@@ -188,7 +195,11 @@ fn to_color_themes(
 
 // ------------------------------------------------------------------------
 
-fn make_curses_attribute(pair_no: &mut u32, bkgr: i16, fgr: &(i16, String)) -> Result<chtype> {
+fn make_curses_attribute(
+    pair_no: &mut u32, 
+    bkgr: i16, 
+    fgr: &(i16, String)
+) -> Result<chtype> {
 
     pancurses::init_pair((*pair_no) as i16, fgr.0, bkgr);
     let ch: chtype = COLOR_PAIR(*pair_no) | match fgr.1.as_str() {

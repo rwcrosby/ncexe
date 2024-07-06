@@ -65,7 +65,7 @@ pub fn show(
     // Create and show the set of windows
 
     windows::show(
-        &screen, 
+        screen, 
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win

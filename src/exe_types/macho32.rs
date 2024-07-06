@@ -24,25 +24,28 @@ use super::{
 
 // ------------------------------------------------------------------------
 
-pub struct Macho32Formatter {
+pub struct MachO32 {
     filename: String,
     mmap: Mmap,
 }
 
-impl Macho32Formatter {
+impl MachO32 {
 
     pub fn new( 
         filename : &str,
         mmap : Mmap,
-    ) -> Result<Rc<dyn Executable>> {
-        Ok(Rc::new(Macho32Formatter{filename: String::from(filename), mmap}))
+    ) -> Rc<MachO32> {
+        Rc::new(MachO32{
+            filename: String::from(filename), 
+            mmap
+        })
     }
 
 }
 
 // ------------------------------------------------------------------------
 
-impl Line for Macho32Formatter {
+impl Line for MachO32 {
     
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         Ok(Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))]))
@@ -52,7 +55,7 @@ impl Line for Macho32Formatter {
 
 // ------------------------------------------------------------------------
 
-impl Executable for Macho32Formatter {
+impl Executable for MachO32 {
 
     fn exe_type(&self) -> ExeType {
         ExeType::MachO32

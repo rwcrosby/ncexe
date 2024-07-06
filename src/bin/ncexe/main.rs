@@ -55,7 +55,7 @@ fn main() -> Result<()> {
     let config = configuration::Configuration::new(&args)?;
 
     // Setup the list of executable objects
-    let mut executables: Vec<_> = args.exe_filename
+    let executables: Vec<_> = args.exe_filename
         .iter()
         .map(|fname| 
             match exe_types::new(fname) {
@@ -69,12 +69,12 @@ fn main() -> Result<()> {
         .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
         .collect();
 
-    if executables.len() == 0 || 
+    if executables.is_empty() || 
         (executables.len() == 1 && executables[0].exe_type() == ExeType::NOPE) {
         panic!("No executable files of interest found");
     }
 
-    // Setup principal objects
+    // Setup principal objects, colors must follow screen
     let screen = Screen::new();
     let colors = Colors::new(&config.theme)?;
 
@@ -85,13 +85,13 @@ fn main() -> Result<()> {
     // Display file info
     if executables.len() == 1 {
         file_header::show(
-            executables[0].clone(), 
+            Rc::clone(&executables[0]), 
             &screen, 
             &colors,
         )
     } else {
         file_list::show(
-            &mut executables, 
+            executables, 
             &screen, 
             &colors,
         )

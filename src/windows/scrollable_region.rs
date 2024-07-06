@@ -24,7 +24,7 @@ use super::{
 
 // --------------------------------------------------------------------
 
-type ScrollableRegionLines = Vec<Box<ScrollableRegionLine>>;
+type ScrollableRegionLines = Vec<ScrollableRegionLine>;
 
 #[derive(Debug)]
 enum EnterType {
@@ -76,7 +76,7 @@ fn make_scrollable_lines (
                 EnterType::None
             };
 
-            Box::new(ScrollableRegionLine{line, enter, indent } )
+            ScrollableRegionLine{line, enter, indent } 
 
         })
         .collect()
@@ -462,7 +462,7 @@ impl<'a> ScrollableRegion<'a> {
 
             line.line
                 .as_pairs(self.size.x - line.indent - 1)?
-                .show(&self.pwin, Coords{y: y, x: line.indent + 1});
+                .show(&self.pwin, Coords{y, x: line.indent + 1});
         }
 
         self.set_indicators();

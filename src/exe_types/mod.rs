@@ -6,7 +6,10 @@ pub mod elf;
 pub mod macho32;
 pub mod macho64;
 
-use anyhow::Result;
+use anyhow::{
+    bail,
+    Result
+};
 use memmap2::Mmap;
 use std::{
     fmt, 
@@ -16,7 +19,7 @@ use std::{
 use crate::formatter::FieldMap;
 
 use elf::ELF;
-use macho32::Macho32Formatter;
+use macho32::MachO32;
 use macho64::MachO64;
 
 // ------------------------------------------------------------------------
@@ -27,6 +30,9 @@ pub trait Executable {
     fn exe_type(&self) -> ExeType;
     fn filename(&self) -> &str;
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn mmap(&self) -> &[u8];
     fn header_map(&self) -> &FieldMap;
 
@@ -66,7 +72,7 @@ impl fmt::Display for ExeType {
 pub fn new(
     filename: &str
 ) -> Result<Rc<dyn Executable>> {
-    let fd = File::open(&filename)?;
+    let fd = File::open(filename)?;
 
     let mmap = unsafe { Mmap::map(&fd) }?;
 
@@ -79,18 +85,17 @@ pub fn new(
 
     let raw_type = unsafe { *(mmap.as_ptr() as *const u32) };
 
-    match raw_type {
-        0xfeedface => Macho32Formatter::new(filename, mmap),
-        0xfeedfacf => MachO64::new(filename, mmap),
-        0x7f454c46 => ELF::new(filename, mmap),
-        0x464c457f => ELF::new(filename, mmap),
-        // 0xcafebabe => ExeType::UNIVBIN,
-        // 0xbebafeca => ExeType::UNIVBIN,
-        v => Ok(Rc::new(NotExecutable {
-            filename: String::from(filename),
-            msg: format!("Invalid magic number: {:x}", v),
-        })),
-    }
+    Ok(
+        match raw_type {
+            0xfeedface => MachO32::new(filename, mmap),
+            0xfeedfacf => MachO64::new(filename, mmap),
+            0x7f454c46 => ELF::new(filename, mmap)?,
+            0x464c457f => ELF::new(filename, mmap)?,
+            // 0xcafebabe => ExeType::UNIVBIN,
+            // 0xbebafeca => ExeType::UNIVBIN,
+            v => bail!(format!("Invalid magic number: {:x}", v)),
+        },
+    )
 }
 // ------------------------------------------------------------------------
 

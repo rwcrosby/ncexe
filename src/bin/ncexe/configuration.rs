@@ -37,7 +37,7 @@ struct YamlConfig {
 ///     2. File pointed to by the `NCEXE_CONFIG` environment variable
 ///     3. File pointed to by the `--config` command line argument
 
-impl<'a> Configuration {
+impl Configuration {
 
     /// Create a new configuratio object from
     /// - The default configuration file at ~/.config/ncexe.yaml
@@ -45,9 +45,7 @@ impl<'a> Configuration {
         
         // Select a configuration file
         
-        let cfile : PathBuf;
-        
-        cfile  = match &args.config {
+        let cfile : PathBuf  = match &args.config {
             Some(v) => v.to_path_buf(),
             None => {
                 match env::var("NCEXE_CONFIG") {

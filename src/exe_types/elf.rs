@@ -29,12 +29,13 @@ pub struct ELF {
 
 // ------------------------------------------------------------------------
 
-impl<'a> ELF {
+impl ELF {
 
     pub fn new( 
-        filename : &'a str,
+        filename : &str,
         mmap : Mmap,
-    ) -> Result<Rc<dyn Executable>> {
+    // ) -> Result<Rc<dyn Executable>> {
+    ) -> Result<Rc<ELF>> {
 
         let mmap_slice = mmap.deref();
 
@@ -80,7 +81,7 @@ impl Executable for ELF {
         self.mmap.deref()
     }
     fn header_map(&self) -> &FieldMap {
-        &self.hdr_map
+        self.hdr_map
     }
 
 }

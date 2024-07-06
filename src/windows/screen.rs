@@ -8,7 +8,7 @@ pub struct Screen {
 
 impl Screen {
 
-    pub fn new() -> Screen {
+    pub fn new() -> Self {
 
         let win = Screen {
             win: pancurses::initscr(),
@@ -21,6 +21,12 @@ impl Screen {
 
         win
 
+    }
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

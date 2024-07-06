@@ -34,27 +34,23 @@ use super::file_header;
 type ExeItem = Rc<dyn Executable>;
 type ExeList = Vec<ExeItem>;
 
-pub fn show<'a>(
-    executables: &'a ExeList, 
-    screen: &'a Screen,
-    colors: &'a Colors,
+pub fn show(
+    executables: ExeList, 
+    screen: &Screen,
+    colors: &Colors,
 ) -> Result<()> {
 
     let wsc = colors.get_window_set_colors("file_list")?;
 
     // These only need to be computed once for the life of the window
     
-    let mut lfn = 0usize;
-    let mut sfn = std::usize::MAX;
     let num_exe = executables.len();
     
-    executables
+    let (_sfn, _lfn) = executables
         .iter()
-        .for_each(| exe | {
-                lfn = std::cmp::max(lfn, exe.filename().len());
-                sfn = std::cmp::min(sfn, exe.filename().len());
-        });
-    
+        .fold((usize::MAX,0 ), | m, e | (std::cmp::min(m.0, e.filename().len()),
+                                         std::cmp::max(m.1, e.filename().len())));
+
     // Create header window
 
     let hdr = format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {filename}", 
