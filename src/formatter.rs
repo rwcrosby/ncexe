@@ -69,10 +69,12 @@ pub type ValTable = [ValEntry];
 
 /// Map a scalar field in image
 pub struct FieldDef {
+    // If the beginnning and end of the range are the same, this 
+    // implies that the actual data is from start to end of segment
     pub range: (usize, usize),
     pub name: &'static str,
     pub string_fn: Option<&'static StringFn>,
-    pub usize_fn: Option<&'static UsizeFn>,
+        pub usize_fn: Option<&'static UsizeFn>,
     pub val_tbl: Option<&'static ValTable>,
     pub enter_fn: Option<EnterFn>,
 }
@@ -145,7 +147,13 @@ impl FieldDef {
     pub fn to_string(&self, data: &[u8]) -> String {
 
         // Yes this could fail but panic is actually an appropriate response
-        (self.string_fn.unwrap())(&data[self.range.0..self.range.1])
+        (self.string_fn.unwrap())(
+            if self.range.1 > self.range.0 {
+                &data[self.range.0..self.range.1]
+            } else {
+                &data[self.range.0..]
+            }
+        )
     }
 
     pub fn lookup(
@@ -254,10 +262,19 @@ pub const LE_64_PTR:    &StringFn = &|d: &[u8]| format!("{:018p}",
     u64::from_le_bytes(d.try_into().unwrap()) as *const u64);
 pub const BIN_STRING:   &StringFn = &|d: &[u8]| d.to_bits();
     
-pub const LE_8_USIZE:   &UsizeFn = &|d: &[u8]| u8::from_le_bytes(d.try_into().unwrap()).into();
-pub const LE_16_USIZE:  &UsizeFn = &|d: &[u8]| u16::from_le_bytes(d.try_into().unwrap()).into();
+pub const LE_8_USIZE:   &UsizeFn = &|d: &[u8]| u8::from_le_bytes(d.try_into().unwrap())
+    .into();
+pub const LE_16_USIZE:  &UsizeFn = &|d: &[u8]| u16::from_le_bytes(d.try_into().unwrap())
+    .into();
 pub const LE_32_USIZE:  &UsizeFn = &|d: &[u8]| u32::from_le_bytes(d.try_into().unwrap())
-        .try_into().unwrap();
+    .try_into()
+    .unwrap();
 pub const LE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_le_bytes(d.try_into().unwrap())
-        .try_into().unwrap();
-    
+    .try_into()
+    .unwrap();
+
+pub const C_STR:        &StringFn = &|d: &[u8]| CStr::from_bytes_until_nul(d)
+    .unwrap()
+    .to_str()
+    .unwrap()
+    .into();

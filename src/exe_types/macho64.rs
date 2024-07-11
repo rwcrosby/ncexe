@@ -259,7 +259,7 @@ const CMD_HEADER: &[FieldDef] = &[
 const CMD_TYPE: &formatter::ValTable = &[
 
     (0x19, "Segment Load", Some(&SEGMENT_LOAD_MAP64)),
-    (0x0C, "Dynamic Link Library", None),
+    (0x0C, "Dynamic Link Library - Full Path", Some(&DLL_FULL_PATH_MAP)),
 
 ];
 
@@ -280,5 +280,21 @@ const SEGMENT_LOAD64: &[FieldDef] = &[
     FieldDef::new(60, 4, "Initial Memory Protections", Some(formatter::LE_32_PTR)),
     FieldDef::new(64, 4, "Number of Sections", Some(formatter::LE_32_STRING)),
     FieldDef::new(68, 4, "Flags", Some(formatter::BIN_STRING)),
+
+];
+
+// ------------------------------------------------------------------------
+
+const DLL_FULL_PATH_MAP: FieldMap = FieldMap::new(DLL_FULL_PATH);
+
+const DLL_FULL_PATH: &[FieldDef] = &[
+
+    FieldDef::ignore(0, 4),
+    FieldDef::ignore(4, 4),
+    FieldDef::ignore(8, 4),
+    FieldDef::new(12, 4, "Timestamp", Some(formatter::LE_32_HEX)),
+    FieldDef::new(16, 4, "Current Version", Some(formatter::LE_32_HEX)),
+    FieldDef::new(20, 4, "Compatable Version", Some(formatter::LE_32_HEX)),
+    FieldDef::new(24, 0, "Library Name",Some(formatter::C_STR)),
 
 ];

@@ -64,7 +64,14 @@ impl<'a> Line for DetailLine<'a> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
-        let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
+        let data_slice = 
+            if self.data.1 > self.data.0 {
+                &self.exe.mmap()[self.data.0..self.data.1]
+            } else {
+                &self.exe.mmap()[self.data.0..]
+            };
+
+        // let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
             (
