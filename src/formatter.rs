@@ -2,10 +2,14 @@
 //! Definitions for the static data mappings
 //! 
 
-use anyhow::Result;
+use anyhow::{
+    anyhow,
+    Context, 
+    Result
+};
 use std::{
+    ffi::CStr, 
     rc::Rc,
-    ffi::CStr,
 };
 
 use crate::{
@@ -49,6 +53,7 @@ impl FieldMap {
 /// Field definition
 
 type StringFn = dyn Fn(&[u8]) -> String;
+type StringFn2 = dyn Fn(&[u8]) -> Result<String>;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
 type EnterFn = fn(
     Rc<dyn Executable>,
@@ -74,7 +79,8 @@ pub struct FieldDef {
     pub range: (usize, usize),
     pub name: &'static str,
     pub string_fn: Option<&'static StringFn>,
-        pub usize_fn: Option<&'static UsizeFn>,
+    pub string_fn2: Option<&'static StringFn2>,
+    pub usize_fn: Option<&'static UsizeFn>,
     pub val_tbl: Option<&'static ValTable>,
     pub enter_fn: Option<EnterFn>,
 }
@@ -91,6 +97,25 @@ impl FieldDef {
             range: (offset, offset + len),
             name,
             string_fn,
+            string_fn2: None,
+            usize_fn: None,
+            val_tbl: None,
+            enter_fn: None,
+            
+        }
+    }
+
+    pub const fn new2(
+        offset: usize,
+        len: usize, 
+        name: &'static str, 
+        string_fn2: Option<&'static StringFn2>
+    ) -> Self {
+        Self {
+            range: (offset, offset + len),
+            name,
+            string_fn: None,
+            string_fn2,
             usize_fn: None,
             val_tbl: None,
             enter_fn: None,
@@ -106,6 +131,7 @@ impl FieldDef {
             range: (offset, offset+len),
             name: "",
             string_fn: None,
+            string_fn2: None,
             usize_fn: None,
             val_tbl: None,
             enter_fn: None,
@@ -144,16 +170,24 @@ impl FieldDef {
         (self.usize_fn.unwrap())(&data[self.range.0..self.range.1])
     }
 
-    pub fn to_string(&self, data: &[u8]) -> String {
+    pub fn to_string(&self, data: &[u8]) -> Result<String> {
 
-        // Yes this could fail but panic is actually an appropriate response
-        (self.string_fn.unwrap())(
-            if self.range.1 > self.range.0 {
+        let data_str = if self.range.1 > self.range.0 {
                 &data[self.range.0..self.range.1]
             } else {
                 &data[self.range.0..]
-            }
-        )
+            };
+
+        if let Some(stringfn) = self.string_fn {
+            Ok(stringfn(data_str))
+        } else if let Some(string_fn) = self.string_fn2 {
+            string_fn(data_str)
+                .with_context(|| format!("Unable to generate string for field: {}", 
+                                            self.name))
+        } else {
+            Err(anyhow!("Should never get here"))
+        }
+
     }
 
     pub fn lookup(
@@ -273,8 +307,6 @@ pub const LE_64_USIZE:  &UsizeFn = &|d: &[u8]| u64::from_le_bytes(d.try_into().u
     .try_into()
     .unwrap();
 
-pub const C_STR:        &StringFn = &|d: &[u8]| CStr::from_bytes_until_nul(d)
-    .unwrap()
-    .to_str()
-    .unwrap()
-    .into();
+pub const C_STR:        &StringFn2 = &|d: &[u8]| Ok(CStr::from_bytes_until_nul(d)?
+    .to_str()?
+    .into());

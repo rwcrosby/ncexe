@@ -96,7 +96,7 @@ struct CmdLine<'a> {
     val_entry: Option<&'a ValEntry>,
     fields: &'static [FieldDef],
     wc: WindowColors,
-    range: (usize, usize),
+    // range: (usize, usize),
 
 }
 
@@ -106,12 +106,12 @@ impl Line for CmdLine<'_> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
-        let data = &self.exe.mmap()[self.range.0..self.range.1];
+        let data = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
             ( Some(self.wc.text), format!("{:6}", self.fields[1].to_usize(data) )),
             ( Some(self.wc.text), String::from(" ") ),
-            ( Some(self.wc.text), self.fields[0].to_string(data) ),
+            ( Some(self.wc.text), self.fields[0].to_string(data)?),
         ]);
 
         if let Some(desc) = self.val_entry {
@@ -188,7 +188,6 @@ fn load_commands_on_enter(
                     fields: CMD_HEADER,
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
                     wc: wsc.scrollable_region,
-                    range: (cmd_offset, cmd_offset + cmd_len),
                 }
             )
         );
@@ -295,6 +294,6 @@ const DLL_FULL_PATH: &[FieldDef] = &[
     FieldDef::new(12, 4, "Timestamp", Some(formatter::LE_32_HEX)),
     FieldDef::new(16, 4, "Current Version", Some(formatter::LE_32_HEX)),
     FieldDef::new(20, 4, "Compatable Version", Some(formatter::LE_32_HEX)),
-    FieldDef::new(24, 0, "Library Name",Some(formatter::C_STR)),
+    FieldDef::new2(24, 4, "Library Name",Some(formatter::C_STR)),
 
 ];

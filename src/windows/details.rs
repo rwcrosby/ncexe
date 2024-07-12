@@ -37,7 +37,7 @@ pub fn to_lines(
 
     map.fields
         .iter()
-        .filter(| f | f.string_fn.is_some() )
+        .filter(| f | f.string_fn.is_some() || f.string_fn2.is_some() )
         .map(|map_field| -> Box<dyn Line> {
             Box::new(DetailLine{
                 exe: Rc::clone(&exe),
@@ -64,14 +64,7 @@ impl<'a> Line for DetailLine<'a> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
-        let data_slice = 
-            if self.data.1 > self.data.0 {
-                &self.exe.mmap()[self.data.0..self.data.1]
-            } else {
-                &self.exe.mmap()[self.data.0..]
-            };
-
-        // let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
+        let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
             (
@@ -84,7 +77,7 @@ impl<'a> Line for DetailLine<'a> {
             ),
             (
                 Some(self.wc.value),
-                format!(" {}", (self.field_def.to_string(data_slice))),
+                format!(" {}", (self.field_def.to_string(data_slice)?)),
             ),
         ]);
 
