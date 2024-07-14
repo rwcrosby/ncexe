@@ -38,17 +38,10 @@ impl Drop for Screen {
 
 // ------------------------------------------------------------------------
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    #[ignore]
-    pub fn test_1() {
-        let w = Screen::new();
-        w.win.printw("Curses test 1");
-        w.win.getch();
-    }
+#[test]
+pub fn screen_test_1() {
+    let w = Screen::new();
+    w.win.printw("Curses test 1");
+    w.win.getch();
 }
 

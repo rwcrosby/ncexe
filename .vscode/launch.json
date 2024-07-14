@@ -72,13 +72,9 @@
                     "--no-run",
                     "--bin=ncexe",
                     "--package=ncexe"
-                ],
-                "filter": {
-                    "name": "ncexe",
-                    "kind": "bin"
-                }
+                ]
             },
-            "args": [],
+            "args": ["--test-threads=1"],
             "cwd": "${workspaceFolder}",
             "env": {
                 "TERM": "xterm-256color"

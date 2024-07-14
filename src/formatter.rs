@@ -172,6 +172,20 @@ impl FieldDef {
 
     pub fn to_string(&self, data: &[u8]) -> Result<String> {
 
+        let res = self.to_string_wrapped(data);
+
+        // TODO open an error window
+        if let Err(ref msg) = res {
+            let _mstr = format!("{:#}", msg);
+            // print!("{}", mstr);
+        }
+        
+        res
+
+    }
+
+    fn to_string_wrapped(&self, data: &[u8]) -> Result<String> {
+
         let data_str = if self.range.1 > self.range.0 {
                 &data[self.range.0..self.range.1]
             } else {

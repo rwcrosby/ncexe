@@ -8,6 +8,7 @@ pub mod details;
 pub mod footer;
 pub mod header;
 pub mod line;
+pub mod popup;
 pub mod screen;
 pub mod scrollable_region;
 

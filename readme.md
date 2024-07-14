@@ -14,3 +14,10 @@ cargo build
 cargo run <exe files>
 target/debug/ncexe <exe files>
 ```
+## Test
+
+```shell
+cargo test -- --test-threads=1
+```
+
+Note: the `--test-threads=1` specification is required or curses doesn't open the windows correctly.
