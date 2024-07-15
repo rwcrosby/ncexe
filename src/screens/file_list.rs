@@ -35,10 +35,9 @@ type ExeList = Vec<ExeItem>;
 
 pub fn show(
     executables: ExeList, 
-    colors: &Colors,
 ) -> Result<()> {
 
-    let wsc = colors.get_window_set_colors("file_list")?;
+    let wsc = Colors::global().get_window_set_colors("file_list")?;
 
     // These only need to be computed once for the life of the window
     
@@ -79,7 +78,6 @@ pub fn show(
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-        colors,
     );
 
     // Create the footer window
@@ -165,13 +163,9 @@ impl Line for FileLine {
 
     fn new_window_fn<'a>(
         &self,
-        colors: &Colors, 
     ) -> Result<()> {
     
-        file_header::show(
-            self.exe.clone(), 
-            colors
-        )
+        file_header::show(self.exe.clone())
 
     }
 

@@ -164,10 +164,9 @@ impl Line for CmdLine<'_> {
 
 fn load_commands_on_enter(
     exe: Rc<dyn Executable>, 
-    colors: &Colors,
 ) -> Result<()> {
 
-    let wsc = colors.get_window_set_colors("list")?;
+    let wsc = Colors::global().get_window_set_colors("list")?;
 
     let num_cmds = HEADER[4].to_usize(exe.mmap());
     let cmds_len = HEADER[5].to_usize(exe.mmap());
@@ -204,7 +203,6 @@ fn load_commands_on_enter(
         "Length Command",
         &footer,
         wsc,
-        colors,
     )
 
 }

@@ -13,12 +13,13 @@ use std::{
 };
 
 use ncexe::{
-    color::Colors,
-    exe_types,
-    exe_types::ExeType,
+    color::{
+        self,
+        Colors
+    },
+    exe_types::{self, ExeType},
     screens::{
-        file_list,
-        file_header,
+        file_header, file_list
     },
     windows::screen::SCREEN,
 };
@@ -28,6 +29,7 @@ use ncexe::{
 
 #[derive(Parser, Default, Debug)]
 pub struct Arguments {
+
     /// Name of the executable file(s)
     #[arg(required = true)]
     exe_filename: Vec<String>,
@@ -76,25 +78,18 @@ fn main() -> Result<()> {
 
     // Setup principal objects, colors must follow screen
     // Force screen lazy initialization
-
     Lazy::force(&SCREEN);
-    let colors = Colors::new(&config.theme)?;
+    color::init(&config.theme);
 
     // Initialize screen
-    SCREEN.win.bkgd(colors.bkgr()?);
+    SCREEN.win.bkgd(Colors::global().bkgr()?);
     SCREEN.win.refresh();
 
     // Display file info
     let rc = if executables.len() == 1 {
-        file_header::show(
-            Rc::clone(&executables[0]), 
-            &colors,
-        )
+        file_header::show(Rc::clone(&executables[0]))
     } else {
-        file_list::show(
-            executables, 
-            &colors,
-        )
+        file_list::show(executables)
     };
 
     SCREEN.term();

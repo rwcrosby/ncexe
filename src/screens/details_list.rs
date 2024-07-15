@@ -5,7 +5,7 @@
 use anyhow::Result;
 
 use crate::{
-    color::{WindowSetColors, Colors},
+    color::WindowSetColors,
     formatter::center_in,
     windows::{
         footer::Footer,
@@ -23,7 +23,6 @@ pub fn show<'a >(
     title: &'a str,
     trailer: &'a str,
     wsc: &'a WindowSetColors,
-    colors : &'a Colors,
 ) -> Result<()> {
 
     // Create header window
@@ -39,7 +38,6 @@ pub fn show<'a >(
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-        colors,
     );
 
     // Create the footer window

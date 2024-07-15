@@ -29,6 +29,7 @@ use anyhow::{
     bail, 
     Result
 };
+use once_cell::sync::OnceCell;
 use pancurses::{
     chtype, 
     COLOR_PAIR, 
@@ -40,6 +41,7 @@ use std::{
     collections::HashMap,
     rc::Rc
 };
+
 
 // ------------------------------------------------------------------------
 /// Curses attribute definitions for a window's colors
@@ -71,6 +73,7 @@ pub type ColorThemes = HashMap<String, Rc<WindowSets>>;
 /// Overall container for color management
 /// Map key is window name, value is the set of colors to use
 
+#[derive(Debug)]
 pub struct Colors {
 
     _themes: ColorThemes,
@@ -121,7 +124,17 @@ impl Colors {
 
     }
 
+    // Class method to return the color objexct
+    pub fn global() -> &'static Colors {
+        COLORS.get().expect("Colors not initialized")
+    }
+
 }
+
+// So the once_cell stuff compiles
+unsafe impl Send for Colors {}
+unsafe impl Sync for Colors {}
+
 
 // ------------------------------------------------------------------------
 // Yaml desription objects
@@ -152,6 +165,8 @@ impl YamlWindowColors {
 
 }
 
+// ------------------------------------------------------------------------
+
 #[derive(Debug, Deserialize)]
 struct YamlWindowSetColors {
     header: YamlWindowColors,
@@ -160,6 +175,20 @@ struct YamlWindowSetColors {
 }
 
 type YamlColorThemes = HashMap<String, HashMap<String, YamlWindowSetColors>>;
+
+// ------------------------------------------------------------------------
+// Global initialization of the color object
+
+pub static COLORS: OnceCell<Colors> = OnceCell::new();
+
+pub fn init(theme: &str) {
+
+    let colors = Colors::new(theme)
+        .expect("Unable to initialize colors");
+
+    COLORS.set(colors).expect("Unable to set colors static");
+
+}
 
 // ------------------------------------------------------------------------
 

@@ -5,8 +5,6 @@
 use anyhow::Result;
 use pancurses::chtype;
 
-use crate::color::Colors;
-
 use super::Coords;
 
 // ------------------------------------------------------------------------
@@ -27,10 +25,7 @@ pub trait Line {
     fn new_window(&self) -> bool { false }
 
     /// Function to open a full new window
-    fn new_window_fn<'a>(
-        &'a self,
-        _colors: &'a Colors,
-    ) -> Result<()> { Ok(()) }
+    fn new_window_fn(&self) -> Result<()> { Ok(()) }
 
     /// Expand in-line?? Return the indention amount
     fn expand(&self) -> Option<usize> { None }

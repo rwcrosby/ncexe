@@ -22,11 +22,10 @@ use crate::{
 // ------------------------------------------------------------------------
 
 pub fn show(
-    exe: Rc<dyn Executable>,
-    colors: &Colors,
+    exe: Rc<dyn Executable>
 ) -> Result<()> {
 
-    let wsc = colors.get_window_set_colors("file_header")?;
+    let wsc = Colors::global().get_window_set_colors("file_header")?;
 
     // Create header window
 
@@ -46,8 +45,7 @@ pub fn show(
         wsc.scrollable_region);
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
-        lines, 
-        colors
+        lines 
     );
 
     // Create the footer window

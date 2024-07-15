@@ -14,6 +14,13 @@ cargo build
 cargo run <exe files>
 target/debug/ncexe <exe files>
 ```
+
+## Examples
+
+```shell
+cargo run --example <example.rs>
+```
+
 ## Test
 
 ```shell

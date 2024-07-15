@@ -4,16 +4,14 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, bail, Result, Context};
 
-use ncexe::windows::screen::Screen;
+use ncexe::windows::screen::SCREEN;
 use ncexe::color;
 use pancurses::chtype;
 
-
 fn main() -> Result<()> {
 
-    let screen = Screen::new();
-
-    let w = &screen.win;
+    let w = &SCREEN.win;
+    color::init("dark");
 
     let _c = color::Colors::new("dark");
 

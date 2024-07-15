@@ -8,10 +8,7 @@ use pancurses::{
     Input
 };
 
-use crate::color::{
-    Colors,
-    WindowColors, 
-};
+use crate::color::WindowColors;
 
 use super::{
     Coords,
@@ -87,7 +84,6 @@ fn make_scrollable_lines (
 pub struct ScrollableRegion<'a> {
 
     pub pwin: pancurses::Window,
-    colors: &'a Colors,
 
     /// Dimensions of the window
     size: Coords,
@@ -111,7 +107,6 @@ impl<'a> ScrollableRegion<'a> {
     pub fn new (
         window_colors: &'a WindowColors,
         lines: Vec<Box<dyn Line>>,
-        colors: &'a Colors,
     ) -> ScrollableRegion<'a> {
 
         let pwin = pancurses::newwin(1, 1, 2, 0); 
@@ -119,7 +114,6 @@ impl<'a> ScrollableRegion<'a> {
 
         ScrollableRegion{ 
             pwin,
-            colors,
             lines: make_scrollable_lines(lines, 0),
             size: Coords{y: 0, x: 0},
             top_idx: 0,
@@ -331,9 +325,7 @@ impl<'a> ScrollableRegion<'a> {
 
             EnterType::NewWindow =>
                 
-                self.lines[idx].line.new_window_fn(
-                    self.colors
-                )?,
+                self.lines[idx].line.new_window_fn()?,
 
             EnterType::Expandable((num_lines, indent)) => 
                 

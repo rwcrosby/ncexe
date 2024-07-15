@@ -13,7 +13,6 @@ use std::{
 };
 
 use crate::{
-    color::Colors, 
     exe_types::Executable,
     windows::popup, 
 };
@@ -55,11 +54,7 @@ impl FieldMap {
 type StringFn = dyn Fn(&[u8]) -> String;
 type StringFn2 = dyn Fn(&[u8]) -> Result<String>;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
-type EnterFn = fn(
-    Rc<dyn Executable>,
-    &Colors, 
-) -> Result<()>;
-
+type EnterFn = fn(Rc<dyn Executable>) -> Result<()>;
 
 /// Entry in the table of values for a field
 pub type ValEntry = (

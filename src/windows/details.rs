@@ -6,10 +6,7 @@ use anyhow::Result;
 use std::rc::Rc;
 
 use crate::{
-    color::{
-        Colors, 
-        WindowColors,
-    },
+    color::WindowColors,
     exe_types::Executable,
     formatter::{
         FieldDef,
@@ -97,11 +94,10 @@ impl<'a> Line for DetailLine<'a> {
 
     fn new_window_fn<'b>(
         &'b self,
-        colors: &'b Colors,
     ) -> Result<()> {
         
         if let Some(efn) = self.field_def.enter_fn {
-            efn(self.exe.clone(), colors)
+            efn(self.exe.clone())
         } else {
             Ok(())
         }
