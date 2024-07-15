@@ -14,8 +14,8 @@ use std::{
 
 use crate::{
     color::Colors, 
-    windows::screen::Screen, 
-    exe_types::Executable
+    exe_types::Executable,
+    windows::popup, 
 };
 
 // ------------------------------------------------------------------------
@@ -58,7 +58,6 @@ type UsizeFn = dyn Fn(&[u8]) -> usize;
 type EnterFn = fn(
     Rc<dyn Executable>,
     &Colors, 
-    &Screen,
 ) -> Result<()>;
 
 
@@ -176,7 +175,8 @@ impl FieldDef {
 
         // TODO open an error window
         if let Err(ref msg) = res {
-            let _mstr = format!("{:#}", msg);
+            popup::error_window(msg);
+            // let _mstr = format!("{:#}", msg);
             // print!("{}", mstr);
         }
         

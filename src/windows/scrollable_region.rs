@@ -19,7 +19,6 @@ use super::{
         Line,
         ToScreen, LineVec,
     }, 
-    screen::Screen,
 };
 
 // --------------------------------------------------------------------
@@ -88,7 +87,6 @@ fn make_scrollable_lines (
 pub struct ScrollableRegion<'a> {
 
     pub pwin: pancurses::Window,
-    screen: &'a Screen,
     colors: &'a Colors,
 
     /// Dimensions of the window
@@ -113,7 +111,6 @@ impl<'a> ScrollableRegion<'a> {
     pub fn new (
         window_colors: &'a WindowColors,
         lines: Vec<Box<dyn Line>>,
-        screen: &'a Screen,
         colors: &'a Colors,
     ) -> ScrollableRegion<'a> {
 
@@ -123,7 +120,6 @@ impl<'a> ScrollableRegion<'a> {
         ScrollableRegion{ 
             pwin,
             colors,
-            screen,
             lines: make_scrollable_lines(lines, 0),
             size: Coords{y: 0, x: 0},
             top_idx: 0,
@@ -336,7 +332,6 @@ impl<'a> ScrollableRegion<'a> {
             EnterType::NewWindow =>
                 
                 self.lines[idx].line.new_window_fn(
-                    self.screen, 
                     self.colors
                 )?,
 

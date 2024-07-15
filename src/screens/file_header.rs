@@ -14,7 +14,6 @@ use crate::{
         details,
         footer::Footer,
         header::Header,
-        screen::Screen,
         scrollable_region::ScrollableRegion,
         self,
     },
@@ -24,7 +23,6 @@ use crate::{
 
 pub fn show(
     exe: Rc<dyn Executable>,
-    screen: &Screen,
     colors: &Colors,
 ) -> Result<()> {
 
@@ -49,7 +47,6 @@ pub fn show(
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines, 
-        screen, 
         colors
     );
 
@@ -65,7 +62,6 @@ pub fn show(
     // Create and show the set of windows
 
     windows::show(
-        screen, 
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win

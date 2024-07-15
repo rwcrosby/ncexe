@@ -7,10 +7,7 @@ use pancurses::chtype;
 
 use crate::color::Colors;
 
-use super::{
-    Coords, 
-    screen::Screen
-};
+use super::Coords;
 
 // ------------------------------------------------------------------------
 
@@ -32,7 +29,6 @@ pub trait Line {
     /// Function to open a full new window
     fn new_window_fn<'a>(
         &'a self,
-        _screen: &'a Screen,
         _colors: &'a Colors,
     ) -> Result<()> { Ok(()) }
 

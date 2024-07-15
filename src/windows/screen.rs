@@ -2,6 +2,10 @@
 //! The terminal screen
 //! 
 
+use once_cell::sync::Lazy;
+
+// ------------------------------------------------------------------------
+
 pub struct Screen {
     pub win: pancurses::Window,
 }
@@ -22,6 +26,11 @@ impl Screen {
         win
 
     }
+
+    pub fn term(&self) {
+        pancurses::endwin();
+    }
+
 }
 
 impl Default for Screen {
@@ -30,6 +39,9 @@ impl Default for Screen {
     }
 }
 
+unsafe impl Sync for Screen {} 
+unsafe impl Send for Screen {} 
+
 impl Drop for Screen {
     fn drop(&mut self) {
         pancurses::endwin();
@@ -37,11 +49,24 @@ impl Drop for Screen {
 }
 
 // ------------------------------------------------------------------------
+// Global screen object
+
+pub static SCREEN: Lazy<Screen> = Lazy::new(|| {
+    Screen::new()
+});
+
+// ------------------------------------------------------------------------
 
 #[test]
 pub fn screen_test_1() {
-    let w = Screen::new();
-    w.win.printw("Curses test 1");
-    w.win.getch();
+
+    use once_cell::sync::Lazy;
+    use super::screen::SCREEN;
+
+    Lazy::force(&SCREEN);
+
+    SCREEN.win.printw("Curses test 1");
+    SCREEN.win.getch();
+    SCREEN.term();
 }
 

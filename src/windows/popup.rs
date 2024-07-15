@@ -2,7 +2,7 @@
 //! Popup windows
 //! 
 
-// use anyhow::Error;
+use anyhow::Error;
 
 use pancurses::{
     init_pair,
@@ -10,10 +10,28 @@ use pancurses::{
     COLOR_PAIR,
 };
 
-use super::screen::Screen;
+use super::screen::SCREEN;
+
+// ------------------------------------------------------------------------
+
+pub fn error_window(
+    error: &Error
+) {
+
+    let mut msgs = vec![];
+    for cause in error.chain() {
+        msgs.push(cause.to_string());
+    }
+
+    for line in msgs {
+        print!("{}", line);
+    }
+
+}
+
+// ------------------------------------------------------------------------
 
 pub fn window(
-    scr: &Screen,
     title: &str,
     msg: &str,
     attr: (i16, i16),
@@ -23,8 +41,8 @@ pub fn window(
     init_pair(cp, attr.0, attr.1);
     
     let width: i32 = 4 + msg.len() as i32;
-    let ypos: i32 = scr.win.get_max_y() / 2 - 5;
-    let xpos: i32 = scr.win.get_max_x() / 2 - width;
+    let ypos: i32 = SCREEN.win.get_max_y() / 2 - 5;
+    let xpos: i32 = SCREEN.win.get_max_x() / 2 - width;
 
     let pw = newwin(5, width, ypos, xpos);
 
@@ -41,7 +59,6 @@ pub fn window(
     pw.mvaddstr(title_y, title_x, title);
     pw.mvchgat(title_y, title_x, title.len() as i32, 0, cp);
 
-
     let msg_y: i32 = 2;
     let msg_x: i32 = 2;
     pw.mvaddstr(msg_y, msg_x, msg);
@@ -53,7 +70,10 @@ pub fn window(
 #[test]
 pub fn popup_test_1() {
 
-    let w = Screen::new();
+    use once_cell::sync::Lazy;
+    use super::screen::SCREEN;
+
+    Lazy::force(&SCREEN);
 
     pancurses::start_color();
 
@@ -66,14 +86,16 @@ pub fn popup_test_1() {
     );
 
     window(
-        &w, 
         "The Title", 
         "The Message", 
         (pancurses::COLOR_WHITE, pancurses::COLOR_RED)
     );
 
-    w.win.touch();
+    SCREEN.win.touch();
     pancurses::doupdate();
 
+    SCREEN.term();
+
     assert!(true);
+
 }

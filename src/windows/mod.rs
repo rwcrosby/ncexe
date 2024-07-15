@@ -16,7 +16,7 @@ use anyhow::Result;
 use pancurses::Input;
 
 use crate::windows::{
-    screen::Screen,
+    screen::SCREEN,
     header::Header,
     scrollable_region::ScrollableRegion,
     footer::Footer,
@@ -44,13 +44,12 @@ pub const FSIZE_LENGTH: usize = 10;
 // ------------------------------------------------------------------------
 
 pub fn show<'a>(
-    screen: &'a Screen,
     hdr_win: &mut Header<'a>,
     scr_win: &mut ScrollableRegion,
     ftr_win: &mut Footer,
 ) -> Result<()> {
 
-    let size: Coords = screen.win.get_max_yx().into();
+    let size: Coords = SCREEN.win.get_max_yx().into();
 
     hdr_win.show(&size)?;
     scr_win.show(&size)?;
@@ -67,7 +66,7 @@ pub fn show<'a>(
 
             Some(Input::KeyResize) =>
             {
-                let new_size: Coords = screen.win.get_max_yx().into();
+                let new_size: Coords = SCREEN.win.get_max_yx().into();
         
                 hdr_win.resize(&new_size)?;
                 scr_win.resize(&new_size)?;
@@ -82,7 +81,7 @@ pub fn show<'a>(
                 '\n' => {
                     scr_win.handle_key(Input::KeyEnter)?;
 
-                    let new_size: Coords = screen.win.get_max_yx().into();
+                    let new_size: Coords = SCREEN.win.get_max_yx().into();
 
                     hdr_win.pwin.touch();
                     hdr_win.resize(&new_size)?;

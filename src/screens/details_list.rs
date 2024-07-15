@@ -11,7 +11,6 @@ use crate::{
         footer::Footer,
         header::Header,
         line::Line,
-        screen::Screen,
         scrollable_region::ScrollableRegion,
         self,
     },
@@ -24,7 +23,6 @@ pub fn show<'a >(
     title: &'a str,
     trailer: &'a str,
     wsc: &'a WindowSetColors,
-    screen : &'a Screen,
     colors : &'a Colors,
 ) -> Result<()> {
 
@@ -41,7 +39,6 @@ pub fn show<'a >(
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-        screen,
         colors,
     );
 
@@ -56,7 +53,6 @@ pub fn show<'a >(
     // Create and show the set of windows
 
     windows::show(
-        screen, 
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win,

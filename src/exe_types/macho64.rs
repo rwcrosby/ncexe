@@ -28,7 +28,7 @@ use crate::{
             MaybeLineVec,
             PairVec, 
         },
-        screen::Screen, details
+        details
     },
     screens::details_list,
 };
@@ -165,7 +165,6 @@ impl Line for CmdLine<'_> {
 fn load_commands_on_enter(
     exe: Rc<dyn Executable>, 
     colors: &Colors,
-    screen: &Screen,
 ) -> Result<()> {
 
     let wsc = colors.get_window_set_colors("list")?;
@@ -205,7 +204,6 @@ fn load_commands_on_enter(
         "Length Command",
         &footer,
         wsc,
-        screen,
         colors,
     )
 

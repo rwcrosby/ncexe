@@ -21,7 +21,6 @@ use crate::{
             Line,
             PairVec, 
         },
-        screen::Screen,
         scrollable_region::ScrollableRegion, 
         self,
     },
@@ -36,7 +35,6 @@ type ExeList = Vec<ExeItem>;
 
 pub fn show(
     executables: ExeList, 
-    screen: &Screen,
     colors: &Colors,
 ) -> Result<()> {
 
@@ -81,7 +79,6 @@ pub fn show(
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-        screen,
         colors,
     );
 
@@ -105,7 +102,6 @@ pub fn show(
     // Create and show the set of windows
 
     windows::show(
-        screen, 
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win
@@ -169,13 +165,11 @@ impl Line for FileLine {
 
     fn new_window_fn<'a>(
         &self,
-        screen: &Screen, 
         colors: &Colors, 
     ) -> Result<()> {
     
         file_header::show(
             self.exe.clone(), 
-            screen, 
             colors
         )
 

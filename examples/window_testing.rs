@@ -58,14 +58,12 @@ fn main() {
     let mut scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
         lines,
-        &screen,
         &colors,
     );
     
     let mut ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
     windows::show(
-        &screen, 
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win).unwrap();

@@ -17,13 +17,10 @@ use crate::{
     }, 
 };
 
-use super::{
-    line::{
-        Line,
-        LineVec, 
-        PairVec
-    }, 
-    screen::Screen,
+use super::line::{
+    Line,
+    LineVec, 
+    PairVec
 };
 
 // ------------------------------------------------------------------------
@@ -100,12 +97,11 @@ impl<'a> Line for DetailLine<'a> {
 
     fn new_window_fn<'b>(
         &'b self,
-        screen: &'b Screen,
         colors: &'b Colors,
     ) -> Result<()> {
         
         if let Some(efn) = self.field_def.enter_fn {
-            efn(self.exe.clone(), colors, screen)
+            efn(self.exe.clone(), colors)
         } else {
             Ok(())
         }

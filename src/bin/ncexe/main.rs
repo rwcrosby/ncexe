@@ -6,6 +6,7 @@ mod configuration;
 
 use anyhow::Result;
 use clap::Parser;
+use once_cell::sync::Lazy;
 use std::{
     path::PathBuf, 
     rc::Rc, 
@@ -18,9 +19,8 @@ use ncexe::{
     screens::{
         file_list,
         file_header,
-
     },
-    windows::screen::Screen,
+    windows::screen::SCREEN,
 };
 
 // ------------------------------------------------------------------------
@@ -75,26 +75,30 @@ fn main() -> Result<()> {
     }
 
     // Setup principal objects, colors must follow screen
-    let screen = Screen::new();
+    // Force screen lazy initialization
+
+    Lazy::force(&SCREEN);
     let colors = Colors::new(&config.theme)?;
 
     // Initialize screen
-    screen.win.bkgd(colors.bkgr()?);
-    screen.win.refresh();
+    SCREEN.win.bkgd(colors.bkgr()?);
+    SCREEN.win.refresh();
 
     // Display file info
-    if executables.len() == 1 {
+    let rc = if executables.len() == 1 {
         file_header::show(
             Rc::clone(&executables[0]), 
-            &screen, 
             &colors,
         )
     } else {
         file_list::show(
             executables, 
-            &screen, 
             &colors,
         )
-    }
+    };
+
+    SCREEN.term();
+
+    rc
 
 }
