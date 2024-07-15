@@ -18,14 +18,25 @@ pub fn error_window(
     error: &Error
 ) {
 
-    let mut msgs = vec![];
+    let mut lines = vec![];
     for cause in error.chain() {
-        msgs.push(cause.to_string());
+
+        match lines.len() {
+            0 => lines.push(format!("Error: {}", cause.to_string())),
+            1 => {
+                lines.push("Cause:".into());
+                lines.push(format!("    {}", cause.to_string()))
+            },
+            _ => lines.push(format!("    {}", cause.to_string()))
+        }
+
     }
 
-    for line in msgs {
-        print!("{}", line);
-    }
+    window(
+        "Error", 
+        lines, 
+        (pancurses::COLOR_WHITE, pancurses::COLOR_RED),
+    );
 
 }
 
@@ -33,18 +44,23 @@ pub fn error_window(
 
 pub fn window(
     title: &str,
-    msg: &str,
+    lines: Vec<String>,
     attr: (i16, i16),
 ) {
 
     let cp = 2;
     init_pair(cp, attr.0, attr.1);
     
-    let width: i32 = 4 + msg.len() as i32;
-    let ypos: i32 = SCREEN.win.get_max_y() / 2 - 5;
-    let xpos: i32 = SCREEN.win.get_max_x() / 2 - width;
+    let max_line_len = lines
+        .iter()
+        .fold(0, | ml, line | std::cmp::max(ml, line.len()) );
 
-    let pw = newwin(5, width, ypos, xpos);
+    let width: i32 = 4 + max_line_len as i32;
+    let height: i32 = 4 + lines.len() as i32;
+    let ypos: i32 = (SCREEN.win.get_max_y() - height) / 2;
+    let xpos: i32 = (SCREEN.win.get_max_x() - width) / 2;
+
+    let pw = newwin(height, width, ypos, xpos);
 
     let a = COLOR_PAIR(cp as u32);
 
@@ -59,9 +75,12 @@ pub fn window(
     pw.mvaddstr(title_y, title_x, title);
     pw.mvchgat(title_y, title_x, title.len() as i32, 0, cp);
 
-    let msg_y: i32 = 2;
+    let mut msg_y: i32 = 2;
     let msg_x: i32 = 2;
-    pw.mvaddstr(msg_y, msg_x, msg);
+    for ref line in lines {
+        pw.mvaddstr(msg_y, msg_x, line);
+        msg_y += 1;
+    }
 
     pw.getch();    
 
@@ -87,7 +106,7 @@ pub fn popup_test_1() {
 
     window(
         "The Title", 
-        "The Message", 
+        vec!["The".to_string(), "Message".to_string()],
         (pancurses::COLOR_WHITE, pancurses::COLOR_RED)
     );
 

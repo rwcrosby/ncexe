@@ -14,7 +14,7 @@ use std::{
 
 use crate::{
     exe_types::Executable,
-    windows::popup, 
+    windows::popup::error_window, 
 };
 
 // ------------------------------------------------------------------------
@@ -166,16 +166,13 @@ impl FieldDef {
 
     pub fn to_string(&self, data: &[u8]) -> Result<String> {
 
-        let res = self.to_string_wrapped(data);
-
-        // TODO open an error window
-        if let Err(ref msg) = res {
-            popup::error_window(msg);
-            // let _mstr = format!("{:#}", msg);
-            // print!("{}", mstr);
-        }
-        
-        res
+        Ok(match self.to_string_wrapped(data) {
+            Err(err) => {
+                error_window(&err);
+                "???".to_string()
+            },
+            Ok(s) => s
+        })
 
     }
 
