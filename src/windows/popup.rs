@@ -10,7 +10,7 @@ use pancurses::{
     COLOR_PAIR,
 };
 
-use super::screen::SCREEN;
+use crate::screens::terminal::TERMWIN;
 
 // ------------------------------------------------------------------------
 
@@ -22,12 +22,12 @@ pub fn error_window(
     for cause in error.chain() {
 
         match lines.len() {
-            0 => lines.push(format!("Error: {}", cause.to_string())),
+            0 => lines.push(format!("Error: {}", cause)),
             1 => {
                 lines.push("Cause:".into());
-                lines.push(format!("    {}", cause.to_string()))
+                lines.push(format!("    {}", cause))
             },
-            _ => lines.push(format!("    {}", cause.to_string()))
+            _ => lines.push(format!("    {}", cause))
         }
 
     }
@@ -57,8 +57,8 @@ pub fn window(
 
     let width: i32 = 4 + max_line_len as i32;
     let height: i32 = 4 + lines.len() as i32;
-    let ypos: i32 = (SCREEN.win.get_max_y() - height) / 2;
-    let xpos: i32 = (SCREEN.win.get_max_x() - width) / 2;
+    let ypos: i32 = (TERMWIN.win.get_max_y() - height) / 2;
+    let xpos: i32 = (TERMWIN.win.get_max_x() - width) / 2;
 
     let pw = newwin(height, width, ypos, xpos);
 
@@ -90,9 +90,9 @@ pub fn window(
 pub fn popup_test_1() {
 
     use once_cell::sync::Lazy;
-    use super::screen::SCREEN;
+    use crate::screens::terminal::TERMWIN;
 
-    Lazy::force(&SCREEN);
+    Lazy::force(&TERMWIN);
 
     pancurses::start_color();
 
@@ -110,10 +110,10 @@ pub fn popup_test_1() {
         (pancurses::COLOR_WHITE, pancurses::COLOR_RED)
     );
 
-    SCREEN.win.touch();
+    TERMWIN.win.touch();
     pancurses::doupdate();
 
-    SCREEN.term();
+    TERMWIN.term();
 
     assert!(true);
 

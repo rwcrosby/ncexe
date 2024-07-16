@@ -21,7 +21,7 @@ use ncexe::{
     screens::{
         file_header, file_list
     },
-    windows::screen::SCREEN,
+    screens::terminal::TERMWIN,
 };
 
 // ------------------------------------------------------------------------
@@ -78,12 +78,12 @@ fn main() -> Result<()> {
 
     // Setup principal objects, colors must follow screen
     // Force screen lazy initialization
-    Lazy::force(&SCREEN);
+    Lazy::force(&TERMWIN);
     color::init(&config.theme);
 
     // Initialize screen
-    SCREEN.win.bkgd(Colors::global().bkgr()?);
-    SCREEN.win.refresh();
+    TERMWIN.win.bkgd(Colors::global().bkgr()?);
+    TERMWIN.win.refresh();
 
     // Display file info
     let rc = if executables.len() == 1 {
@@ -92,7 +92,7 @@ fn main() -> Result<()> {
         file_list::show(executables)
     };
 
-    SCREEN.term();
+    TERMWIN.term();
 
     rc
 

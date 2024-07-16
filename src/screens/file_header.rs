@@ -10,12 +10,12 @@ use crate::{
     color::Colors, 
     exe_types::Executable,
     formatter::center_in, 
+    screens,
     windows::{
-        details,
-        footer::Footer,
-        header::Header,
+        details, 
+        footer::Footer, 
+        header::Header, 
         scrollable_region::ScrollableRegion,
-        self,
     },
 };
 
@@ -59,7 +59,7 @@ pub fn show(
 
     // Create and show the set of windows
 
-    windows::show(
+    screens::show(
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win

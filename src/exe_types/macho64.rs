@@ -290,6 +290,6 @@ const DLL_FULL_PATH: &[FieldDef] = &[
     FieldDef::new(12, 4, "Timestamp", Some(formatter::LE_32_HEX)),
     FieldDef::new(16, 4, "Current Version", Some(formatter::LE_32_HEX)),
     FieldDef::new(20, 4, "Compatable Version", Some(formatter::LE_32_HEX)),
-    FieldDef::new2(24, 4, "Library Name",Some(formatter::C_STR)),
+    FieldDef::new2(24, 0, "Library Name",Some(formatter::C_STR)),
 
 ];

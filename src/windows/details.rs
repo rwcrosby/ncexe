@@ -92,8 +92,8 @@ impl<'a> Line for DetailLine<'a> {
         self.field_def.enter_fn.is_some()
     }
 
-    fn new_window_fn<'b>(
-        &'b self,
+    fn new_window_fn(
+        &self,
     ) -> Result<()> {
         
         if let Some(efn) = self.field_def.enter_fn {

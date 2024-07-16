@@ -3,9 +3,9 @@ use once_cell::sync::Lazy;
 extern crate ncexe;
 
 use ncexe::exe_types::ETYPE_LENGTH;
-use ncexe::windows;
+use ncexe::screens;
 use ncexe::windows::line::Line;
-use ncexe::windows::screen::SCREEN;
+use ncexe::screens::terminal::TERMWIN;
 use ncexe::windows::header;
 use ncexe::windows::scrollable_region;
 use ncexe::windows::footer;
@@ -14,7 +14,7 @@ use ncexe::color;
 
 fn main() {
 
-    Lazy::force(&SCREEN);
+    Lazy::force(&TERMWIN);
 
     // let screen = Screen::new();
 
@@ -22,8 +22,8 @@ fn main() {
     let cs1 = colors.get_window_set_colors("file_list").unwrap();
     let cs2 = colors.get_window_set_colors("file_header").unwrap();
 
-    SCREEN.win.bkgd(cs1.header.text);
-    SCREEN.win.refresh();
+    TERMWIN.win.bkgd(cs1.header.text);
+    TERMWIN.win.refresh();
 
     let tl = ETYPE_LENGTH as i32;
     let ml = 10i32;
@@ -66,7 +66,7 @@ fn main() {
     
     let mut ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
-    windows::show(
+    screens::show(
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win).unwrap();

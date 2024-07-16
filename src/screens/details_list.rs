@@ -7,12 +7,12 @@ use anyhow::Result;
 use crate::{
     color::WindowSetColors,
     formatter::center_in,
+    screens,
     windows::{
         footer::Footer,
         header::Header,
         line::Line,
         scrollable_region::ScrollableRegion,
-        self,
     },
 };
 
@@ -50,7 +50,7 @@ pub fn show<'a >(
 
     // Create and show the set of windows
 
-    windows::show(
+    screens::show(
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win,

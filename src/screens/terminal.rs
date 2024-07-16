@@ -6,15 +6,15 @@ use once_cell::sync::Lazy;
 
 // ------------------------------------------------------------------------
 
-pub struct Screen {
+pub struct TermWin {
     pub win: pancurses::Window,
 }
 
-impl Screen {
+impl TermWin {
 
     pub fn new() -> Self {
 
-        let win = Screen {
+        let win = TermWin {
             win: pancurses::initscr(),
         };
 
@@ -33,16 +33,16 @@ impl Screen {
 
 }
 
-impl Default for Screen {
+impl Default for TermWin {
     fn default() -> Self {
         Self::new()
     }
 }
 
-unsafe impl Sync for Screen {} 
-unsafe impl Send for Screen {} 
+unsafe impl Sync for TermWin {} 
+unsafe impl Send for TermWin {} 
 
-impl Drop for Screen {
+impl Drop for TermWin {
     fn drop(&mut self) {
         pancurses::endwin();
     }
@@ -51,8 +51,8 @@ impl Drop for Screen {
 // ------------------------------------------------------------------------
 // Global screen object
 
-pub static SCREEN: Lazy<Screen> = Lazy::new(|| {
-    Screen::new()
+pub static TERMWIN: Lazy<TermWin> = Lazy::new(|| {
+    TermWin::new()
 });
 
 // ------------------------------------------------------------------------
@@ -61,12 +61,12 @@ pub static SCREEN: Lazy<Screen> = Lazy::new(|| {
 pub fn screen_test_1() {
 
     use once_cell::sync::Lazy;
-    use super::screen::SCREEN;
+    use super::terminal::TERMWIN;
 
-    Lazy::force(&SCREEN);
+    Lazy::force(&TERMWIN);
 
-    SCREEN.win.printw("Curses test 1");
-    SCREEN.win.getch();
-    SCREEN.term();
+    TERMWIN.win.printw("Curses test 1");
+    TERMWIN.win.getch();
+    TERMWIN.term();
 }
 

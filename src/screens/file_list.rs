@@ -22,8 +22,8 @@ use crate::{
             PairVec, 
         },
         scrollable_region::ScrollableRegion, 
-        self,
     },
+    screens,
 };
 
 use super::file_header;
@@ -99,7 +99,7 @@ pub fn show(
     
     // Create and show the set of windows
 
-    windows::show(
+    screens::show(
         &mut hdr_win, 
         &mut scr_win, 
         &mut ftr_win
