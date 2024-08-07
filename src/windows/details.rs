@@ -3,11 +3,10 @@
 //!
 
 use anyhow::Result;
-use std::rc::Rc;
 
 use crate::{
     color::WindowColors,
-    exe_types::Executable,
+    exe_types::ExeRef,
     formatter::{
         FieldDef,
         FieldMap, 
@@ -22,19 +21,19 @@ use super::line::{
 
 // ------------------------------------------------------------------------
 
-pub fn to_lines(
-    exe: Rc<dyn Executable>, 
+pub fn to_lines<'l>(
+    exe: ExeRef<'l>, 
     data: (usize, usize),
-    map: &FieldMap,
+    map: &FieldMap<'l>,
     wc: WindowColors,
-) -> LineVec {
+) -> LineVec<'l> {
 
     map.fields
         .iter()
         .filter(| f | f.string_fn.is_some() || f.string_fn2.is_some() )
-        .map(|map_field| -> Box<dyn Line> {
+        .map(|map_field| -> Box<dyn Line<'l>> {
             Box::new(DetailLine{
-                exe: Rc::clone(&exe),
+                exe,
                 data,
                 field_def: map_field,
                 wc,
@@ -46,15 +45,15 @@ pub fn to_lines(
 
 // ------------------------------------------------------------------------
 
-struct DetailLine<'a> {
-    exe: Rc<dyn Executable>, 
+struct DetailLine<'dl> {
+    exe: ExeRef<'dl>, 
     data: (usize, usize),
-    field_def: &'a FieldDef,
+    field_def: &'dl FieldDef<'dl>,
     wc: WindowColors,
     max_text_len: usize,
 }
 
-impl<'a> Line for DetailLine<'a> {
+impl<'l> Line<'l> for DetailLine<'l> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
@@ -97,7 +96,7 @@ impl<'a> Line for DetailLine<'a> {
     ) -> Result<()> {
         
         if let Some(efn) = self.field_def.enter_fn {
-            efn(self.exe.clone())
+            efn(self.exe)
         } else {
             Ok(())
         }

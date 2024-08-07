@@ -7,7 +7,7 @@ use anyhow::{
     bail,
 };
 use memmap2::Mmap;
-use std::{ops::Deref, rc::Rc};
+use std::ops::Deref;
 
 use crate::formatter::{
     self,
@@ -15,27 +15,25 @@ use crate::formatter::{
     FieldMap,
 };
 use super::{
-    Executable,
-    ExeType,
+    ExeItem, ExeType, Executable
 };
 
 // ------------------------------------------------------------------------
 
-pub struct ELF {
+pub struct ELF<'elf> {
     filename: String,
     mmap: Mmap,
-    hdr_map: &'static FieldMap,
+    hdr_map: &'elf FieldMap<'elf>,
 }
 
 // ------------------------------------------------------------------------
 
-impl ELF {
+impl<'elf> ELF<'elf> {
 
     pub fn new( 
         filename : &str,
         mmap : Mmap,
-    // ) -> Result<Rc<dyn Executable>> {
-    ) -> Result<Rc<ELF>> {
+    ) -> Result<ExeItem> {
 
         let mmap_slice = mmap.deref();
 
@@ -53,7 +51,7 @@ impl ELF {
             v => bail!("Invalid ELF bit length {:02x}", v)
         };
 
-        Ok(Rc::new(ELF{
+        Ok(Box::new(ELF{
             filename: String::from(filename), 
             mmap, 
             // fname_fn: None,
@@ -66,7 +64,7 @@ impl ELF {
 
 // ------------------------------------------------------------------------
 
-impl Executable for ELF {
+impl<'e> Executable<'e> for ELF<'e> {
 
     fn exe_type(&self) -> ExeType {
         ExeType::ELF
@@ -80,7 +78,7 @@ impl Executable for ELF {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &FieldMap {
+    fn header_map(&self) -> &'e FieldMap {
         self.hdr_map
     }
 

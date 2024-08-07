@@ -20,7 +20,7 @@ use super::{
 
 // --------------------------------------------------------------------
 
-type ScrollableRegionLines = Vec<ScrollableRegionLine>;
+type ScrollableRegionLines<'srl> = Vec<ScrollableRegionLine<'srl>>;
 
 #[derive(Debug)]
 enum EnterType {
@@ -42,10 +42,10 @@ impl EnterType {
     }
 }
 
-struct ScrollableRegionLine {
+struct ScrollableRegionLine<'srl> {
 
     /// Ownership of the Line is passed here
-    line: Box<dyn Line>,
+    line: Box<dyn Line<'srl> + 'srl>,
 
     /// What to do on enter on the line
     enter: EnterType,
@@ -81,7 +81,7 @@ fn make_scrollable_lines (
 
 // ------------------------------------------------------------------------
 
-pub struct ScrollableRegion<'a> {
+pub struct ScrollableRegion<'sr> {
 
     pub pwin: pancurses::Window,
 
@@ -89,7 +89,7 @@ pub struct ScrollableRegion<'a> {
     size: Coords,
 
     /// Set of lines to display
-    lines: ScrollableRegionLines,
+    lines: ScrollableRegionLines<'sr>,
 
     /// Index into lines of the top line in the window
     top_idx: usize,
@@ -98,16 +98,16 @@ pub struct ScrollableRegion<'a> {
     win_idx: usize,
 
     /// Colors to use for this scrollable region
-    window_colors: &'a WindowColors,
+    window_colors: &'sr WindowColors,
 
 }
 
-impl<'a> ScrollableRegion<'a> {
+impl<'sr> ScrollableRegion<'sr> {
 
     pub fn new (
-        window_colors: &'a WindowColors,
-        lines: Vec<Box<dyn Line>>,
-    ) -> ScrollableRegion<'a> {
+        window_colors: &'sr WindowColors,
+        lines: LineVec<'sr>,
+    ) -> ScrollableRegion<'sr> {
 
         let pwin = pancurses::newwin(1, 1, 2, 0); 
         pwin.keypad(true);

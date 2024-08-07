@@ -13,7 +13,7 @@ use anyhow::{
 use memmap2::Mmap;
 use std::{
     fmt, 
-    fs::File, rc::Rc, 
+    fs::File,
 };
 
 use crate::formatter::FieldMap;
@@ -25,18 +25,22 @@ use macho64::MachO64;
 // ------------------------------------------------------------------------
 /// Trait to be implemented by the various executable handlers
 
-pub trait Executable {
+pub trait Executable<'e> {
 
     fn exe_type(&self) -> ExeType;
-    fn filename(&self) -> &str;
+    fn filename(&'e self) -> &'e str;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    fn mmap(&self) -> &[u8];
-    fn header_map(&self) -> &FieldMap;
+    fn mmap(&'e self) -> &'e [u8];
+    fn header_map(&'e self) -> &'e FieldMap;
 
 }
+
+pub type ExeItem<'e> = Box<dyn Executable<'e> + 'e>;
+pub type ExeRef<'e> = &'e dyn Executable<'e>;
+pub type ExeList<'e> = Vec<ExeItem<'e>>;
 
 // ------------------------------------------------------------------------
 /// The types of executable files supported
@@ -69,15 +73,15 @@ impl fmt::Display for ExeType {
 // ------------------------------------------------------------------------
 // Constructor for an executable object
 
-pub fn new(
-    filename: &str
-) -> Result<Rc<dyn Executable>> {
+pub fn new<'e>(
+    filename: &'e str
+) -> Result<ExeItem<'e>> {
     let fd = File::open(filename)?;
 
     let mmap = unsafe { Mmap::map(&fd) }?;
 
     if mmap.len() < 4 {
-        return Ok(Rc::new(NotExecutable {
+        return Ok(Box::new(NotExecutable {
             filename: String::from(filename),
             msg: format!("Too small: {}", mmap.len()),
         }));
@@ -110,7 +114,7 @@ pub struct NotExecutable {
     pub msg: String,
 }
 
-impl Executable for NotExecutable {
+impl<'e> Executable<'e> for NotExecutable {
     fn exe_type(&self) -> ExeType {
         ExeType::NOPE
     }
@@ -127,6 +131,4 @@ impl Executable for NotExecutable {
         panic!("Header map called on non-executable")
     }
 
-
 }
-

@@ -3,38 +3,34 @@
 //!
 
 use anyhow::Result;
-use std::rc::Rc;
 
 use crate::{
-    color::Colors,
+    color::Colors, 
     exe_types::{
-        ETYPE_LENGTH, 
-        Executable, 
-        ExeType,
-    },
+        ExeList, 
+        ExeRef, 
+        ExeType, 
+        ETYPE_LENGTH
+    }, 
     formatter::center_in, 
+    screens, 
     windows::{
-        FSIZE_LENGTH,
         footer::Footer,
-        header::Header,
-        line::{
-            Line,
-            PairVec, 
-        },
+         header::Header, 
+         line::{
+            Line, LineVec, PairVec 
+        }, 
         scrollable_region::ScrollableRegion, 
-    },
-    screens,
+        FSIZE_LENGTH 
+    }
 };
 
 use super::file_header;
 
 // ------------------------------------------------------------------------
 
-type ExeItem = Rc<dyn Executable>;
-type ExeList = Vec<ExeItem>;
-
-pub fn show(
-    executables: ExeList, 
+pub fn show<'s>(
+    executables: &'s ExeList<'s>, 
 ) -> Result<()> {
 
     let wsc = Colors::global().get_window_set_colors("file_list")?;
@@ -66,12 +62,13 @@ pub fn show(
     // Create the scrollable window
         
     let mut total_len = 0;
-    let lines: Vec<Box<dyn Line>> = executables
+    let lines: LineVec<'s> = executables
         .iter()
-        .map(| e | -> Box<dyn Line> {
-            total_len += e.len();
+        .map(| exe | -> Box<dyn Line<'s> + 's> {
+            total_len += exe.len();
             Box::new(FileLine{
-                exe: e.clone(),
+                // exe: exe.as_ref(),
+                exe: (*exe).as_ref(),
         })})
         .collect();
 
@@ -110,11 +107,11 @@ pub fn show(
 // ------------------------------------------------------------------------
 /// Line in the file list
 
-struct FileLine {
-    exe: Rc<dyn Executable>,
+struct FileLine<'e> {
+    exe: ExeRef<'e>,
 }
 
-impl Line for FileLine {
+impl<'l> Line<'l> for FileLine<'l> {
 
     fn as_pairs(&self, width: usize) -> Result<PairVec> {
 
@@ -165,8 +162,8 @@ impl Line for FileLine {
         &self,
     ) -> Result<()> {
     
-        file_header::show(self.exe.clone())
+        file_header::show(self.exe)
 
     }
-
+    
 }

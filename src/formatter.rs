@@ -7,25 +7,22 @@ use anyhow::{
     Context, 
     Result
 };
-use std::{
-    ffi::CStr, 
-    rc::Rc,
-};
+use std::ffi::CStr;
 
 use crate::{
-    exe_types::Executable,
+    exe_types::ExeRef,
     windows::popup::error_window, 
 };
 
 // ------------------------------------------------------------------------
 /// Header for a memory block mapping
-pub struct FieldMap {
-    pub fields: &'static [FieldDef],
+pub struct FieldMap<'fd> {
+    pub fields: &'fd [FieldDef<'fd>],
     pub data_len: usize,
     pub max_text_len: usize,
 }
 
-impl FieldMap {
+impl<'fd> FieldMap<'fd> {
     pub const fn new(fields: &'static [FieldDef]) -> Self {
 
         let mut fld_idx = 0;
@@ -54,32 +51,32 @@ impl FieldMap {
 type StringFn = dyn Fn(&[u8]) -> String;
 type StringFn2 = dyn Fn(&[u8]) -> Result<String>;
 type UsizeFn = dyn Fn(&[u8]) -> usize;
-type EnterFn = fn(Rc<dyn Executable>) -> Result<()>;
+type EnterFn = fn(ExeRef) -> Result<()>;
 
 /// Entry in the table of values for a field
-pub type ValEntry = (
+pub type ValEntry<'v> = (
     usize, 
-    &'static str, 
-    Option<&'static FieldMap>
+    &'v str, 
+    Option<FieldMap<'v>>
 );
 
 /// Fixed table of value entries
-pub type ValTable = [ValEntry];
+pub type ValTable<'vt> = [ValEntry<'vt>];
 
 /// Map a scalar field in image
-pub struct FieldDef {
+pub struct FieldDef<'fd> {
     // If the beginnning and end of the range are the same, this 
     // implies that the actual data is from start to end of segment
     pub range: (usize, usize),
     pub name: &'static str,
-    pub string_fn: Option<&'static StringFn>,
-    pub string_fn2: Option<&'static StringFn2>,
-    pub usize_fn: Option<&'static UsizeFn>,
-    pub val_tbl: Option<&'static ValTable>,
+    pub string_fn: Option<&'fd StringFn>,
+    pub string_fn2: Option<&'fd StringFn2>,
+    pub usize_fn: Option<&'fd UsizeFn>,
+    pub val_tbl: Option<&'fd ValTable<'fd>>,
     pub enter_fn: Option<EnterFn>,
 }
 
-impl FieldDef {
+impl<'fd> FieldDef<'fd> {
 
     pub const fn new(
         offset: usize,
@@ -133,15 +130,15 @@ impl FieldDef {
     }
 
     pub const fn fn_usize(
-        mut self: FieldDef, 
+        mut self, 
         uf: &'static UsizeFn, 
-    ) -> FieldDef {
+    ) -> FieldDef<'fd> {
         self.usize_fn = Some(uf);
         self
     }
 
     pub const fn val_tbl(
-        mut self: FieldDef, 
+        mut self, 
         uf: &'static UsizeFn,
         vt: &'static ValTable,
     ) -> Self {
@@ -151,7 +148,7 @@ impl FieldDef {
     }
 
     pub const fn enter_fn(
-        mut self: FieldDef, 
+        mut self, 
         enter: EnterFn,
     ) -> Self {
         self.enter_fn = Some(enter);

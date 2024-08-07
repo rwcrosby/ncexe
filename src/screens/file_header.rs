@@ -4,11 +4,10 @@
 
 
 use anyhow::Result;
-use std::rc::Rc;
 
 use crate::{
     color::Colors, 
-    exe_types::Executable,
+    exe_types::ExeRef,
     formatter::center_in, 
     screens,
     windows::{
@@ -21,8 +20,8 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-pub fn show(
-    exe: Rc<dyn Executable>
+pub fn show<'s>(
+    exe: ExeRef<'s>
 ) -> Result<()> {
 
     let wsc = Colors::global().get_window_set_colors("file_header")?;
@@ -39,10 +38,12 @@ pub fn show(
     // Create the scrollable window
 
     let lines = details::to_lines(
-        exe.clone(), 
+        exe, 
         (0, exe.mmap().len()),
         exe.header_map(), 
-        wsc.scrollable_region);
+        wsc.scrollable_region
+    );
+
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines 
@@ -52,6 +53,7 @@ pub fn show(
 
     let footer_fn = |sc: usize| 
         center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
+
     let mut ftr_win = Footer::new(
         &wsc.footer, 
         Box::new(footer_fn)

@@ -11,18 +11,18 @@ use crate::{
     windows::{
         footer::Footer,
         header::Header,
-        line::Line,
+        line::LineVec,
         scrollable_region::ScrollableRegion,
     },
 };
 
 // ------------------------------------------------------------------------
 
-pub fn show<'a >(
-    lines: Vec<Box<dyn Line>>,
-    title: &'a str,
-    trailer: &'a str,
-    wsc: &'a WindowSetColors,
+pub fn show<'s>(
+    lines: LineVec<'s>,
+    title: &str,
+    trailer: &str,
+    wsc: &'s WindowSetColors,
 ) -> Result<()> {
 
     // Create header window

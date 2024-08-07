@@ -6,36 +6,23 @@
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::{
-    ops::Deref, 
-    rc::Rc
-};
+use std::ops::Deref;
 
 use crate::{
     color::{
         Colors,
         WindowColors,
-    },
-    formatter::{
-        self,
-        FieldMap,
-        FieldDef, 
-        ValEntry,
-    },
-    windows::{
-        line::{
-            Line,
-            MaybeLineVec,
-            PairVec, 
-        },
-        details
-    },
-    screens::details_list,
+    }, formatter::{
+        self, FieldDef, FieldMap, ValEntry
+    }, screens::details_list, windows::{
+        details, line::{
+            Line, LineVec, MaybeLineVec, PairVec 
+        }
+    }
 };
 
 use super::{
-    Executable,
-    ExeType,
+    ExeItem, ExeRef, ExeType, Executable
 };
 
 // ------------------------------------------------------------------------
@@ -52,9 +39,9 @@ impl MachO64 {
     pub fn new( 
         filename: &str,
         mmap: Mmap,
-    ) -> Rc<MachO64> {
+    ) -> ExeItem {
 
-        Rc::new(
+        Box::new(
             MachO64{
                 filename: String::from(filename), 
                 mmap, 
@@ -66,21 +53,21 @@ impl MachO64 {
 
 // ------------------------------------------------------------------------
 
-impl Executable for MachO64 {
+impl<'e>Executable<'e> for MachO64 {
 
     fn exe_type(&self) -> super::ExeType {
         ExeType::MachO64
     }
-    fn filename(&self) -> &str {
+    fn filename(&'e self) -> &'e str {
         &self.filename
     }
     fn len(&self) -> usize {
         self.mmap.len()
     }
-    fn mmap(&self) -> &[u8] {
+    fn mmap(&'e self) -> &'e [u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &FieldMap {
+    fn header_map(&'e self) -> &'e FieldMap {
         &HEADER_MAP
     }
 
@@ -89,20 +76,17 @@ impl Executable for MachO64 {
 // ------------------------------------------------------------------------
 /// Load commands line -> new window listing the load commands
 
-struct CmdLine<'a> {
-
-    exe: Rc<dyn Executable>,
+struct CmdLine<'e> {
+    exe: ExeRef<'e>,
     data: (usize, usize),
-    val_entry: Option<&'a ValEntry>,
-    fields: &'static [FieldDef],
+    val_entry: Option<&'e ValEntry<'e>>,
+    fields: &'e [FieldDef<'e>],
     wc: WindowColors,
-    // range: (usize, usize),
-
 }
 
 const DTL_INDENT: usize = 7;
 
-impl Line for CmdLine<'_> {
+impl<'l> Line<'l> for CmdLine<'l> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
 
@@ -136,17 +120,17 @@ impl Line for CmdLine<'_> {
         None
     }
 
-    fn expand_fn(&self) -> Result<MaybeLineVec> {
+    fn expand_fn(&self) -> Result<MaybeLineVec<'l>> {
 
         let mut rc = None;
 
         if let Some(val_entry) = self.val_entry {
-            if let Some(detail_map) = val_entry.2 {
+            if let Some(detail_map) = &val_entry.2 {
 
                 let cmds = details::to_lines(
-                    self.exe.clone(), 
+                    self.exe, 
                     self.data,
-                    detail_map, 
+                    &detail_map, 
                     self.wc
                 );
                 rc = Some(cmds);
@@ -162,8 +146,8 @@ impl Line for CmdLine<'_> {
 
 // ------------------------------------------------------------------------
 
-fn load_commands_on_enter(
-    exe: Rc<dyn Executable>, 
+fn load_commands_on_enter<'lce>(
+    exe: ExeRef<'lce>, 
 ) -> Result<()> {
 
     let wsc = Colors::global().get_window_set_colors("list")?;
@@ -172,7 +156,7 @@ fn load_commands_on_enter(
     let cmds_len = HEADER[5].to_usize(exe.mmap());
     let mut cmd_offset = HEADER_MAP.data_len;
 
-    let mut lines: Vec<Box<dyn Line>> = Vec::with_capacity(num_cmds); 
+    let mut lines: LineVec<'lce> = Vec::with_capacity(num_cmds); 
     for _ in 0..num_cmds {
 
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset+ CMD_HEADER_MAP.data_len];
@@ -181,7 +165,7 @@ fn load_commands_on_enter(
         lines.push(
             Box::new(
                 CmdLine{
-                    exe: exe.clone(),
+                    exe,
                     data: (cmd_offset, cmd_offset+cmd_len),
                     fields: CMD_HEADER,
                     val_entry: CMD_HEADER[0].lookup(cmd_slice),
@@ -253,8 +237,8 @@ const CMD_HEADER: &[FieldDef] = &[
 
 const CMD_TYPE: &formatter::ValTable = &[
 
-    (0x19, "Segment Load", Some(&SEGMENT_LOAD_MAP64)),
-    (0x0C, "Dynamic Link Library - Full Path", Some(&DLL_FULL_PATH_MAP)),
+    (0x19, "Segment Load", Some(SEGMENT_LOAD_MAP64)),
+    (0x0C, "Dynamic Link Library - Full Path", Some(DLL_FULL_PATH_MAP)),
 
 ];
 

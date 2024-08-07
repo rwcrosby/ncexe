@@ -9,13 +9,13 @@ use super::Coords;
 
 // ------------------------------------------------------------------------
 
-pub type LineVec = Vec<Box<dyn Line>>;
-pub type MaybeLineVec = Option<LineVec>;
+pub type LineVec<'l> = Vec<Box<dyn Line<'l> + 'l>>;
+pub type MaybeLineVec<'l> = Option<LineVec<'l>>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
 
-pub trait Line {
+pub trait Line<'l> {
 
     /// Return a set of attr/string pairs
     /// The total length is guaranteed not to exceed the specified value
@@ -31,7 +31,7 @@ pub trait Line {
     fn expand(&self) -> Option<usize> { None }
 
     /// Function to expand 
-    fn expand_fn(&self) -> Result<MaybeLineVec> { Ok(None) }
+    fn expand_fn(&self) -> Result<MaybeLineVec<'l>> { Ok(None) }
     
 }
 

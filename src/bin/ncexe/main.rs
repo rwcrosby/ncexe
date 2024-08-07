@@ -7,21 +7,22 @@ mod configuration;
 use anyhow::Result;
 use clap::Parser;
 use once_cell::sync::Lazy;
-use std::{
-    path::PathBuf, 
-    rc::Rc, 
-};
+use std::path::PathBuf;
 
 use ncexe::{
     color::{
         self,
         Colors
     },
-    exe_types::{self, ExeType},
+    exe_types::{
+        self, 
+        ExeType, 
+        ExeList},
     screens::{
-        file_header, file_list
+        file_header, 
+        file_list, 
+        terminal::TERMWIN
     },
-    screens::terminal::TERMWIN,
 };
 
 // ------------------------------------------------------------------------
@@ -57,12 +58,12 @@ fn main() -> Result<()> {
     let config = configuration::Configuration::new(&args)?;
 
     // Setup the list of executable objects
-    let executables: Vec<_> = args.exe_filename
+    let executables: ExeList = args.exe_filename
         .iter()
         .map(|fname| 
             match exe_types::new(fname) {
                 Ok(exe) => exe,
-                Err(err) => Rc::new(exe_types::NotExecutable {
+                Err(err) => Box::new(exe_types::NotExecutable {
                     filename: String::from(fname),
                     msg: err.to_string(),
                 })
@@ -87,9 +88,9 @@ fn main() -> Result<()> {
 
     // Display file info
     let rc = if executables.len() == 1 {
-        file_header::show(Rc::clone(&executables[0]))
+        file_header::show(&executables[0])
     } else {
-        file_list::show(executables)
+        file_list::show(&executables)
     };
 
     TERMWIN.term();
