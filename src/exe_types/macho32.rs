@@ -1,22 +1,17 @@
-//! 
+//!
 //! Formatter for the MacOS Mach-O format
 //!
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
 use crate::{
-    windows::line::{
-        Line,
-        PairVec,
-    }, 
     formatter::FieldMap,
+    windows::line::{Line, PairVec},
 };
 
-use super::{
-    ExeItem, ExeType, Executable
-};
+use super::Executable;
 
 // ------------------------------------------------------------------------
 
@@ -26,48 +21,56 @@ pub struct MachO32 {
 }
 
 impl MachO32 {
-
-    pub fn new( 
-        filename : &str,
-        mmap : Mmap,
-    ) -> ExeItem {
-        Box::new(MachO32{
-            filename: String::from(filename), 
-            mmap
-        })
+    pub fn new(filename: &str, mmap: Mmap) -> Self {
+        MachO32 {
+            filename: String::from(filename),
+            mmap,
+        }
     }
-
 }
 
 // ------------------------------------------------------------------------
 
 impl<'l> Line<'l> for MachO32 {
-    
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        Ok(Vec::from([(None, String::from("Mach-O 32 Not Supported Yet"))]))
+        Ok(Vec::from([(
+            None,
+            String::from("Mach-O 32 Not Supported Yet"),
+        )]))
     }
-    
 }
 
 // ------------------------------------------------------------------------
 
 impl<'e> Executable<'e> for MachO32 {
-
-    fn exe_type(&self) -> ExeType {
-        ExeType::MachO32
-    }
-    fn filename(&'e self) -> &'e str {
+    fn filename(&self) -> &str {
         &self.filename
     }
     fn len(&self) -> usize {
         self.mmap.len()
     }
-    fn mmap(&'e self) -> &'e [u8] {
+    fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
     fn header_map(&self) -> &'e FieldMap {
         todo!("Header map not implmeneted for MachO32")
     }
-
 }
 
+impl fmt::Display for MachO32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "Mach-O 32 Bit")
+    }
+}
+
+impl fmt::Debug for MachO32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "Mach-O 32 Bit: {}: {:p}/{}",
+            self.filename,
+            self.mmap.as_ptr(),
+            self.len(),
+        )
+    }
+}

@@ -9,7 +9,6 @@ use crate::{
     exe_types::{
         ExeList, 
         ExeRef, 
-        ExeType, 
         ETYPE_LENGTH
     }, 
     formatter::center_in, 
@@ -119,7 +118,7 @@ impl<'l> Line<'l> for FileLine<'l> {
         let fname = self.exe.filename();
 
         let first_part = format!("{etype:<tl$.tl$} {size:>ml$.ml$} ", 
-            tl=ETYPE_LENGTH, etype=self.exe.exe_type().to_string(),
+            tl=ETYPE_LENGTH, etype=self.exe.to_string(),
             ml=FSIZE_LENGTH, size=self.exe.len());
 
         let line =  &(first_part + if max_fname < FSIZE_LENGTH as isize {
@@ -155,7 +154,7 @@ impl<'l> Line<'l> for FileLine<'l> {
     }
 
     fn new_window(&self) -> bool {
-        self.exe.exe_type() != ExeType::NOPE
+        self.exe.is_empty()
     }
 
     fn new_window_fn<'a>(

@@ -7,16 +7,14 @@ use anyhow::{
     bail,
 };
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
 use crate::formatter::{
     self,
     FieldDef, 
     FieldMap,
 };
-use super::{
-    ExeItem, ExeType, Executable
-};
+use super::Executable;
 
 // ------------------------------------------------------------------------
 
@@ -33,7 +31,7 @@ impl<'elf> ELF<'elf> {
     pub fn new( 
         filename : &str,
         mmap : Mmap,
-    ) -> Result<ExeItem> {
+    ) -> Result<Self> {
 
         let mmap_slice = mmap.deref();
 
@@ -51,12 +49,12 @@ impl<'elf> ELF<'elf> {
             v => bail!("Invalid ELF bit length {:02x}", v)
         };
 
-        Ok(Box::new(ELF{
+        Ok(Self{
             filename: String::from(filename), 
             mmap, 
             // fname_fn: None,
             hdr_map
-        }))
+        })
 
     }
 
@@ -66,9 +64,6 @@ impl<'elf> ELF<'elf> {
 
 impl<'e> Executable<'e> for ELF<'e> {
 
-    fn exe_type(&self) -> ExeType {
-        ExeType::ELF
-    }
     fn filename(&self) -> &str {
         &self.filename
     }
@@ -82,6 +77,24 @@ impl<'e> Executable<'e> for ELF<'e> {
         self.hdr_map
     }
 
+}
+
+impl fmt::Display for ELF<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "ELF")
+    }
+}
+
+impl fmt::Debug for ELF<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "ELF: {}: {:p}/{}",
+            self.filename,
+            self.mmap.as_ptr(),
+            self.len(),
+        )
+    }
 }
 
 // ------------------------------------------------------------------------

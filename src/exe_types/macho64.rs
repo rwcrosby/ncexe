@@ -6,7 +6,7 @@
 
 use anyhow::Result;
 use memmap2::Mmap;
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
 use crate::{
     color::{
@@ -22,7 +22,7 @@ use crate::{
 };
 
 use super::{
-    ExeItem, ExeRef, ExeType, Executable
+    ExeRef, Executable
 };
 
 // ------------------------------------------------------------------------
@@ -39,13 +39,12 @@ impl MachO64 {
     pub fn new( 
         filename: &str,
         mmap: Mmap,
-    ) -> ExeItem {
+    ) -> Self {
 
-        Box::new(
-            MachO64{
+        Self{
                 filename: String::from(filename), 
                 mmap, 
-        })
+        }
 
     }
 
@@ -55,22 +54,37 @@ impl MachO64 {
 
 impl<'e>Executable<'e> for MachO64 {
 
-    fn exe_type(&self) -> super::ExeType {
-        ExeType::MachO64
-    }
-    fn filename(&'e self) -> &'e str {
+    fn filename(&self) -> &str {
         &self.filename
     }
     fn len(&self) -> usize {
         self.mmap.len()
     }
-    fn mmap(&'e self) -> &'e [u8] {
+    fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&'e self) -> &'e FieldMap {
+    fn header_map(&self) -> &'e FieldMap {
         &HEADER_MAP
     }
 
+}
+
+impl fmt::Display for MachO64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "Mach-O 64 Bit")
+    }
+}
+
+impl fmt::Debug for MachO64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "Mach-O 64 Bit: {}: {:p}/{}",
+            self.filename,
+            self.mmap.as_ptr(),
+            self.len(),
+        )
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -130,7 +144,7 @@ impl<'l> Line<'l> for CmdLine<'l> {
                 let cmds = details::to_lines(
                     self.exe, 
                     self.data,
-                    &detail_map, 
+                    detail_map, 
                     self.wc
                 );
                 rc = Some(cmds);

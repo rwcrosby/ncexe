@@ -20,16 +20,15 @@ use crate::{
 
 // ------------------------------------------------------------------------
 
-pub fn show<'s>(
-    exe: ExeRef<'s>
+pub fn show(
+    exe: ExeRef<'_>
 ) -> Result<()> {
 
     let wsc = Colors::global().get_window_set_colors("file_header")?;
 
     // Create header window
 
-    let etype = exe.exe_type();
-    let hdr_fn = move |sc: usize| center_in(sc, &etype.to_string());
+    let hdr_fn = move |sc: usize| center_in(sc, exe.to_string().as_str());
     let mut hdr_win = Header::new(
         &wsc.header, 
         Box::new(hdr_fn)

@@ -16,8 +16,8 @@ use ncexe::{
     },
     exe_types::{
         self, 
-        ExeType, 
-        ExeList},
+        ExeList, 
+    },
     screens::{
         file_header, 
         file_list, 
@@ -60,20 +60,13 @@ fn main() -> Result<()> {
     // Setup the list of executable objects
     let executables: ExeList = args.exe_filename
         .iter()
-        .map(|fname| 
-            match exe_types::new(fname) {
-                Ok(exe) => exe,
-                Err(err) => Box::new(exe_types::NotExecutable {
-                    filename: String::from(fname),
-                    msg: err.to_string(),
-                })
-            }
-        )
-        .filter(|exe| config.show_notexe || exe.exe_type() != ExeType::NOPE)
+        .map(|fname|  exe_types::new_exe(fname) )
+        .filter(|exe| config.show_notexe || !exe.is_empty())
         .collect();
 
+
     if executables.is_empty() || 
-        (executables.len() == 1 && executables[0].exe_type() == ExeType::NOPE) {
+        (executables.len() == 1 && executables[0].is_empty()) {
         panic!("No executable files of interest found");
     }
 
@@ -88,9 +81,13 @@ fn main() -> Result<()> {
 
     // Display file info
     let rc = if executables.len() == 1 {
+        // let q: ExeRef = executables[0].as_ref();
+        // file_header::show(q)
         file_header::show(&executables[0])
+        // Ok(())
     } else {
         file_list::show(&executables)
+        // Ok(())
     };
 
     TERMWIN.term();
