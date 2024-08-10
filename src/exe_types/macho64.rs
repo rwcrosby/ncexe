@@ -63,7 +63,7 @@ impl Executable for MachO64 {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map<'e >(&'e self) -> &'e FieldMap {
+    fn header_map(&self) -> &FieldMap {
         &HEADER_MAP
     }
 

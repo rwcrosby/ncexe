@@ -27,7 +27,7 @@ impl MyTrait for MyStruct<'_> {
     }
 }
 
-fn receiver<'t>(my_trait: &'t dyn MyTrait) {
+fn receiver(my_trait: &dyn MyTrait) {
     my_trait.some_fn();
 }
 

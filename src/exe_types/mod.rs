@@ -8,10 +8,7 @@ pub mod macho64;
 pub mod notexe;
 
 use memmap2::Mmap;
-use std::{
-    fmt, 
-    fs::File,
-};
+use std::{fmt, fs::File};
 
 use crate::formatter::FieldMap;
 
@@ -24,14 +21,13 @@ use notexe::NotExecutable;
 /// Trait to be implemented by the various executable handlers
 
 pub trait Executable: fmt::Display + fmt::Debug {
-
     fn filename(&self) -> &str;
     fn len(&self) -> usize;
-    // fn is_empty(&self) -> bool;
-    fn is_empty(&self) -> bool {self.len() == 0 }
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn mmap(&self) -> &[u8];
-    fn header_map<'e>(&'e self) -> &'e FieldMap;
-
+    fn header_map(&self) -> &FieldMap;
 }
 
 // Convenience types for the executable trait
@@ -43,36 +39,22 @@ pub type ExeList<'e> = Vec<ExeItem<'e>>;
 // ------------------------------------------------------------------------
 // Constructor for an executable object
 
-pub fn new_exe(
-    filename: &str
-) -> ExeItem<'_> {
-
+pub fn new_exe(filename: &str) -> ExeItem<'_> {
     let fd = match File::open(filename) {
         Ok(f) => f,
-        Err(msg) => 
-        return Box::new(NotExecutable::new(
-            filename,
-            msg.to_string(),
-            ))
+        Err(msg) => return Box::new(NotExecutable::new(filename, msg.to_string())),
     };
 
     let mmap = match unsafe { Mmap::map(&fd) } {
         Ok(mmap) => mmap,
-        Err(m) => 
-            return Box::new(NotExecutable::new(
-                filename,
-                m.to_string(),
-                ))
+        Err(m) => return Box::new(NotExecutable::new(filename, m.to_string())),
     };
 
     if mmap.len() < 4 {
-
         return Box::new(NotExecutable::new(
             filename,
             format!("Too small: {}", mmap.len()),
-            ))
-        ;
-
+        ));
     };
 
     let raw_type = unsafe { *(mmap.as_ptr() as *const u32) };
@@ -82,15 +64,15 @@ pub fn new_exe(
         0xfeedfacf => Box::new(MachO64::new(filename, mmap)),
         0x7f454c46 | 0x464c457f => match ELF::new(filename, mmap) {
             Ok(elf) => Box::new(elf),
-            Err(msg)=> Box::new(NotExecutable::new(filename, msg.to_string()))
+            Err(msg) => Box::new(NotExecutable::new(filename, msg.to_string())),
         },
         // 0xcafebabe => ExeType::UNIVBIN,
         // 0xbebafeca => ExeType::UNIVBIN,
-        v => Box::new(NotExecutable::new(filename, 
-            format!("Invalid magic number: {:x}", v))),
-
+        v => Box::new(NotExecutable::new(
+            filename,
+            format!("Invalid magic number: {:x}", v),
+        )),
     }
-
 }
 
 // ------------------------------------------------------------------------

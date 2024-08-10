@@ -40,7 +40,7 @@ impl Executable for NotExecutable {
     fn mmap(&self) -> &[u8] {
         panic!("Mmap called on non-executable")
     }
-    fn header_map<'e>(&'e self) -> &'e FieldMap {
+    fn header_map(&self) -> &FieldMap {
         panic!("Header map called on non-executable")
     }
 }

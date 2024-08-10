@@ -73,7 +73,7 @@ impl Executable for ELF<'_> {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map<'e >(&'e self) -> &'e FieldMap {
+    fn header_map(&self) -> &FieldMap {
         self.hdr_map
     }
 

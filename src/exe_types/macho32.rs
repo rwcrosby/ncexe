@@ -52,7 +52,7 @@ impl Executable for MachO32 {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map<'e>(&'e self) -> &'e FieldMap {
+    fn header_map(&self) -> &FieldMap {
         todo!("Header map not implmeneted for MachO32")
     }
 }
