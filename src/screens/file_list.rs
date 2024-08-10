@@ -7,9 +7,7 @@ use anyhow::Result;
 use crate::{
     color::Colors, 
     exe_types::{
-        ExeList, 
-        ExeRef, 
-        ETYPE_LENGTH
+        ExeList, Executable, ETYPE_LENGTH
     }, 
     formatter::center_in, 
     screens, 
@@ -29,6 +27,7 @@ use super::file_header;
 // ------------------------------------------------------------------------
 
 pub fn show<'s>(
+    // executables: &'s ExeList<'s>, 
     executables: &'s ExeList<'s>, 
 ) -> Result<()> {
 
@@ -38,10 +37,10 @@ pub fn show<'s>(
     
     let num_exe = executables.len();
     
-    let (_sfn, _lfn) = executables
-        .iter()
-        .fold((usize::MAX,0 ), | m, e | (std::cmp::min(m.0, e.filename().len()),
-                                         std::cmp::max(m.1, e.filename().len())));
+    // let (_sfn, _lfn) = executables
+    //     .iter()
+    //     .fold((usize::MAX,0 ), | m, e | (std::cmp::min(m.0, e.filename().len()),
+    //                                      std::cmp::max(m.1, e.filename().len())));
 
     // Create header window
 
@@ -66,8 +65,8 @@ pub fn show<'s>(
         .map(| exe | -> Box<dyn Line<'s> + 's> {
             total_len += exe.len();
             Box::new(FileLine{
-                // exe: exe.as_ref(),
-                exe: (*exe).as_ref(),
+                exe: exe.as_ref(),
+                // exe: (*exe).as_ref(),
         })})
         .collect();
 
@@ -106,8 +105,8 @@ pub fn show<'s>(
 // ------------------------------------------------------------------------
 /// Line in the file list
 
-struct FileLine<'e> {
-    exe: ExeRef<'e>,
+struct FileLine<'fl> {
+    exe: &'fl dyn Executable,
 }
 
 impl<'l> Line<'l> for FileLine<'l> {
@@ -115,7 +114,8 @@ impl<'l> Line<'l> for FileLine<'l> {
     fn as_pairs(&self, width: usize) -> Result<PairVec> {
 
         let max_fname = width as isize - (ETYPE_LENGTH + FSIZE_LENGTH + 2) as isize;
-        let fname = self.exe.filename();
+        let fname = "";
+        // let fname = self.exe.filename();
 
         let first_part = format!("{etype:<tl$.tl$} {size:>ml$.ml$} ", 
             tl=ETYPE_LENGTH, etype=self.exe.to_string(),

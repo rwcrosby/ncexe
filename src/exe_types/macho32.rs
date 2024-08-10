@@ -42,7 +42,7 @@ impl<'l> Line<'l> for MachO32 {
 
 // ------------------------------------------------------------------------
 
-impl<'e> Executable<'e> for MachO32 {
+impl Executable for MachO32 {
     fn filename(&self) -> &str {
         &self.filename
     }
@@ -52,7 +52,7 @@ impl<'e> Executable<'e> for MachO32 {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &'e FieldMap {
+    fn header_map<'e>(&'e self) -> &'e FieldMap {
         todo!("Header map not implmeneted for MachO32")
     }
 }

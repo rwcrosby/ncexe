@@ -23,20 +23,21 @@ use notexe::NotExecutable;
 // ------------------------------------------------------------------------
 /// Trait to be implemented by the various executable handlers
 
-pub trait Executable<'e>: fmt::Display + fmt::Debug {
+pub trait Executable: fmt::Display + fmt::Debug {
 
     fn filename(&self) -> &str;
     fn len(&self) -> usize;
+    // fn is_empty(&self) -> bool;
     fn is_empty(&self) -> bool {self.len() == 0 }
     fn mmap(&self) -> &[u8];
-    fn header_map(&'e self) -> &'e FieldMap;
+    fn header_map<'e>(&'e self) -> &'e FieldMap;
 
 }
 
 // Convenience types for the executable trait
 
-pub type ExeItem<'e> = Box<dyn Executable<'e> + 'e>;
-pub type ExeRef<'e> = &'e dyn Executable<'e>;
+pub type ExeItem<'e> = Box<dyn Executable + 'e>;
+pub type ExeRef<'e> = &'e dyn Executable;
 pub type ExeList<'e> = Vec<ExeItem<'e>>;
 
 // ------------------------------------------------------------------------

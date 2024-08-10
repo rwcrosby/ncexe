@@ -7,21 +7,19 @@ use anyhow::Result;
 
 use crate::{
     color::Colors, 
-    exe_types::ExeRef,
+    exe_types::Executable,
     formatter::center_in, 
     screens,
     windows::{
-        details, 
-        footer::Footer, 
-        header::Header, 
-        scrollable_region::ScrollableRegion,
+        // details, footer::Footer, header::Header, line::LineVec, scrollable_region::ScrollableRegion
+        footer::Footer, header::Header, line::LineVec, scrollable_region::ScrollableRegion
     },
 };
 
 // ------------------------------------------------------------------------
 
 pub fn show(
-    exe: ExeRef<'_>
+    exe: &dyn Executable
 ) -> Result<()> {
 
     let wsc = Colors::global().get_window_set_colors("file_header")?;
@@ -36,12 +34,13 @@ pub fn show(
 
     // Create the scrollable window
 
-    let lines = details::to_lines(
-        exe, 
-        (0, exe.mmap().len()),
-        exe.header_map(), 
-        wsc.scrollable_region
-    );
+    let lines: LineVec = vec![];
+    // let lines = details::to_lines(
+    //     exe, 
+    //     (0, exe.mmap().len()),
+    //     exe.header_map(), 
+    //     wsc.scrollable_region
+    // );
 
     let mut scr_win = ScrollableRegion::new(
         &wsc.scrollable_region, 
@@ -51,7 +50,8 @@ pub fn show(
     // Create the footer window
 
     let footer_fn = |sc: usize| 
-        center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
+        center_in(sc, &format!("{} bytes", exe.len()));
+        // center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
 
     let mut ftr_win = Footer::new(
         &wsc.footer, 

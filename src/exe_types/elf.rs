@@ -62,7 +62,7 @@ impl<'elf> ELF<'elf> {
 
 // ------------------------------------------------------------------------
 
-impl<'e> Executable<'e> for ELF<'e> {
+impl Executable for ELF<'_> {
 
     fn filename(&self) -> &str {
         &self.filename
@@ -73,7 +73,7 @@ impl<'e> Executable<'e> for ELF<'e> {
     fn mmap(&self) -> &[u8] {
         self.mmap.deref()
     }
-    fn header_map(&self) -> &'e FieldMap {
+    fn header_map<'e >(&'e self) -> &'e FieldMap {
         self.hdr_map
     }
 

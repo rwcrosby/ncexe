@@ -19,9 +19,9 @@ use ncexe::{
         ExeList, 
     },
     screens::{
-        file_header, 
-        file_list, 
-        terminal::TERMWIN
+        // file_header, 
+        // file_list, 
+        file_header, file_list, terminal::TERMWIN
     },
 };
 
@@ -64,7 +64,6 @@ fn main() -> Result<()> {
         .filter(|exe| config.show_notexe || !exe.is_empty())
         .collect();
 
-
     if executables.is_empty() || 
         (executables.len() == 1 && executables[0].is_empty()) {
         panic!("No executable files of interest found");
@@ -83,7 +82,7 @@ fn main() -> Result<()> {
     let rc = if executables.len() == 1 {
         // let q: ExeRef = executables[0].as_ref();
         // file_header::show(q)
-        file_header::show(&executables[0])
+        file_header::show(executables[0].as_ref())
         // Ok(())
     } else {
         file_list::show(&executables)

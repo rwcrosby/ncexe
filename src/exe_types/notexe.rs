@@ -28,17 +28,19 @@ impl NotExecutable {
 /// Basic trait implementation for a non-executable file
 ///
 
-impl<'e> Executable<'e> for NotExecutable {
+impl Executable for NotExecutable {
     fn filename(&self) -> &str {
         &self.filename
     }
     fn len(&self) -> usize {
         0
     }
+    fn is_empty(&self) -> bool {self.len() == 0 }
+
     fn mmap(&self) -> &[u8] {
         panic!("Mmap called on non-executable")
     }
-    fn header_map(&self) -> &'e FieldMap {
+    fn header_map<'e>(&'e self) -> &'e FieldMap {
         panic!("Header map called on non-executable")
     }
 }

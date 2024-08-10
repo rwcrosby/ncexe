@@ -34,7 +34,7 @@ pub fn to_lines<'l>(
         .map(|map_field| -> Box<dyn Line<'l>> {
             Box::new(DetailLine{
                 exe,
-                data,
+                _data: data,
                 field_def: map_field,
                 wc,
                 max_text_len: map.max_text_len,
@@ -47,7 +47,7 @@ pub fn to_lines<'l>(
 
 struct DetailLine<'dl> {
     exe: ExeRef<'dl>, 
-    data: (usize, usize),
+    _data: (usize, usize),
     field_def: &'dl FieldDef<'dl>,
     wc: WindowColors,
     max_text_len: usize,
@@ -57,7 +57,8 @@ impl<'l> Line<'l> for DetailLine<'l> {
 
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
         let fld = self.field_def;
-        let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
+        let data_slice = &[];
+        // let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
             (

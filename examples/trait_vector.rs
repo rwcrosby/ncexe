@@ -7,7 +7,7 @@ struct MyStruct<'s> {
     
 impl<'ms> MyStruct<'ms> {
     
-    fn new(s: &'ms str) -> Box<dyn MyTrait<'ms> + 'ms> {
+    fn new(s: &'ms str) -> Box<dyn MyTrait + 'ms> {
         Box::new(Self{s: s.to_string() + " as string",
             ss: s
         })
@@ -15,23 +15,23 @@ impl<'ms> MyStruct<'ms> {
     
 }
 
-trait MyTrait<'t>: {
+trait MyTrait: {
     fn some_fn(&self) {
         println!("In SomeFn")
     }
 }
 
-impl MyTrait<'_> for MyStruct<'_> {
+impl MyTrait for MyStruct<'_> {
     fn some_fn(&self) {
         println!("In SomeFn for MyStuct s:{}, ss:{}", self.s, self.ss)
     }
 }
 
-fn receiver<'t>(my_trait: &dyn MyTrait<'t>) {
+fn receiver<'t>(my_trait: &'t dyn MyTrait) {
     my_trait.some_fn();
 }
 
-type MyTraitRef<'t> = dyn MyTrait<'t>;
+// type MyTraitRef<'t> = dyn MyTrait;
 
 fn main() {
     
