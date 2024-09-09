@@ -6,13 +6,13 @@ use anyhow::Result;
 
 use crate::{
     color::Colors,
-    exe_types::{ExeList, ExeRef, ETYPE_LENGTH},
+    exe_types::{ExeVec, ExeRef, ETYPE_LENGTH},
     formatter::center_in,
     screens,
     windows::{
         footer::Footer,
         header::Header,
-        line::{Line, LineVec, PairVec},
+        line::{Line, LineItem, LineVec, PairVec},
         scrollable_region::ScrollableRegion,
         FSIZE_LENGTH,
     },
@@ -22,7 +22,7 @@ use super::file_header;
 
 // ------------------------------------------------------------------------
 
-pub fn show<'s>(executables: &'s ExeList<'s>) -> Result<()> {
+pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
     let wsc = Colors::global().get_window_set_colors("file_list")?;
 
     let num_exe = executables.len();
@@ -47,7 +47,7 @@ pub fn show<'s>(executables: &'s ExeList<'s>) -> Result<()> {
     let mut total_len = 0;
     let lines: LineVec<'s> = executables
         .iter()
-        .map(|exe| -> Box<dyn Line<'s> + 's> {
+        .map(|exe| -> LineItem<'s> {
             total_len += exe.len();
             Box::new(FileLine {
                 exe: exe.as_ref(),

@@ -9,7 +9,10 @@ use super::Coords;
 
 // ------------------------------------------------------------------------
 
-pub type LineVec<'l> = Vec<Box<dyn Line<'l> + 'l>>;
+pub type LineItem<'l> = Box<dyn Line<'l> + 'l>;
+pub type LineRef<'l> = &'l dyn Line<'l>;
+pub type LineVec<'l> = Vec<LineItem<'l>>;
+
 pub type MaybeLineVec<'l> = Option<LineVec<'l>>;
 
 // ------------------------------------------------------------------------

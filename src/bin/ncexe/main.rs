@@ -10,18 +10,12 @@ use once_cell::sync::Lazy;
 use std::path::PathBuf;
 
 use ncexe::{
-    color::{
-        self,
-        Colors
-    },
-    exe_types::{
-        self, 
-        ExeList, 
-    },
+    color::{self, Colors},
+    exe_types::{self, ExeVec},
     screens::{
-        // file_header, 
-        // file_list, 
-        file_header, file_list, terminal::TERMWIN
+        file_header,
+        file_list,
+        terminal::TERMWIN,
     },
 };
 
@@ -30,7 +24,6 @@ use ncexe::{
 
 #[derive(Parser, Default, Debug)]
 pub struct Arguments {
-
     /// Name of the executable file(s)
     #[arg(required = true)]
     exe_filename: Vec<String>,
@@ -43,29 +36,27 @@ pub struct Arguments {
     #[arg(short, long, action)]
     show_notexe: bool,
 
-    /// Theme to use 
-    #[arg(short, long, default_value="dark")]
+    /// Theme to use
+    #[arg(short, long, default_value = "dark")]
     theme: String,
-    
 }
 
 // ------------------------------------------------------------------------
 
 fn main() -> Result<()> {
-
     // Build the configuration
     let args: Arguments = Arguments::parse();
     let config = configuration::Configuration::new(&args)?;
 
     // Setup the list of executable objects
-    let executables: ExeList = args.exe_filename
+    let executables: ExeVec = args
+        .exe_filename
         .iter()
-        .map(|fname|  exe_types::new_exe(fname) )
+        .map(|fname| exe_types::new_exe(fname))
         .filter(|exe| config.show_notexe || !exe.is_empty())
         .collect();
 
-    if executables.is_empty() || 
-        (executables.len() == 1 && executables[0].is_empty()) {
+    if executables.is_empty() || (executables.len() == 1 && executables[0].is_empty()) {
         panic!("No executable files of interest found");
     }
 
@@ -80,17 +71,12 @@ fn main() -> Result<()> {
 
     // Display file info
     let rc = if executables.len() == 1 {
-        // let q: ExeRef = executables[0].as_ref();
-        // file_header::show(q)
         file_header::show(executables[0].as_ref())
-        // Ok(())
     } else {
         file_list::show(&executables)
-        // Ok(())
     };
 
     TERMWIN.term();
 
     rc
-
 }

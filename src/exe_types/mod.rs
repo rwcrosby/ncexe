@@ -23,9 +23,7 @@ use notexe::NotExecutable;
 pub trait Executable: fmt::Display + fmt::Debug {
     fn filename(&self) -> &str;
     fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    fn is_empty(&self) -> bool {self.len() == 0 }
     fn mmap(&self) -> &[u8];
     fn header_map(&self) -> &FieldMap;
 }
@@ -34,7 +32,7 @@ pub trait Executable: fmt::Display + fmt::Debug {
 
 pub type ExeItem<'e> = Box<dyn Executable + 'e>;
 pub type ExeRef<'e> = &'e dyn Executable;
-pub type ExeList<'e> = Vec<ExeItem<'e>>;
+pub type ExeVec<'e> = Vec<ExeItem<'e>>;
 
 // ------------------------------------------------------------------------
 // Constructor for an executable object

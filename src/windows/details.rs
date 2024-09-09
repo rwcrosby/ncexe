@@ -10,7 +10,7 @@ use crate::{
     formatter::{FieldDef, FieldMap},
 };
 
-use super::line::{Line, LineVec, PairVec};
+use super::line::{Line, LineItem, LineVec, PairVec};
 
 // ------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ pub fn to_lines<'l>(
     map.fields
         .iter()
         .filter(|f| f.string_fn.is_some() || f.string_fn2.is_some())
-        .map(|map_field| -> Box<dyn Line<'l>> {
+        .map(|map_field| -> LineItem<'l> {
             Box::new(DetailLine {
                 exe,
                 data,
