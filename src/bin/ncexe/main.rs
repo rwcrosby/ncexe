@@ -60,6 +60,12 @@ fn main() -> Result<()> {
         panic!("No executable files of interest found");
     }
 
+    let cv = make_closures(&executables);
+    for c in cv {
+        println!("{}", c())
+    };
+
+
     // Setup principal objects, colors must follow screen
     // Force screen lazy initialization
     Lazy::force(&TERMWIN);
@@ -79,4 +85,19 @@ fn main() -> Result<()> {
     TERMWIN.term();
 
     rc
+}
+
+fn make_closures<'c>(ev: &'c ExeVec) -> Vec<Box<dyn Fn() -> usize + 'c>> {
+
+    ev
+        .iter()
+        .map(| e | {
+
+            Box::new(| | {
+                e.len()
+            })  as Box<dyn Fn() -> usize>
+    
+        })
+        .collect()
+
 }
