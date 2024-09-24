@@ -49,10 +49,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
         .iter()
         .map(|exe| -> LineItem<'s> {
             total_len += exe.len();
-            Box::new(FileLine {
-                exe: exe.as_ref(),
-                // exe: (*exe).as_ref(),
-            })
+            Box::new(FileLine { exe: exe.as_ref() })
         })
         .collect();
 
@@ -85,6 +82,7 @@ impl<'l> Line<'l> for FileLine<'l> {
         let max_fname = width as isize - (ETYPE_LENGTH + FSIZE_LENGTH + 2) as isize;
         let fname = self.exe.filename();
 
+        // Start with the exexcutable type
         let first_part = format!(
             "{etype:<tl$.tl$} {size:>ml$.ml$} ",
             tl = ETYPE_LENGTH,
@@ -93,6 +91,7 @@ impl<'l> Line<'l> for FileLine<'l> {
             size = self.exe.len()
         );
 
+        // Add the file name
         let line = &(first_part
             + if max_fname < FSIZE_LENGTH as isize {
                 &fname[(fname.len() - width)..]
@@ -106,6 +105,7 @@ impl<'l> Line<'l> for FileLine<'l> {
                 }
             });
 
+        // Truncate line if needed
         let line = if width < line.len() {
             &line[..width]
         } else {
@@ -122,4 +122,13 @@ impl<'l> Line<'l> for FileLine<'l> {
     fn new_window_fn(&self) -> Result<()> {
         file_header::show(self.exe)
     }
+
+    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
+        Some(
+            Box::new( | | {
+                file_header::show(self.exe)
+            })
+        )
+    }
+
 }

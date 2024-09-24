@@ -36,6 +36,9 @@ pub trait Line<'l> {
     /// Function to expand 
     fn expand_fn(&self) -> Result<MaybeLineVec<'l>> { Ok(None) }
     
+    // Function to call when enter is hit on the line
+    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> { None }
+
 }
 
 // ------------------------------------------------------------------------

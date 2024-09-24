@@ -37,7 +37,7 @@ pub type ExeVec<'e> = Vec<ExeItem<'e>>;
 // ------------------------------------------------------------------------
 // Constructor for an executable object
 
-pub fn new_exe(filename: &str) -> ExeItem<'_> {
+pub fn new(filename: &str) -> ExeItem<'_> {
     let fd = match File::open(filename) {
         Ok(f) => f,
         Err(msg) => return Box::new(NotExecutable::new(filename, msg.to_string())),

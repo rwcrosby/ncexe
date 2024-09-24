@@ -52,7 +52,7 @@ fn main() -> Result<()> {
     let executables: ExeVec = args
         .exe_filename
         .iter()
-        .map(|fname| exe_types::new_exe(fname))
+        .map(|fname| exe_types::new(fname))
         .filter(|exe| config.show_notexe || !exe.is_empty())
         .collect();
 

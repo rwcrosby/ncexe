@@ -23,11 +23,11 @@ pub fn to_lines<'l>(
     map.fields
         .iter()
         .filter(|f| f.string_fn.is_some() || f.string_fn2.is_some())
-        .map(|map_field| -> LineItem<'l> {
+        .map(|field_def| -> LineItem<'l> {
             Box::new(DetailLine {
                 exe,
                 data,
-                field_def: map_field,
+                field_def,
                 wc,
                 max_text_len: map.max_text_len,
             })
@@ -47,14 +47,13 @@ struct DetailLine<'dl> {
 
 impl<'l> Line<'l> for DetailLine<'l> {
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
-        let fld = self.field_def;
-        // let data_slice = &[];
         let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
             (
                 Some(self.wc.text),
-                format!("{fld:l$.l$} :", l = self.max_text_len, fld = fld.name,),
+                format!("{fld:l$.l$} :", 
+                    l = self.max_text_len, fld = self.field_def.name,),
             ),
             (
                 Some(self.wc.value),
@@ -62,7 +61,7 @@ impl<'l> Line<'l> for DetailLine<'l> {
             ),
         ]);
 
-        if let Some(desc) = fld.lookup(data_slice) {
+        if let Some(desc) = self.field_def.lookup(data_slice) {
             pairs.push((Some(self.wc.value), format!(" ({})", desc.1)));
         };
 
