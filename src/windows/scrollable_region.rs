@@ -64,7 +64,7 @@ fn make_scrollable_lines (
         .into_iter()
         .map(| line | {
 
-            let enter = if line.new_window() {
+            let enter = if line.new_window() || (line.enter_fn().is_some()) {
                 EnterType::NewWindow
             } else if let Some(indent) = line.expand() {
                 EnterType::Expandable((0, indent))

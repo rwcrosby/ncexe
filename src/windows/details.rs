@@ -52,8 +52,11 @@ impl<'l> Line<'l> for DetailLine<'l> {
         let mut pairs = Vec::from([
             (
                 Some(self.wc.text),
-                format!("{fld:l$.l$} :", 
-                    l = self.max_text_len, fld = self.field_def.name,),
+                format!(
+                    "{fld:l$.l$} :",
+                    l = self.max_text_len,
+                    fld = self.field_def.name,
+                ),
             ),
             (
                 Some(self.wc.value),
@@ -68,15 +71,10 @@ impl<'l> Line<'l> for DetailLine<'l> {
         Ok(pairs)
     }
 
-    fn new_window(&self) -> bool {
-        self.field_def.enter_fn.is_some()
-    }
-
-    fn new_window_fn(&self) -> Result<()> {
-        if let Some(efn) = self.field_def.enter_fn {
-            efn(self.exe)
-        } else {
-            Ok(())
+    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
+        match self.field_def.enter_fn {
+            Some(_) => Some(Box::new(|| self.field_def.enter_fn.unwrap()(self.exe))),
+            None => None,
         }
     }
 }

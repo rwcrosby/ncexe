@@ -115,14 +115,6 @@ impl<'l> Line<'l> for FileLine<'l> {
         Ok(Vec::from([(None, line.into())]))
     }
 
-    fn new_window(&self) -> bool {
-        !self.exe.is_empty()
-    }
-
-    fn new_window_fn(&self) -> Result<()> {
-        file_header::show(self.exe)
-    }
-
     fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
         Some(
             Box::new( | | {
