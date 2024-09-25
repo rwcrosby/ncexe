@@ -10,7 +10,7 @@ use crate::{
     formatter::{FieldDef, FieldMap},
 };
 
-use super::line::{Line, LineItem, LineVec, PairVec};
+use super::line::{EnterFn, Line, LineItem, LineVec, PairVec};
 
 // ------------------------------------------------------------------------
 
@@ -71,9 +71,9 @@ impl<'l> Line<'l> for DetailLine<'l> {
         Ok(pairs)
     }
 
-    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
+    fn enter_fn(&self) -> Option<EnterFn<'l>> {
         match self.field_def.enter_fn {
-            Some(_) => Some(Box::new(|| self.field_def.enter_fn.unwrap()(self.exe))),
+            Some(_) => Some(Box::new(|_sr| self.field_def.enter_fn.unwrap()(self.exe))),
             None => None,
         }
     }

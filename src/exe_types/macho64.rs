@@ -120,13 +120,27 @@ impl<'l> Line<'l> for CmdLine<'l> {
 
         if let Some(val_entry) = self.val_entry {
             if let Some(detail_map) = &val_entry.2 {
-                let cmds = details::to_lines(self.exe, self.data, detail_map, self.wc);
-                rc = Some(cmds);
+                rc = Some(
+                    details::to_lines(self.exe, self.data, detail_map, self.wc)
+                );
             }
         }
 
         Ok(rc)
     }
+/* 
+    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
+        
+        if let Some(val_entry) = self.val_entry {
+            if let Some(_detail_map) = &val_entry.2 {
+                return None
+            }
+        }
+
+        None
+
+    } 
+    */
 }
 
 // ------------------------------------------------------------------------

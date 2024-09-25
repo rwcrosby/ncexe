@@ -6,13 +6,13 @@ use anyhow::Result;
 
 use crate::{
     color::Colors,
-    exe_types::{ExeVec, ExeRef, ETYPE_LENGTH},
+    exe_types::{ExeRef, ExeVec, ETYPE_LENGTH},
     formatter::center_in,
     screens,
     windows::{
         footer::Footer,
         header::Header,
-        line::{Line, LineItem, LineVec, PairVec},
+        line::{EnterFn, Line, LineItem, LineVec, PairVec},
         scrollable_region::ScrollableRegion,
         FSIZE_LENGTH,
     },
@@ -115,12 +115,7 @@ impl<'l> Line<'l> for FileLine<'l> {
         Ok(Vec::from([(None, line.into())]))
     }
 
-    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
-        Some(
-            Box::new( | | {
-                file_header::show(self.exe)
-            })
-        )
+    fn enter_fn(&self) -> Option<EnterFn<'l>> {
+        Some(Box::new(|_sr| file_header::show(self.exe)))
     }
-
 }

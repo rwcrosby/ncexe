@@ -5,7 +5,7 @@
 use anyhow::Result;
 use pancurses::chtype;
 
-use super::Coords;
+use super::{scrollable_region::ScrollableRegion, Coords};
 
 // ------------------------------------------------------------------------
 
@@ -14,6 +14,8 @@ pub type LineRef<'l> = &'l dyn Line<'l>;
 pub type LineVec<'l> = Vec<LineItem<'l>>;
 
 pub type MaybeLineVec<'l> = Option<LineVec<'l>>;
+
+pub type EnterFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> Result<()> + 'l>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
@@ -37,7 +39,7 @@ pub trait Line<'l> {
     fn expand_fn(&self) -> Result<MaybeLineVec<'l>> { Ok(None) }
     
     // Function to call when enter is hit on the line
-    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> { None }
+    fn enter_fn(&self) -> Option<EnterFn<'l>> { None }
 
 }
 

@@ -322,7 +322,7 @@ impl<'sr> ScrollableRegion<'sr> {
         let line = &mut self.lines[idx];
 
         if let Some(efn) = line.line.enter_fn() {
-            return efn();
+            return efn(self);
         }
 
         match line.enter {
