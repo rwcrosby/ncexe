@@ -26,12 +26,6 @@ pub trait Line<'l> {
     /// The total length is guaranteed not to exceed the specified value
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
-    /// Open a new window?
-    fn new_window(&self) -> bool { false }
-
-    /// Function to open a full new window
-    fn new_window_fn(&self) -> Result<()> { Ok(()) }
-
     /// Expand in-line?? Return the indention amount
     fn expand(&self) -> Option<usize> { None }
 

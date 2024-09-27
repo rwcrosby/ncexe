@@ -24,7 +24,6 @@ type ScrollableRegionLines<'srl> = Vec<ScrollableRegionLine<'srl>>;
 
 #[derive(Debug)]
 enum EnterType {
-    NewWindow,
     /// Tuple is number of expanded lines, amount to indent
     Expandable((usize, usize)),
     None,
@@ -64,9 +63,7 @@ fn make_scrollable_lines (
         .into_iter()
         .map(| line | {
 
-            let enter = if line.new_window() || (line.enter_fn().is_some()) {
-                EnterType::NewWindow
-            } else if let Some(indent) = line.expand() {
+            let enter = if let Some(indent) = line.expand() {
                 EnterType::Expandable((0, indent))
             } else {
                 EnterType::None
@@ -327,10 +324,6 @@ impl<'sr> ScrollableRegion<'sr> {
 
         match line.enter {
 
-            EnterType::NewWindow =>
-                
-                self.lines[idx].line.new_window_fn()?,
-
             EnterType::Expandable((num_lines, indent)) => 
                 
                 if num_lines > 0 {
@@ -437,19 +430,24 @@ impl<'sr> ScrollableRegion<'sr> {
             .enumerate()
         {
 
-            match line.enter {
-                EnterType::Expandable((num_lines, _)) => 
-                    self.pwin.mvaddch(y as i32, 0, 
-                        if num_lines > 0 {
-                            '-'
-                        } else {
-                            '+'
-                        }),
-                EnterType::NewWindow => 
-                    self.pwin.mvaddch(y as i32, 0, '='),
-                EnterType::None => 
-                    self.pwin.mvaddch(y as i32, 0, ' '),
-            };
+            if let Some(_) = line.line.enter_fn() {
+                self.pwin.mvaddch(y as i32, 0, '=');
+            } else {
+    
+
+                match line.enter {
+                    EnterType::Expandable((num_lines, _)) => 
+                        self.pwin.mvaddch(y as i32, 0, 
+                            if num_lines > 0 {
+                                '-'
+                            } else {
+                                '+'
+                            }),
+                    EnterType::None => 
+                        self.pwin.mvaddch(y as i32, 0, ' '),
+                };
+
+            }
 
             line.line
                 .as_pairs(self.size.x - line.indent - 1)?
