@@ -14,8 +14,22 @@
 	// 	}
 	// ]
 
+	// "mounts": [
+	// 	{
+	// 		"source": "/home/rcrosby",
+	// 		"target": "/host",
+	// 		"type": "bind"
+	// 	}
+	// ]
+
+
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
+	"features": {
+    	"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+        	"packages": "tmux,duf,bat,ncdu,mc"
+    }
+}
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -28,4 +42,7 @@
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
+
+	"runArgs": ["--userns=keep-id"],
+	"containerUser": "vscode"
 }
