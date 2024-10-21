@@ -430,7 +430,7 @@ impl<'sr> ScrollableRegion<'sr> {
             .enumerate()
         {
 
-            if let Some(_) = line.line.enter_fn() {
+            if line.line.enter_fn().is_some() {
                 self.pwin.mvaddch(y as i32, 0, '=');
             } else {
     
