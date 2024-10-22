@@ -28,8 +28,8 @@
 	"features": {
     	"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
         	"packages": "tmux,duf,bat,ncdu,mc"
-    }
-}
+    	}
+	}
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
