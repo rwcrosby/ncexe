@@ -2,7 +2,9 @@
 //! Show the file list window
 //!
 
-use anyhow::Result;
+use std::cell::RefCell;
+
+use anyhow::{Ok, Result};
 
 use crate::{
     color::Colors,
@@ -53,7 +55,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
         })
         .collect();
 
-    let mut scr_win = ScrollableRegion::new(&wsc.scrollable_region, lines);
+    let scr_win = RefCell::new(ScrollableRegion::new(&wsc.scrollable_region, lines));
 
     // Create the footer window
 
@@ -67,7 +69,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
     // Create and show the set of windows
 
-    screens::show(&mut hdr_win, &mut scr_win, &mut ftr_win)
+    screens::show(&mut hdr_win, scr_win, &mut ftr_win)
 }
 
 // ------------------------------------------------------------------------
@@ -118,4 +120,5 @@ impl<'l> Line<'l> for FileLine<'l> {
     fn enter_fn(&self) -> Option<EnterFn<'l>> {
         Some(Box::new(|_sr| file_header::show(self.exe)))
     }
+
 }

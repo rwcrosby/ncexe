@@ -2,6 +2,8 @@
 //! An expandable list window
 //! 
 
+use std::cell::RefCell;
+
 use anyhow::Result;
 
 use crate::{
@@ -35,10 +37,10 @@ pub fn show<'s>(
 
     // Create the scrollable window
 
-    let mut scr_win = ScrollableRegion::new(
+    let scr_win = RefCell::new(ScrollableRegion::new(
         &wsc.scrollable_region, 
         lines,
-    );
+    ));
 
     // Create the footer window
 
@@ -52,7 +54,7 @@ pub fn show<'s>(
 
     screens::show(
         &mut hdr_win, 
-        &mut scr_win, 
+        scr_win, 
         &mut ftr_win,
     )
 

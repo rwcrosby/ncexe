@@ -2,7 +2,7 @@
 //! Container for the line trait
 //! 
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use pancurses::chtype;
 
 use super::{scrollable_region::ScrollableRegion, Coords};
