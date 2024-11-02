@@ -2,8 +2,6 @@
 //! The executable file header window
 //!
 
-use std::cell::RefCell;
-
 use anyhow::Result;
 
 use crate::{
@@ -34,7 +32,7 @@ pub fn show(exe: ExeRef) -> Result<()> {
         wsc.scrollable_region,
     );
 
-    let scr_win = RefCell::new(ScrollableRegion::new(&wsc.scrollable_region, lines));
+    let mut scr_win = ScrollableRegion::new(&wsc.scrollable_region, lines);
 
     // Create the footer window
 
@@ -45,5 +43,5 @@ pub fn show(exe: ExeRef) -> Result<()> {
 
     // Create and show the set of windows
 
-    screens::show(&mut hdr_win, scr_win, &mut ftr_win)
+    screens::show(&mut hdr_win, &mut scr_win, &mut ftr_win)
 }

@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-
 use once_cell::sync::Lazy;
 
 extern crate ncexe;
@@ -61,16 +59,16 @@ fn main() {
     let lines: Vec<Box<dyn Line>> = Vec::from([]);
 
     let mut hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
-    let scr_win = RefCell::new(scrollable_region::ScrollableRegion::new(
+    let mut scr_win = scrollable_region::ScrollableRegion::new(
         &cs2.scrollable_region, 
         lines,
-    ));
+    );
     
     let mut ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
     screens::show(
         &mut hdr_win, 
-        scr_win, 
+        &mut scr_win, 
         &mut ftr_win).unwrap();
 
 }

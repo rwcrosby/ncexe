@@ -2,8 +2,6 @@
 //! Show the file list window
 //!
 
-use std::cell::RefCell;
-
 use anyhow::{Ok, Result};
 
 use crate::{
@@ -55,7 +53,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
         })
         .collect();
 
-    let scr_win = RefCell::new(ScrollableRegion::new(&wsc.scrollable_region, lines));
+    let mut scr_win = ScrollableRegion::new(&wsc.scrollable_region, lines);
 
     // Create the footer window
 
@@ -69,7 +67,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
     // Create and show the set of windows
 
-    screens::show(&mut hdr_win, scr_win, &mut ftr_win)
+    screens::show(&mut hdr_win, &mut scr_win, &mut ftr_win)
 }
 
 // ------------------------------------------------------------------------
