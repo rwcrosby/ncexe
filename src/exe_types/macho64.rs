@@ -14,7 +14,7 @@ use crate::{
     screens::details_list,
     windows::{
         details,
-        line::{Line, LineVec, MaybeLineVec, PairVec},
+        line::{ActionType, Line, LineVec, PairVec},
     },
 };
 
@@ -82,9 +82,46 @@ struct CmdLine<'e> {
     val_entry: Option<&'e ValEntry<'e>>,
     fields: &'e [FieldDef<'e>],
     wc: WindowColors,
+    action: ActionType<'e>
+
 }
 
 const DTL_INDENT: usize = 7;
+
+impl<'cl> CmdLine<'cl> {
+    fn new(
+        exe: ExeRef<'cl>,
+        cmd_offset: usize,
+        cmd_len: usize,
+        cmd_slice: &[u8],
+        wc: WindowColors,
+    ) -> CmdLine<'cl> {
+
+        let val_entry = CMD_HEADER[0].lookup(cmd_slice);
+        let data = (cmd_offset, cmd_offset + cmd_len);
+
+        let action = 
+            if let Some(val_entry) = val_entry {
+                if let Some(detail_map) = &val_entry.2 {
+                    ActionType::Expandable((
+                        Box::new(move | _srl | details::to_lines(exe, data, detail_map, wc)), 
+                        0, 
+                        DTL_INDENT
+                    ))
+                } else {
+                    ActionType::None
+                }
+            } else {
+                ActionType::None
+            };
+
+        CmdLine {
+            exe, wc, val_entry, action, data,
+            fields: CMD_HEADER,
+        }
+
+    }
+}
 
 impl<'l> Line<'l> for CmdLine<'l> {
     fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
@@ -115,7 +152,7 @@ impl<'l> Line<'l> for CmdLine<'l> {
         None
     }
 
-    fn expand_fn(&self) -> Result<MaybeLineVec<'l>> {
+    fn expand_fn(&self) -> Result<Option<LineVec<'l>>> {
         let mut rc = None;
 
         if let Some(val_entry) = self.val_entry {
@@ -128,24 +165,16 @@ impl<'l> Line<'l> for CmdLine<'l> {
 
         Ok(rc)
     }
-/* 
-    fn enter_fn(&self) -> Option<Box<dyn Fn() -> Result<()> + 'l>> {
-        
-        if let Some(val_entry) = self.val_entry {
-            if let Some(_detail_map) = &val_entry.2 {
-                return None
-            }
-        }
 
-        None
+    fn action_type(&self) -> &'l ActionType {
+        &self.action
+    }
 
-    } 
-    */
 }
 
 // ------------------------------------------------------------------------
 
-fn load_commands_on_enter<'lce>(exe: ExeRef<'lce>) -> Result<()> {
+fn list_load_commands_on_enter<'lce>(exe: ExeRef<'lce>) -> Result<()> {
     let wsc = Colors::global().get_window_set_colors("list")?;
 
     let num_cmds = HEADER[4].to_usize(exe.mmap());
@@ -156,15 +185,7 @@ fn load_commands_on_enter<'lce>(exe: ExeRef<'lce>) -> Result<()> {
     for _ in 0..num_cmds {
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset + CMD_HEADER_MAP.data_len];
         let cmd_len: usize = CMD_HEADER[1].to_usize(cmd_slice);
-
-        lines.push(Box::new(CmdLine {
-            exe,
-            data: (cmd_offset, cmd_offset + cmd_len),
-            fields: CMD_HEADER,
-            val_entry: CMD_HEADER[0].lookup(cmd_slice),
-            wc: wsc.scrollable_region,
-        }));
-
+        lines.push(Box::new(CmdLine::new(exe, cmd_offset, cmd_len, cmd_slice, wsc.scrollable_region)));
         cmd_offset += cmd_len;
     }
 
@@ -187,7 +208,7 @@ const HEADER: &[FieldDef] = &[
     FieldDef::new(8, 4, "CPU Sub-Type", Some(formatter::LE_32_HEX)),
     FieldDef::new(12, 4, "File Type", Some(formatter::LE_32_HEX)),
     FieldDef::new(16, 4, "Load Commands", Some(formatter::LE_32_STRING))
-        .enter_fn(load_commands_on_enter)
+        .enter_fn(list_load_commands_on_enter)
         .fn_usize(formatter::LE_32_USIZE),
     FieldDef::new(20, 4, "Load Command Length", Some(formatter::LE_32_PTR))
         .fn_usize(formatter::LE_32_USIZE),

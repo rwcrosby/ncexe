@@ -2,7 +2,7 @@
 //! Container for the line trait
 //! 
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use pancurses::chtype;
 
 use super::{scrollable_region::ScrollableRegion, Coords};
@@ -10,12 +10,12 @@ use super::{scrollable_region::ScrollableRegion, Coords};
 // ------------------------------------------------------------------------
 
 pub type LineItem<'l> = Box<dyn Line<'l> + 'l>;
-pub type LineRef<'l> = &'l dyn Line<'l>;
 pub type LineVec<'l> = Vec<LineItem<'l>>;
-
-pub type MaybeLineVec<'l> = Option<LineVec<'l>>;
+pub type LineRef<'l> = &'l dyn Line<'l>;
 
 pub type EnterFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> Result<()> + 'l>;
+pub type NewWindowFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> Result<()> + 'l>;
+pub type ExpandLinesFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> LineVec<'l> + 'l>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
@@ -26,15 +26,27 @@ pub trait Line<'l> {
     /// The total length is guaranteed not to exceed the specified value
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
+    fn action_type(&self) -> &'l ActionType { &ActionType::None }
+
     /// Expand in-line?? Return the indention amount
     fn expand(&self) -> Option<usize> { None }
 
     /// Function to expand 
-    fn expand_fn(&self) -> Result<MaybeLineVec<'l>> { Ok(None) }
+    fn expand_fn(&self) -> Result<Option<LineVec<'l>>> { Ok(None) }
     
     // Function to call when enter is hit on the line
     fn enter_fn(&self) -> Option<EnterFn<'l>> { None }
 
+}
+
+// --------------------------------------------------------------------
+
+pub enum ActionType<'at> {
+    /// Open a new window on enter
+    NewWindow(NewWindowFn<'at>),
+    /// Tuple is expansion fn, number of expanded lines, amount to indent
+    Expandable((ExpandLinesFn<'at >, usize, usize)),
+    None,
 }
 
 // ------------------------------------------------------------------------

@@ -322,14 +322,6 @@ impl<'sr> ScrollableRegion<'sr> {
         let idx = self.top_idx + self.win_idx;
         let line = &mut self.lines[idx];
 
-        // if line.line.action_fn(self, idx).is_some() {
-        //     return Ok(())
-        // }
-
-        // if let Some(efn) = line.line.enter_fn() {
-        //     return efn(self);
-        // }
-
         match line.enter {
             
             EnterType::NewWindow => 

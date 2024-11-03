@@ -3,33 +3,32 @@
 //!
 
 use anyhow::Result;
-
-use crate::{
-    color::WindowColors,
-    exe_types::ExeRef,
-    formatter::{FieldDef, FieldMap},
-};
-
-use super::line::{EnterFn, Line, LineItem, LineVec, PairVec};
+use crate::{color, exe_types, formatter};
+use super::line;
 
 // ------------------------------------------------------------------------
 
 pub fn to_lines<'l>(
-    exe: ExeRef<'l>,
+    exe: exe_types::ExeRef<'l>,
     data: (usize, usize),
-    map: &FieldMap<'l>,
-    wc: WindowColors,
-) -> LineVec<'l> {
+    map: &formatter::FieldMap<'l>,
+    wc: color::WindowColors,
+) -> line::LineVec<'l> {
     map.fields
         .iter()
         .filter(|f| f.string_fn.is_some() || f.string_fn2.is_some())
-        .map(|field_def| -> LineItem<'l> {
+        .map(|field_def| -> line::LineItem<'l> {
             Box::new(DetailLine {
                 exe,
                 data,
                 field_def,
                 wc,
                 max_text_len: map.max_text_len,
+                action: if field_def.enter_fn.is_some() {
+                    line::ActionType::NewWindow(Box::new(|_sr| field_def.enter_fn.unwrap()(exe)))
+                } else {
+                    line::ActionType::None
+                },
             })
         })
         .collect()
@@ -38,15 +37,16 @@ pub fn to_lines<'l>(
 // ------------------------------------------------------------------------
 
 struct DetailLine<'dl> {
-    exe: ExeRef<'dl>,
+    exe: exe_types::ExeRef<'dl>,
     data: (usize, usize),
-    field_def: &'dl FieldDef<'dl>,
-    wc: WindowColors,
+    field_def: &'dl formatter::FieldDef<'dl>,
+    wc: color::WindowColors,
     max_text_len: usize,
+    action: line::ActionType<'dl>,
 }
 
-impl<'l> Line<'l> for DetailLine<'l> {
-    fn as_pairs(&self, _max_len: usize) -> Result<PairVec> {
+impl<'l> line::Line<'l> for DetailLine<'l> {
+    fn as_pairs(&self, _max_len: usize) -> Result<line::PairVec> {
         let data_slice = &self.exe.mmap()[self.data.0..self.data.1];
 
         let mut pairs = Vec::from([
@@ -71,10 +71,14 @@ impl<'l> Line<'l> for DetailLine<'l> {
         Ok(pairs)
     }
 
-    fn enter_fn(&self) -> Option<EnterFn<'l>> {
+    fn enter_fn(&self) -> Option<line::EnterFn<'l>> {
         match self.field_def.enter_fn {
             Some(_) => Some(Box::new(|_sr| self.field_def.enter_fn.unwrap()(self.exe))),
             None => None,
         }
+    }
+
+    fn action_type(&self) -> &'l line::ActionType<'_> {
+        &self.action
     }
 }

@@ -12,7 +12,7 @@ use crate::{
     windows::{
         footer::Footer,
         header::Header,
-        line::{EnterFn, Line, LineItem, LineVec, PairVec},
+        line::{ActionType, EnterFn, Line, LineItem, LineVec, PairVec},
         scrollable_region::ScrollableRegion,
         FSIZE_LENGTH,
     },
@@ -49,7 +49,14 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
         .iter()
         .map(|exe| -> LineItem<'s> {
             total_len += exe.len();
-            Box::new(FileLine { exe: exe.as_ref() })
+            Box::new(FileLine { 
+                exe: exe.as_ref(),
+                action: if exe.is_empty() {
+                    ActionType::None
+                } else {
+                    ActionType::NewWindow(Box::new(|_sr| file_header::show(exe.as_ref())))
+                }
+             })
         })
         .collect();
 
@@ -75,6 +82,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
 struct FileLine<'fl> {
     exe: ExeRef<'fl>,
+    action: ActionType<'fl>
 }
 
 impl<'l> Line<'l> for FileLine<'l> {
@@ -117,6 +125,10 @@ impl<'l> Line<'l> for FileLine<'l> {
 
     fn enter_fn(&self) -> Option<EnterFn<'l>> {
         Some(Box::new(|_sr| file_header::show(self.exe)))
+    }
+
+    fn action_type(&self) -> &'l ActionType<'_> {
+        &self.action
     }
 
 }
