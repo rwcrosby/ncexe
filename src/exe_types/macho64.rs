@@ -14,7 +14,7 @@ use crate::{
     screens::details_list,
     windows::{
         details,
-        line::{ActionType, Line, LineVec, PairVec},
+        line::{self, ActionType, Line, PairVec},
     },
 };
 
@@ -82,7 +82,7 @@ struct CmdLine<'e> {
     val_entry: Option<&'e ValEntry<'e>>,
     fields: &'e [FieldDef<'e>],
     wc: WindowColors,
-    action: ActionType<'e>
+    action: Option<ActionType<'e>>
 
 }
 
@@ -103,16 +103,16 @@ impl<'cl> CmdLine<'cl> {
         let action = 
             if let Some(val_entry) = val_entry {
                 if let Some(detail_map) = &val_entry.2 {
-                    ActionType::Expandable((
-                        Box::new(move | _srl | details::to_lines(exe, data, detail_map, wc)), 
+                    Some(ActionType::Expandable(
+                        Box::new(move | | details::to_lines(exe, data, detail_map, wc)), 
                         0, 
                         DTL_INDENT
                     ))
                 } else {
-                    ActionType::None
+                    None
                 }
             } else {
-                ActionType::None
+                None
             };
 
         CmdLine {
@@ -152,7 +152,7 @@ impl<'l> Line<'l> for CmdLine<'l> {
         None
     }
 
-    fn expand_fn(&self) -> Result<Option<LineVec<'l>>> {
+    fn expand_fn(&self) -> Result<Option<line::LineVec<'l>>> {
         let mut rc = None;
 
         if let Some(val_entry) = self.val_entry {
@@ -166,8 +166,19 @@ impl<'l> Line<'l> for CmdLine<'l> {
         Ok(rc)
     }
 
-    fn action_type(&self) -> &'l ActionType {
-        &self.action
+    fn action_type(&self) -> Option<&ActionType<'l>> {
+        if let Some(ref at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
+    }
+    fn action_type_mut(&mut self) -> Option<&mut ActionType<'l>> {
+        if let Some(ref mut at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
     }
 
 }
@@ -181,7 +192,7 @@ fn list_load_commands_on_enter<'lce>(exe: ExeRef<'lce>) -> Result<()> {
     let cmds_len = HEADER[5].to_usize(exe.mmap());
     let mut cmd_offset = HEADER_MAP.data_len;
 
-    let mut lines: LineVec<'lce> = Vec::with_capacity(num_cmds);
+    let mut lines: line::LineVec<'lce> = Vec::with_capacity(num_cmds);
     for _ in 0..num_cmds {
         let cmd_slice = &exe.mmap()[cmd_offset..cmd_offset + CMD_HEADER_MAP.data_len];
         let cmd_len: usize = CMD_HEADER[1].to_usize(cmd_slice);

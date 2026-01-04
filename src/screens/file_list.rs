@@ -52,9 +52,9 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
             Box::new(FileLine { 
                 exe: exe.as_ref(),
                 action: if exe.is_empty() {
-                    ActionType::None
+                    None
                 } else {
-                    ActionType::NewWindow(Box::new(|_sr| file_header::show(exe.as_ref())))
+                    Some(ActionType::NewWindow(Box::new(|| file_header::show(exe.as_ref()))))
                 }
              })
         })
@@ -82,7 +82,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
 struct FileLine<'fl> {
     exe: ExeRef<'fl>,
-    action: ActionType<'fl>
+    action: Option<ActionType<'fl>>
 }
 
 impl<'l> Line<'l> for FileLine<'l> {
@@ -127,8 +127,20 @@ impl<'l> Line<'l> for FileLine<'l> {
         Some(Box::new(|_sr| file_header::show(self.exe)))
     }
 
-    fn action_type(&self) -> &'l ActionType<'_> {
-        &self.action
+    fn action_type(&self) -> Option<&ActionType<'l>> {
+        if let Some(ref at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
+    }
+
+    fn action_type_mut(&mut self) -> Option<&mut ActionType<'l>> {
+        if let Some(ref mut at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
     }
 
 }

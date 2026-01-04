@@ -14,8 +14,8 @@ pub type LineVec<'l> = Vec<LineItem<'l>>;
 pub type LineRef<'l> = &'l dyn Line<'l>;
 
 pub type EnterFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> Result<()> + 'l>;
-pub type NewWindowFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> Result<()> + 'l>;
-pub type ExpandLinesFn<'l> = Box<dyn Fn(&mut ScrollableRegion) -> LineVec<'l> + 'l>;
+pub type NewWindowFn<'l> = Box<dyn Fn() -> Result<()> + 'l>;
+pub type ExpandLinesFn<'l> = Box<dyn Fn() -> LineVec<'l> + 'l>;
 
 // ------------------------------------------------------------------------
 /// Definition of the line trait used by the scrollable window
@@ -26,7 +26,8 @@ pub trait Line<'l> {
     /// The total length is guaranteed not to exceed the specified value
     fn as_pairs(&self, max_len: usize) -> Result<PairVec>;
 
-    fn action_type(&self) -> &'l ActionType { &ActionType::None }
+    fn action_type(&self) -> Option<&ActionType<'l>> { None } 
+    fn action_type_mut(&mut self) -> Option<&mut ActionType<'l>> { None } 
 
     /// Expand in-line?? Return the indention amount
     fn expand(&self) -> Option<usize> { None }
@@ -45,8 +46,7 @@ pub enum ActionType<'at> {
     /// Open a new window on enter
     NewWindow(NewWindowFn<'at>),
     /// Tuple is expansion fn, number of expanded lines, amount to indent
-    Expandable((ExpandLinesFn<'at >, usize, usize)),
-    None,
+    Expandable(ExpandLinesFn<'at >, usize, usize),
 }
 
 // ------------------------------------------------------------------------

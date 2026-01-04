@@ -25,9 +25,9 @@ pub fn to_lines<'l>(
                 wc,
                 max_text_len: map.max_text_len,
                 action: if field_def.enter_fn.is_some() {
-                    line::ActionType::NewWindow(Box::new(|_sr| field_def.enter_fn.unwrap()(exe)))
+                    Some(line::ActionType::NewWindow(Box::new(|| field_def.enter_fn.unwrap()(exe))))
                 } else {
-                    line::ActionType::None
+                    None
                 },
             })
         })
@@ -42,7 +42,7 @@ struct DetailLine<'dl> {
     field_def: &'dl formatter::FieldDef<'dl>,
     wc: color::WindowColors,
     max_text_len: usize,
-    action: line::ActionType<'dl>,
+    action: Option<line::ActionType<'dl>>,
 }
 
 impl<'l> line::Line<'l> for DetailLine<'l> {
@@ -78,7 +78,20 @@ impl<'l> line::Line<'l> for DetailLine<'l> {
         }
     }
 
-    fn action_type(&self) -> &'l line::ActionType<'_> {
-        &self.action
+    fn action_type(&self) -> Option<&line::ActionType<'l>> {
+        if let Some(ref at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
     }
+
+    fn action_type_mut(&mut self) -> Option<&mut line::ActionType<'l>> {
+        if let Some(ref mut at) = self.action {
+            Some(at)
+        } else {
+            None
+        }
+    }
+
 }

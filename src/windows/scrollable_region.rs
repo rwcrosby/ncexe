@@ -11,15 +11,13 @@ use pancurses::{
 use crate::color::WindowColors;
 
 use super::{
-    Coords,
     line::{
-        Line,
-        ToScreen, LineVec,
-    }, 
+        self, LineVec
+    }, Coords 
 };
 
 // --------------------------------------------------------------------
-
+/*
 type ScrollableRegionLines<'srl> = Vec<ScrollableRegionLine<'srl>>;
 
 #[derive(Debug)]
@@ -79,7 +77,7 @@ fn make_scrollable_lines (
         .collect()
 
 }
-
+*/
 // ------------------------------------------------------------------------
 
 pub struct ScrollableRegion<'sr> {
@@ -90,7 +88,7 @@ pub struct ScrollableRegion<'sr> {
     size: Coords,
 
     /// Set of lines to display
-    lines: ScrollableRegionLines<'sr>,
+    lines: line::LineVec<'sr> ,
 
     /// Index into lines of the top line in the window
     top_idx: usize,
@@ -115,7 +113,8 @@ impl<'sr> ScrollableRegion<'sr> {
 
         ScrollableRegion{ 
             pwin,
-            lines: make_scrollable_lines(lines, 0),
+            // lines: make_scrollable_lines(lines, 0),
+            lines,
             size: Coords{y: 0, x: 0},
             top_idx: 0,
             win_idx: 0,
@@ -322,6 +321,26 @@ impl<'sr> ScrollableRegion<'sr> {
         let idx = self.top_idx + self.win_idx;
         let line = &mut self.lines[idx];
 
+        if let Some(at) = line.action_type_mut() {
+
+            match at {
+
+                line::ActionType::NewWindow(nwf) => nwf(),
+    
+                line::ActionType::Expandable(_, ref mut num_lines, _) => {
+                    *num_lines = 0;
+                    Ok(())
+                }
+    
+            }
+
+        }
+        else {
+            Ok(())
+        }
+
+
+/* 
         match line.enter {
             
             EnterType::NewWindow => 
@@ -361,7 +380,7 @@ impl<'sr> ScrollableRegion<'sr> {
         }
 
         Ok(())
-
+*/
     }
 
     // --------------------------------------------------------------------
@@ -432,36 +451,34 @@ impl<'sr> ScrollableRegion<'sr> {
             self.lines.len()
         };
 
-        for (y, line) in self.lines[self.top_idx..lim]
+        for (y, ref line) in self.lines[self.top_idx..lim]
             .iter()
             .enumerate()
         {
 
-            match line.enter {
+            if let Some(at) = line.action_type() {
+                match at {
+                    line::ActionType::NewWindow(_) =>
+                        self.pwin.mvaddch(y as i32, 0, '='),
 
-                EnterType::NewWindow => 
-                    self.pwin.mvaddch(y as i32, 0, 
-                        if line.line.enter_fn().is_some() {
-                            '='
-                        } else {
-                            ' '
-                        }),
+                    line::ActionType::Expandable(_, num_lines, _) => 
+                        self.pwin.mvaddch(y as i32, 0, 
+                            if *num_lines > 0 {
+                                '-'
+                            } else {
+                                '+'
+                            }),
 
-                EnterType::Expandable((num_lines, _)) => 
-                    self.pwin.mvaddch(y as i32, 0, 
-                        if num_lines > 0 {
-                            '-'
-                        } else {
-                            '+'
-                        }),
-
-                EnterType::None => 
-                    self.pwin.mvaddch(y as i32, 0, ' '),
+                };
+            } else {
+                self.pwin.mvaddch(y as i32, 0, ' ');
             };
 
-            line.line
-                .as_pairs(self.size.x - line.indent - 1)?
-                .show(&self.pwin, Coords{y, x: line.indent + 1});
+            /* 
+            // line
+            //     .as_pairs(self.size.x - line.indent - 1)?
+            //     .show(&self.pwin, Coords{y, x: line.indent + 1});
+            */
         }
 
         self.set_indicators();
