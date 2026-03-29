@@ -15,34 +15,26 @@ use ncexe::color;
 fn main() {
 
     Lazy::force(&TERMWIN);
+    color::init("dark");
 
-    // let screen = Screen::new();
-
-    let colors = color::Colors::new("dark").unwrap();
+    let colors = color::Colors::global();
     let cs1 = colors.get_window_set_colors("file_list").unwrap();
     let cs2 = colors.get_window_set_colors("file_header").unwrap();
 
-    TERMWIN.win.bkgd(cs1.header.text);
-    TERMWIN.win.refresh();
+    let tl = ETYPE_LENGTH;
+    let ml = 10usize;
 
-    let tl = ETYPE_LENGTH as i32;
-    let ml = 10i32;
-        
-    let hdr = format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {filename}", 
-        tl=tl as usize, etype="Type",
-        ml=ml as usize, size="Size",
-        filename="Name",
+    let hdr = format!(" {etype:<tl$.tl$} {size:>ml$.ml$} {filename}",
+        tl = tl, etype = "Type",
+        ml = ml, size = "Size",
+        filename = "Name",
     );
 
-    let hdr_fn = move | _sc: usize | (0, hdr.clone());
+    let hdr_fn = move |_sc: usize| (0, hdr.clone());
 
-    // let enter_fn = Box::new(| _idx: usize, _line: &dyn Line | Ok(()) );
+    let footer_fn = move |sc: usize| {
 
-    let footer_fn = move | sc: usize| {
-
-        let txt = format!("{} Files {} Bytes",
-            0,
-            0 );
+        let txt = format!("{} Files {} Bytes", 0, 0);
 
         let excess = i32::try_from(sc).unwrap() - i32::try_from(txt.len()).unwrap();
 
@@ -60,15 +52,15 @@ fn main() {
 
     let mut hdr_win = header::Header::new(&cs1.header, Box::new(hdr_fn));
     let mut scr_win = scrollable_region::ScrollableRegion::new(
-        &cs2.scrollable_region, 
+        &cs2.scrollable_region,
         lines,
     );
-    
+
     let mut ftr_win = footer::Footer::new(&cs1.footer, Box::new(footer_fn));
 
     screens::show(
-        &mut hdr_win, 
-        &mut scr_win, 
+        &mut hdr_win,
+        &mut scr_win,
         &mut ftr_win).unwrap();
 
 }

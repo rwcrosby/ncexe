@@ -1,100 +1,36 @@
 //!
 //! Scrollable region of the screen
-//! 
+//!
 
 use anyhow::Result;
-use pancurses::{
-    A_REVERSE,
-    Input
+use crossterm::event::KeyCode;
+use ratatui::{
+    Frame,
+    layout::Rect,
+    style::Modifier,
+    text::{Line, Span},
+    widgets::Paragraph,
 };
 
 use crate::color::WindowColors;
 
-use super::{
-    line::{
-        self, LineVec
-    }, Coords 
-};
+use super::{line, Coords};
 
-// --------------------------------------------------------------------
-/*
-type ScrollableRegionLines<'srl> = Vec<ScrollableRegionLine<'srl>>;
-
-#[derive(Debug)]
-enum EnterType {
-    /// OPen a new window on enter
-    NewWindow,
-    /// Tuple is number of expanded lines, amount to indent
-    Expandable((usize, usize)),
-    None,
-}
-
-impl EnterType {
-    fn set_num_lines(&mut self, new_num_lines: usize) -> usize {
-        if let EnterType::Expandable(mut enter_type) = self {
-            enter_type.0 = new_num_lines;
-            *self = EnterType::Expandable(enter_type);
-            enter_type.0
-        } else {        
-            panic!("set_num called on invalid type {:?}", self)
-        }
-    }
-}
-
-struct ScrollableRegionLine<'srl> {
-
-    /// Ownership of the Line is passed here
-    line: Box<dyn Line<'srl> + 'srl>,
-
-    /// What to do on enter on the line
-    enter: EnterType,
-
-    /// Indent for THIS line
-    indent: usize,
-
-}
- 
-fn make_scrollable_lines (
-    lines: LineVec,
-    indent: usize
-) -> ScrollableRegionLines {
-
-    lines
-        .into_iter()
-        .map(| line | {
-
-            let enter = if let Some(indent) = line.expand() {
-                EnterType::Expandable((0, indent))
-            } else if line.enter_fn().is_some() {
-                EnterType::NewWindow
-            } else {
-                EnterType::None
-            };
-
-            ScrollableRegionLine{line, enter, indent } 
-
-        })
-        .collect()
-
-}
-*/
 // ------------------------------------------------------------------------
 
 pub struct ScrollableRegion<'sr> {
 
-    pub pwin: pancurses::Window,
-
-    /// Dimensions of the window
-    size: Coords,
-
     /// Set of lines to display
-    lines: line::LineVec<'sr> ,
+    lines: line::LineVec<'sr>,
 
     /// Index into lines of the top line in the window
     top_idx: usize,
 
-    /// Index into the window of the currently selected line
+    /// Index into the visible window of the currently selected line
     win_idx: usize,
+
+    /// Cached dimensions from last render
+    size: Coords,
 
     /// Colors to use for this scrollable region
     window_colors: &'sr WindowColors,
@@ -103,387 +39,242 @@ pub struct ScrollableRegion<'sr> {
 
 impl<'sr> ScrollableRegion<'sr> {
 
-    pub fn new (
+    pub fn new(
         window_colors: &'sr WindowColors,
-        lines: LineVec<'sr>,
+        lines: line::LineVec<'sr>,
     ) -> ScrollableRegion<'sr> {
-
-        let pwin = pancurses::newwin(1, 1, 2, 0); 
-        pwin.keypad(true);
-
-        ScrollableRegion{ 
-            pwin,
-            // lines: make_scrollable_lines(lines, 0),
+        ScrollableRegion {
             lines,
-            size: Coords{y: 0, x: 0},
+            size: Coords { y: 0, x: 0 },
             top_idx: 0,
             win_idx: 0,
-            window_colors, 
+            window_colors,
+        }
+    }
+
+    // --------------------------------------------------------------------
+
+    pub fn render(&mut self, f: &mut Frame, area: Rect) {
+        let height = area.height as usize;
+        let width = area.width as usize;
+        self.size = Coords { y: height, x: width };
+
+        if height == 0 || width == 0 {
+            return;
         }
 
-    }
-
-    // --------------------------------------------------------------------
-
-    pub fn show(&mut self, screen_size: &Coords) -> Result<()> {
-        self.paint(screen_size, true)
-    }
-
-    pub fn resize(&mut self, screen_size: &Coords) -> Result<()> {
-        self.paint(screen_size, false)
-    }
-
-    // --------------------------------------------------------------------
-
-    pub fn handle_key(&mut self, ch: Input ) -> Result<()> {
-        
-        match ch {
-            Input::KeyDown => self.key_down_handler()?,
-            Input::KeyUp => self.key_up_handler()?,
-            Input::KeyPPage => self.key_pgup_handler()?,
-            Input::KeyNPage => self.key_pgdown_handler()?,
-            Input::KeyHome => self.key_home_handler()?,
-            Input::KeyEnd => self.key_end_handler()?,
-            Input::KeyEnter => self.key_enter_handler()?,
-            _ => ()
+        // Clamp selection to visible area
+        if !self.lines.is_empty() && self.win_idx >= height {
+            self.win_idx = height - 1;
         }
 
-        Ok(())
-    }
+        let total = self.lines.len();
+        let lim = (self.top_idx + height).min(total);
+        let visible_count = lim.saturating_sub(self.top_idx);
 
-    // --------------------------------------------------------------------
-    /// Toggle highlight on a line
+        let can_scroll_up = self.top_idx > 0;
+        let can_scroll_down = self.top_idx + height < total;
 
+        let mut ratatui_lines: Vec<Line<'static>> = Vec::new();
 
-    fn highlight(&self,  highlight: bool) -> Result<()> {
+        for (win_pos, line_idx) in (self.top_idx..lim).enumerate() {
+            let line = &self.lines[line_idx];
 
-        for p in 1..self.size.x - 1 {
+            // Reserve 2 chars: 1 for action indicator, 1 for scroll indicator
+            let content_width = width.saturating_sub(2);
+            let pairs = line.as_pairs(content_width).unwrap_or_default();
 
-            let ch = self.pwin.mvinch(
-                i32::try_from(self.win_idx)?, 
-                i32::try_from(p)?
-            );
-
-            let rev_ch = if highlight {
-                ch | A_REVERSE
-            } else {
-                ch & !A_REVERSE
+            // Action indicator character
+            let indicator = match line.action_type() {
+                None => ' ',
+                Some(line::ActionType::NewWindow(_)) => '=',
+                Some(line::ActionType::Expandable(_, n, _)) => {
+                    if *n > 0 { '-' } else { '+' }
+                }
             };
 
-            self.pwin.addch(rev_ch);
+            // Build spans
+            let mut spans: Vec<Span<'static>> = Vec::new();
+            spans.push(Span::styled(
+                indicator.to_string(),
+                self.window_colors.text,
+            ));
 
-        }
-
-        Ok(())
-
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_down_handler(&mut self) -> Result<()> {
-
-        if self.win_idx < self.size.y - 1 && 
-           self.win_idx + self.top_idx < self.lines.len() - 1 {
-            self.highlight(false)?;
-            self.win_idx += 1;
-        } else if self.top_idx + self.size.y < self.lines.len() {
-            self.top_idx += 1;
-            self.write_lines()?;
-        }
-
-        self.highlight(true)
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_up_handler(&mut self) -> Result<()> {
-
-        if self.win_idx > 0 {
-            self.highlight(false)?;
-            self.win_idx -= 1;
-        } else if self.top_idx > 0 {
-            self.top_idx -= 1;
-            self.write_lines()?;
-        }
-
-        self.highlight(true)
-
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_pgdown_handler(&mut self) -> Result<()> {
-
-        if self.size.y + self.top_idx < self.lines.len() {
-
-            if self.top_idx + self.size.y > self.lines.len() {
-                self.top_idx = self.lines.len() - self.size.y 
-            } else {
-                self.top_idx += self.size.y
+            let mut content_len = 0usize;
+            for (style_opt, text) in &pairs {
+                let style = style_opt.unwrap_or(self.window_colors.text);
+                content_len += text.len();
+                spans.push(Span::styled(text.clone(), style));
             }
 
-            self.write_lines()?;
-
-        } else {
-
-            self.highlight(false)?;
-            self.win_idx = std::cmp::min(self.lines.len() - self.top_idx - 1, self.size.y - 1);
-
-        }
-
-        if self.top_idx + self.size.y > self.lines.len() {
-            let first_blank = self.lines.len() - self.top_idx;
-            (first_blank..self.size.y)
-                .for_each(|l_no| {
-                    self.pwin.mv(i32::try_from(l_no).unwrap(), 0);
-                    self.pwin.clrtoeol();
-                })
-        }
-        
-        self.highlight(true)
-
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_pgup_handler(&mut self) -> Result<()> {
-
-        if self.top_idx > 0 {
-
-            if self.top_idx > self.size.y {
-                self.top_idx -= self.size.y
-            } else {
-                self.top_idx = 0;
+            // Padding to fill the row before the scroll indicator column
+            let pad_len = content_width.saturating_sub(content_len);
+            if pad_len > 0 {
+                spans.push(Span::styled(
+                    " ".repeat(pad_len),
+                    self.window_colors.bkgr,
+                ));
             }
 
-            self.write_lines()?;
-
-
-        } else {
-            self.highlight(false)?;
-        }
-        
-        self.win_idx = 0;
-        self.highlight(true)
-
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_home_handler(&mut self) -> Result<()> {
-
-        if self.top_idx > 0 {
-
-            self.top_idx = 0;
-            self.write_lines()?;
-
-
-        }
-
-        if self.win_idx > 0 {
-            self.highlight(false)?;
-            self.win_idx = 0;
-            self.highlight(true)?;
-        }
-
-        Ok(())
-
-    }
-
-    // --------------------------------------------------------------------
-    
-    fn key_end_handler(&mut self) -> Result<()> {
-
-        if self.top_idx + self.size.y <= self.lines.len() {
-            self.top_idx = self.lines.len() - self.size.y;
-            self.write_lines()?;
-        }
-
-        if self.win_idx != self.size.y - 1 {
-            self.highlight(false)?;
-            self.win_idx = if self.lines.len() - self.top_idx < self.size.y {
-                self.lines.len() - self.top_idx - 1
+            // Scroll indicator at last column
+            let scroll_char = if win_pos == 0 && can_scroll_up {
+                "\u{21d1}" // ⇑
+            } else if win_pos == visible_count.saturating_sub(1) && can_scroll_down {
+                "\u{21d3}" // ⇓
             } else {
-                self.size.y - 1
+                " "
             };
-            self.highlight(true)?;
+            spans.push(Span::styled(
+                scroll_char.to_string(),
+                self.window_colors.text,
+            ));
 
+            // Apply REVERSED modifier to all spans of the selected line
+            let line_widget = if win_pos == self.win_idx {
+                let reversed: Vec<Span<'static>> = spans
+                    .into_iter()
+                    .map(|s| {
+                        Span::styled(
+                            s.content.into_owned(),
+                            s.style.add_modifier(Modifier::REVERSED),
+                        )
+                    })
+                    .collect();
+                Line::from(reversed)
+            } else {
+                Line::from(spans)
+            };
+
+            ratatui_lines.push(line_widget);
         }
 
-        Ok(())
+        // Pad remaining rows with background-colored blank lines
+        while ratatui_lines.len() < height {
+            ratatui_lines.push(Line::styled(
+                " ".repeat(width),
+                self.window_colors.bkgr,
+            ));
+        }
 
+        let paragraph = Paragraph::new(ratatui_lines).style(self.window_colors.bkgr);
+        f.render_widget(paragraph, area);
     }
 
     // --------------------------------------------------------------------
-    
-    fn key_enter_handler(&mut self) -> Result<()> {
 
+    pub fn handle_key(&mut self, code: KeyCode) -> Result<()> {
+        match code {
+            KeyCode::Down => self.key_down_handler()?,
+            KeyCode::Up => self.key_up_handler()?,
+            KeyCode::PageDown => self.key_pgdown_handler()?,
+            KeyCode::PageUp => self.key_pgup_handler()?,
+            KeyCode::Home => self.key_home_handler()?,
+            KeyCode::End => self.key_end_handler()?,
+            _ => {}
+        }
+        Ok(())
+    }
+
+    // --------------------------------------------------------------------
+
+    pub fn key_enter_handler(&mut self) -> Result<()> {
         let idx = self.top_idx + self.win_idx;
+        if idx >= self.lines.len() {
+            return Ok(());
+        }
         let line = &mut self.lines[idx];
 
         if let Some(at) = line.action_type_mut() {
-
             match at {
-
-                line::ActionType::NewWindow(nwf) => nwf(),
-    
+                line::ActionType::NewWindow(nwf) => nwf()?,
                 line::ActionType::Expandable(_, ref mut num_lines, _) => {
                     *num_lines = 0;
-                    Ok(())
                 }
-    
             }
-
-        }
-        else {
-            Ok(())
-        }
-
-
-/* 
-        match line.enter {
-            
-            EnterType::NewWindow => 
-
-                if let Some(efn) = line.line.enter_fn() {
-                    return efn(self);
-                }
-                
-
-            EnterType::Expandable((num_lines, indent)) => 
-                
-                if num_lines > 0 {
-                    
-                    line.enter.set_num_lines(0);
-
-                    let line_slice = &mut self.lines[idx+1..];
-        
-                    line_slice.rotate_left(num_lines);
-                    self.lines.truncate(self.lines.len() - num_lines);
-        
-
-                } else if let Some(new_lines) = line.line.expand_fn()? {
-
-                    let num_lines = new_lines.len();
-                    line.enter.set_num_lines(num_lines);
-        
-                    let mut to_append = make_scrollable_lines(new_lines, indent);
-        
-                    self.lines.append(&mut to_append);
-        
-                    let line_slice = &mut self.lines[idx+1..];
-                    line_slice.rotate_right(num_lines);
-                
-                },
-
-            EnterType::None => (),
         }
 
         Ok(())
-*/
     }
 
     // --------------------------------------------------------------------
-    /// Reset and paint the screen
 
-    fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
-        
-        self.size = Coords{y:  size.y - 3, x: size.x};
-        self.pwin.resize(size.y.try_into()?, size.x.try_into()?);
-        
-        if init {
-            self.pwin.bkgd(self.window_colors.text)
+    fn key_down_handler(&mut self) -> Result<()> {
+        let total = self.lines.len();
+        if total == 0 { return Ok(()); }
+
+        let abs_idx = self.top_idx + self.win_idx;
+        if abs_idx >= total - 1 { return Ok(()); }
+
+        if self.win_idx < self.size.y - 1 {
+            self.win_idx += 1;
         } else {
-            self.pwin.erase()
-        };
-
-        if self.win_idx > self.size.y - 1 {
-            self.win_idx = self.size.y -1;
+            self.top_idx += 1;
         }
-
-        self.write_lines()?;
-        self.highlight(true)?;
-        self.pwin.noutrefresh();
-
         Ok(())
-
     }
 
     // --------------------------------------------------------------------
-    // Set the scrolling indicators
 
-    fn set_indicators(&self) {
-
-        let last_col = self.size.x as i32 - 1;
-
-        self.pwin.mvprintw(
-            0, 
-            last_col,
-            if self.top_idx > 0 { 
-                "\u{21d1}" 
-            } else { 
-                " " 
-            }
-        );
-
-        self.pwin.mvprintw(
-            self.size.y as i32 - 1, 
-            last_col,
-            if self.size.y + self.top_idx >= self.lines.len() { 
-                " " 
-            } else {
-                "\u{21d3}" 
-            } 
-        );
-    
+    fn key_up_handler(&mut self) -> Result<()> {
+        if self.win_idx > 0 {
+            self.win_idx -= 1;
+        } else if self.top_idx > 0 {
+            self.top_idx -= 1;
+        }
+        Ok(())
     }
 
     // --------------------------------------------------------------------
-    // Write whatever lines are available to the screen
 
-    fn write_lines(&self) -> Result<()> {
+    fn key_pgdown_handler(&mut self) -> Result<()> {
+        let total = self.lines.len();
+        let height = self.size.y;
+        if height == 0 || total == 0 { return Ok(()); }
 
-        let lim = if (self.size.y) <= self.lines.len() - self.top_idx {
-            // More lines remain than will fit on the screen
-            self.top_idx + self.size.y
+        if self.top_idx + height < total {
+            // Advance viewport by one page
+            self.top_idx = (self.top_idx + height).min(total.saturating_sub(height));
         } else {
-            // All remaining lines will fit on the screen
-            self.lines.len()
-        };
-
-        for (y, ref line) in self.lines[self.top_idx..lim]
-            .iter()
-            .enumerate()
-        {
-
-            if let Some(at) = line.action_type() {
-                match at {
-                    line::ActionType::NewWindow(_) =>
-                        self.pwin.mvaddch(y as i32, 0, '='),
-
-                    line::ActionType::Expandable(_, num_lines, _) => 
-                        self.pwin.mvaddch(y as i32, 0, 
-                            if *num_lines > 0 {
-                                '-'
-                            } else {
-                                '+'
-                            }),
-
-                };
-            } else {
-                self.pwin.mvaddch(y as i32, 0, ' ');
-            };
-
-            /* 
-            // line
-            //     .as_pairs(self.size.x - line.indent - 1)?
-            //     .show(&self.pwin, Coords{y, x: line.indent + 1});
-            */
+            // Already on last page: move selection to last visible item
+            self.win_idx = (total - self.top_idx - 1).min(height - 1);
         }
-
-        self.set_indicators();
         Ok(())
+    }
 
+    // --------------------------------------------------------------------
+
+    fn key_pgup_handler(&mut self) -> Result<()> {
+        let height = self.size.y;
+        if height == 0 { return Ok(()); }
+
+        self.top_idx = self.top_idx.saturating_sub(height);
+        self.win_idx = 0;
+        Ok(())
+    }
+
+    // --------------------------------------------------------------------
+
+    fn key_home_handler(&mut self) -> Result<()> {
+        self.top_idx = 0;
+        self.win_idx = 0;
+        Ok(())
+    }
+
+    // --------------------------------------------------------------------
+
+    fn key_end_handler(&mut self) -> Result<()> {
+        let total = self.lines.len();
+        let height = self.size.y;
+        if height == 0 || total == 0 { return Ok(()); }
+
+        if total > height {
+            self.top_idx = total - height;
+            self.win_idx = height - 1;
+        } else {
+            self.top_idx = 0;
+            self.win_idx = total - 1;
+        }
+        Ok(())
     }
 
 }

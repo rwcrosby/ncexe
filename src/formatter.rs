@@ -9,10 +9,7 @@ use anyhow::{
 };
 use std::ffi::CStr;
 
-use crate::{
-    exe_types::ExeRef,
-    windows::popup::error_window, 
-};
+use crate::exe_types::ExeRef;
 
 // ------------------------------------------------------------------------
 /// Header for a memory block mapping
@@ -164,8 +161,8 @@ impl<'fd> FieldDef<'fd> {
     pub fn to_string(&self, data: &[u8]) -> Result<String> {
 
         Ok(match self.to_string_wrapped(data) {
-            Err(err) => {
-                error_window(&err);
+            Err(_err) => {
+                // Cannot show blocking popup from within ratatui draw(); return error indicator
                 "???".to_string()
             },
             Ok(s) => s

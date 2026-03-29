@@ -1,13 +1,16 @@
 //!
 //! Standard header window
-//! 
+//!
 
 use anyhow::Result;
-
-use crate::{
-    color::WindowColors,
-    windows::Coords,
+use ratatui::{
+    Frame,
+    layout::Rect,
+    text::{Line, Text},
+    widgets::Paragraph,
 };
+
+use crate::color::WindowColors;
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -19,67 +22,47 @@ type LineFn<'a> = Box<dyn Fn(usize) -> (i32, String) + 'a>;
 // ------------------------------------------------------------------------
 
 pub struct Header<'a> {
-    window_colors: &'a  WindowColors,
-    pub pwin: pancurses::Window,
+    window_colors: &'a WindowColors,
     line2_fn: LineFn<'a>,
 }
 
 impl Header<'_> {
 
-    /// Create a header window using `window_colors`, building the second
+    /// Create a header using `window_colors`, building the second
     /// line using `line2_fn`
 
-    pub fn new<'a> (
-        window_colors: &'a WindowColors, 
+    pub fn new<'a>(
+        window_colors: &'a WindowColors,
         line2_fn: LineFn<'a>,
-    ) -> Header<'a> 
-    {
-        let pwin = pancurses::newwin(2, 1, 0, 0);
-        Header{ window_colors, pwin, line2_fn }
+    ) -> Header<'a> {
+        Header { window_colors, line2_fn }
     }
 
     // --------------------------------------------------------------------
 
-    pub fn show(&mut self, size: &Coords) -> Result<()> {
-        self.paint(size, true)
-    }
-    
-    pub fn resize(&mut self, size: &Coords) -> Result<()> {
-        self.paint(size, false)
-    }
-    
-    // --------------------------------------------------------------------
+    pub fn render(&self, f: &mut Frame, area: Rect) {
+        let width = area.width as usize;
 
-    fn paint(&mut self, size: &Coords, init: bool) -> Result<()> {
-        
-        // Size is 2 lines by full width
-
-        let size: Coords = Coords{y:  2, x: size.x};
-
-        self.pwin.resize(i32::try_from(size.y)?, i32::try_from(size.x)?);
-        if init {
-            self.pwin.bkgd(self.window_colors.bkgr)
-        } else {
-            self.pwin.erase()
-        };
-
-        let line1 = make_title(
-            &format!("{} v{}", NAME, VERSION), 
+        let title = make_title(
+            &format!("{} v{}", NAME, VERSION),
             "",
             "Use the arrow keys to navigate, q to go back",
-            size.x
-        )?;
+            width,
+        ).unwrap_or_default();
 
-        let (x2, line2) = (self.line2_fn)(size.x);
+        let (x2, line2_str) = (self.line2_fn)(width);
+        let x2 = x2.max(0) as usize;
+        let line2_padded = format!("{}{}", " ".repeat(x2), line2_str);
 
-        self.pwin.attrset(self.window_colors.title);
-        self.pwin.mvprintw(0, 0, line1);
-        self.pwin.mvprintw(1, x2, line2);
-        
-        self.pwin.noutrefresh();
+        let lines = vec![
+            Line::styled(title, self.window_colors.title),
+            Line::styled(line2_padded, self.window_colors.title),
+        ];
 
-        Ok(())
+        let paragraph = Paragraph::new(Text::from(lines))
+            .style(self.window_colors.bkgr);
 
+        f.render_widget(paragraph, area);
     }
 
 }
@@ -87,28 +70,24 @@ impl Header<'_> {
 // ------------------------------------------------------------------------
 /// Create the title string
 
-fn make_title(left: &str, middle: &str, right: &str, cols: usize ) -> Result<String> {
+fn make_title(left: &str, middle: &str, right: &str, cols: usize) -> Result<String> {
 
-    let gutter_size = isize::try_from(cols)? - isize::try_from(left.len() + middle.len() + right.len())?;
+    let gutter_size = isize::try_from(cols)?
+        - isize::try_from(left.len() + middle.len() + right.len())?;
 
-
-    let title = if gutter_size < 2 {            // Need to truncate
-
+    let title = if gutter_size < 2 {
         String::from(&(left.to_owned() + " " + middle + " " + right)[..cols])
-
-    } else {                                    // Everything fits
-
+    } else {
         let lgutter = gutter_size / 2;
-        let rgutter = gutter_size / 2 + if gutter_size - lgutter * 2 > 0 {1} else {0};
+        let rgutter = gutter_size / 2 + if gutter_size - lgutter * 2 > 0 { 1 } else { 0 };
 
-        left.to_owned() + 
-            &(" ".repeat(usize::try_from(lgutter)?)) + 
-            middle + 
-            &(" ".repeat(usize::try_from(rgutter)?)) + 
-            right
-
+        left.to_owned()
+            + &" ".repeat(usize::try_from(lgutter)?)
+            + middle
+            + &" ".repeat(usize::try_from(rgutter)?)
+            + right
     };
-
 
     Ok(title)
 }
+

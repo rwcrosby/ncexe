@@ -1,6 +1,6 @@
 //!
 //! Modules for the various screens in the program
-//! 
+//!
 
 pub mod details_list;
 pub mod file_header;
@@ -8,16 +8,16 @@ pub mod file_list;
 pub mod terminal;
 
 use anyhow::Result;
-use pancurses::Input;
+use crossterm::event::{self, Event, KeyCode};
+use ratatui::layout::{Constraint, Direction, Layout};
 
 use crate::{
     screens::terminal::TERMWIN,
     windows::{
+        footer::Footer,
         header::Header,
         scrollable_region::ScrollableRegion,
-        footer::Footer,
-        Coords,
-}
+    },
 };
 
 // ------------------------------------------------------------------------
@@ -28,58 +28,48 @@ pub fn show(
     ftr_win: &mut Footer,
 ) -> Result<()> {
 
-    let size: Coords = TERMWIN.win.get_max_yx().into();
-
-    hdr_win.show(&size)?;
-    scr_win.show(&size)?;
-    ftr_win.show(&size)?;
-    pancurses::doupdate();
-    
-    // Loop handling keystrokes
-
     loop {
+        {
+            let mut terminal = TERMWIN.terminal.lock().unwrap();
+            terminal.draw(|f| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(2),
+                        Constraint::Min(0),
+                        Constraint::Length(1),
+                    ])
+                    .split(f.area());
 
-        let ch = scr_win.pwin.getch();
+                hdr_win.render(f, chunks[0]);
+                scr_win.render(f, chunks[1]);
+                ftr_win.render(f, chunks[2]);
+            })?;
+        }
 
-        match ch {
-
-            Some(Input::KeyResize) =>
-            {
-                let new_size: Coords = TERMWIN.win.get_max_yx().into();
-        
-                hdr_win.resize(&new_size)?;
-                scr_win.resize(&new_size)?;
-                ftr_win.resize(&new_size)?;
-                
-                pancurses::doupdate();
-        
-            }
-
-            Some(Input::Character(c)) => match c {
-                'q' | '\u{1b}' => break,
-                '\n' => {
-                    scr_win.handle_key(Input::KeyEnter)?;
-
-                    let new_size: Coords = TERMWIN.win.get_max_yx().into();
-
-                    hdr_win.pwin.touch();
-                    hdr_win.resize(&new_size)?;
-                    scr_win.pwin.touch();
-                    scr_win.resize(&new_size)?;
-                    ftr_win.pwin.touch();
-                    ftr_win.resize(&new_size)?;
-            
-                    pancurses::doupdate();
-
+        match event::read()? {
+            Event::Key(key) => match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => break,
+                KeyCode::Enter => {
+                    scr_win.key_enter_handler()?;
+                    // Force full redraw after enter (may have opened/closed nested window)
+                    TERMWIN.terminal.lock().unwrap().clear()?;
                 }
-                _ => (),
-                },
-
-            Some(c) => scr_win.handle_key(c)?,
-            None => (),
-
-        };
-
+                code @ (KeyCode::Down
+                | KeyCode::Up
+                | KeyCode::PageDown
+                | KeyCode::PageUp
+                | KeyCode::Home
+                | KeyCode::End) => {
+                    scr_win.handle_key(code)?;
+                }
+                _ => {}
+            },
+            Event::Resize(_, _) => {
+                // ratatui automatically uses the new size on next draw()
+            }
+            _ => {}
+        }
     }
 
     Ok(())

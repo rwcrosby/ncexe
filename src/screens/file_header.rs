@@ -24,7 +24,6 @@ pub fn show(exe: ExeRef) -> Result<()> {
 
     // Create the scrollable window
 
-    // let lines: LineVec = vec![];
     let lines = details::to_lines(
         exe,
         (0, exe.mmap().len()),
@@ -37,7 +36,6 @@ pub fn show(exe: ExeRef) -> Result<()> {
     // Create the footer window
 
     let footer_fn = |sc: usize| center_in(sc, &format!("{} bytes", exe.len()));
-    // center_in(sc, &format!("{}, {} bytes", exe.filename(), exe.len()));
 
     let mut ftr_win = Footer::new(&wsc.footer, Box::new(footer_fn));
 

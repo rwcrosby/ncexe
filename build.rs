@@ -1,8 +1,4 @@
 fn main() {
-
-    #[cfg(target_os = "macos")]
-    println!("cargo:rustc-link-search=/opt/homebrew/opt/ncurses/lib");
-    
-    println!("cargo:rustc-link-lib=ncursesw");
-
+    // ratatui uses crossterm which handles terminal I/O without requiring
+    // a system ncurses library
 }

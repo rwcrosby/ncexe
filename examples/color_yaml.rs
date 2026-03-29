@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 use anyhow::{bail, Result};
-use pancurses::{chtype, COLOR_PAIR, A_BOLD, A_NORMAL};
+use ratatui::style::{Color, Modifier, Style};
 use std::collections::HashMap;
 
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct YamlWindowColors {
-    bkgr: i16,
-    title: (i16, String),
-    text: (i16, String),
-    value: (i16, String),
+    bkgr: u8,
+    title: (u8, String),
+    text: (u8, String),
+    value: (u8, String),
 }
 
 #[derive(Debug, Deserialize)]
@@ -24,10 +24,10 @@ type YamlColorThemes = HashMap<String, HashMap<String, YamlWindowSetColors>>;
 
 #[derive(Debug)]
 pub struct WindowColors {
-    bkgr: chtype,
-    title: chtype,
-    text: chtype,
-    value: chtype,
+    bkgr: Style,
+    title: Style,
+    text: Style,
+    value: Style,
 }
 
 #[derive(Debug)]
@@ -42,36 +42,32 @@ pub type ColorThemes = HashMap<String, WindowSets>;
 
 fn main() {
 
-
     let yml: YamlColorThemes = serde_yaml::from_str(YAML).unwrap();
 
-    let themes = to_color_themes(&yml, 10);
+    let themes = to_color_themes(&yml);
     println!("{:?}", themes);
 
 }
 
-fn to_color_themes(yml: &YamlColorThemes,  mut pair_no: u32) -> Result<ColorThemes> {
+fn to_color_themes(yml: &YamlColorThemes) -> Result<ColorThemes> {
 
+    let mut ct: ColorThemes = HashMap::new();
 
-    let mut ct: ColorThemes = HashMap::from([]);
+    for (theme_name, theme_value) in yml.iter() {
 
-    for (theme_name,  theme_value) in yml.iter() {
-
-        let mut ws: WindowSets = HashMap::from([]);
+        let mut ws: WindowSets = HashMap::new();
 
         for (win_name, win_value) in theme_value.iter() {
- 
-            ws.insert(win_name.clone(), WindowSetColors{
-                header: win_value.header.to_window_colors(&mut pair_no)?,
-                scrollable_region: win_value.scrollable_region.to_window_colors(&mut pair_no)?,
-                footer: win_value.footer.to_window_colors(&mut pair_no)?,
+            ws.insert(win_name.clone(), WindowSetColors {
+                header: win_value.header.to_window_colors()?,
+                scrollable_region: win_value.scrollable_region.to_window_colors()?,
+                footer: win_value.footer.to_window_colors()?,
             });
-            
         }
 
-        ct.insert(theme_name.clone() , ws);
+        ct.insert(theme_name.clone(), ws);
 
-    } 
+    }
 
     println!("Generated ColorThemes {:?}", ct);
 
@@ -81,40 +77,33 @@ fn to_color_themes(yml: &YamlColorThemes,  mut pair_no: u32) -> Result<ColorThem
 
 impl YamlWindowColors {
 
-    fn to_window_colors(&self, pair_no: &mut u32) -> Result<WindowColors> {
-
-        pancurses::init_pair(*pair_no as i16, 0, self.bkgr);
-        let bkgr: chtype = COLOR_PAIR(*pair_no); 
-
-        let title = make_curses_attribute(pair_no, self.bkgr, &self.title)?;
-        let text = make_curses_attribute(pair_no, self.bkgr, &self.text)?;
-        let value = make_curses_attribute(pair_no, self.bkgr, &self.value)?;
-
-        Ok(WindowColors{bkgr, title, text, value})
-
+    fn to_window_colors(&self) -> Result<WindowColors> {
+        let bkgr = Style::default().bg(Color::Indexed(self.bkgr));
+        let title = make_style(self.bkgr, &self.title)?;
+        let text = make_style(self.bkgr, &self.text)?;
+        let value = make_style(self.bkgr, &self.value)?;
+        Ok(WindowColors { bkgr, title, text, value })
     }
 
 }
 
-fn make_curses_attribute(pair_no: &mut u32, bkgr: i16, fgr: &(i16, String)) -> Result<chtype> {
-
-    pancurses::init_pair((*pair_no) as i16, fgr.0, bkgr);
-    let ch: chtype = COLOR_PAIR(*pair_no) | match fgr.1.as_str() {
-        "Bold" => A_BOLD,
-        "Normal" => A_NORMAL,
+fn make_style(bkgr: u8, fgr: &(u8, String)) -> Result<Style> {
+    let modifier = match fgr.1.as_str() {
+        "Bold" => Modifier::BOLD,
+        "Normal" => Modifier::empty(),
         v => bail!("Invalid attribute {}", v),
     };
-
-    *pair_no += 1;
-    Ok(ch)
-
+    Ok(Style::default()
+        .fg(Color::Indexed(fgr.0))
+        .bg(Color::Indexed(bkgr))
+        .add_modifier(modifier))
 }
 
 const YAML: &str = "
 ---
 
 dark:
-    file_list: 
+    file_list:
         header:
             bkgr: 232
             title: [160, Bold]
@@ -130,7 +119,7 @@ dark:
             title: [160, Bold]
             text: [127, Normal]
             value: [166, Normal]
-    file_header: 
+    file_header:
         header:
             bkgr: 232
             title: [160, Bold]
@@ -146,5 +135,5 @@ dark:
             title: [160, Bold]
             text: [127, Normal]
             value: [166, Normal]
-    
+
 ";

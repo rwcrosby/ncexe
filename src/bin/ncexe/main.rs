@@ -1,5 +1,5 @@
 //!
-//! Curses based executable file dumper
+//! Ratatui-based executable file dumper
 //!
 
 mod configuration;
@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use std::path::PathBuf;
 
 use ncexe::{
-    color::{self, Colors},
+    color,
     exe_types::{self, ExeVec},
     screens::{
         file_header,
@@ -60,14 +60,11 @@ fn main() -> Result<()> {
         panic!("No executable files of interest found");
     }
 
-    // Setup principal objects, colors must follow screen
-    // Force screen lazy initialization
-    Lazy::force(&TERMWIN);
+    // Initialize colors (before the terminal so errors go to stderr)
     color::init(&config.theme);
 
-    // Initialize screen
-    TERMWIN.win.bkgd(Colors::global().bkgr()?);
-    TERMWIN.win.refresh();
+    // Initialize terminal (force lazy initialization)
+    Lazy::force(&TERMWIN);
 
     // Display file info
     let rc = if executables.len() == 1 {

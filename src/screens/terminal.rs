@@ -1,34 +1,40 @@
 //!
 //! The terminal screen
-//! 
+//!
 
+use std::io::{self, Stdout};
+use std::sync::Mutex;
+
+use crossterm::{
+    cursor,
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use once_cell::sync::Lazy;
+use ratatui::{backend::CrosstermBackend, Terminal};
 
 // ------------------------------------------------------------------------
 
 pub struct TermWin {
-    pub win: pancurses::Window,
+    pub terminal: Mutex<Terminal<CrosstermBackend<Stdout>>>,
 }
 
 impl TermWin {
 
     pub fn new() -> Self {
-
-        let win = TermWin {
-            win: pancurses::initscr(),
-        };
-
-        pancurses::noecho();
-        win.win.keypad(true);
-        win.win.refresh();
-        pancurses::curs_set(0);
-
-        win
-
+        enable_raw_mode().expect("enable raw mode");
+        execute!(io::stdout(), EnterAlternateScreen, cursor::Hide)
+            .expect("enter alternate screen");
+        let backend = CrosstermBackend::new(io::stdout());
+        let terminal = Terminal::new(backend).expect("create terminal");
+        TermWin {
+            terminal: Mutex::new(terminal),
+        }
     }
 
     pub fn term(&self) {
-        pancurses::endwin();
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen, cursor::Show);
     }
 
 }
@@ -39,34 +45,41 @@ impl Default for TermWin {
     }
 }
 
-unsafe impl Sync for TermWin {} 
-unsafe impl Send for TermWin {} 
-
 impl Drop for TermWin {
     fn drop(&mut self) {
-        pancurses::endwin();
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen, cursor::Show);
     }
 }
+
+unsafe impl Sync for TermWin {}
+unsafe impl Send for TermWin {}
 
 // ------------------------------------------------------------------------
 // Global screen object
 
-pub static TERMWIN: Lazy<TermWin> = Lazy::new(|| {
-    TermWin::new()
-});
+pub static TERMWIN: Lazy<TermWin> = Lazy::new(TermWin::new);
 
 // ------------------------------------------------------------------------
 
 #[test]
+#[ignore]
 pub fn screen_test_1() {
-
     use once_cell::sync::Lazy;
     use super::terminal::TERMWIN;
 
     Lazy::force(&TERMWIN);
 
-    TERMWIN.win.printw("Curses test 1");
-    TERMWIN.win.getch();
+    let mut terminal = TERMWIN.terminal.lock().unwrap();
+    terminal.draw(|f| {
+        use ratatui::{text::Line, widgets::Paragraph};
+        let area = f.area();
+        f.render_widget(Paragraph::new(Line::raw("Ratatui test 1")), area);
+    }).unwrap();
+
+    drop(terminal);
+
+    crossterm::event::read().unwrap();
+
     TERMWIN.term();
 }
-

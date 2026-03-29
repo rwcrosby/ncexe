@@ -49,14 +49,14 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
         .iter()
         .map(|exe| -> LineItem<'s> {
             total_len += exe.len();
-            Box::new(FileLine { 
+            Box::new(FileLine {
                 exe: exe.as_ref(),
                 action: if exe.is_empty() {
                     None
                 } else {
                     Some(ActionType::NewWindow(Box::new(|| file_header::show(exe.as_ref()))))
-                }
-             })
+                },
+            })
         })
         .collect();
 
@@ -66,7 +66,6 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
     let footer_fn = |sc: usize| {
         let txt = format!("{} Files, {} Bytes", num_exe, total_len);
-
         center_in(sc, &txt)
     };
 
@@ -82,7 +81,7 @@ pub fn show<'s>(executables: &'s ExeVec<'s>) -> Result<()> {
 
 struct FileLine<'fl> {
     exe: ExeRef<'fl>,
-    action: Option<ActionType<'fl>>
+    action: Option<ActionType<'fl>>,
 }
 
 impl<'l> Line<'l> for FileLine<'l> {
@@ -90,7 +89,6 @@ impl<'l> Line<'l> for FileLine<'l> {
         let max_fname = width as isize - (ETYPE_LENGTH + FSIZE_LENGTH + 2) as isize;
         let fname = self.exe.filename();
 
-        // Start with the exexcutable type
         let first_part = format!(
             "{etype:<tl$.tl$} {size:>ml$.ml$} ",
             tl = ETYPE_LENGTH,
@@ -99,13 +97,11 @@ impl<'l> Line<'l> for FileLine<'l> {
             size = self.exe.len()
         );
 
-        // Add the file name
         let line = &(first_part
             + if max_fname < FSIZE_LENGTH as isize {
                 &fname[(fname.len() - width)..]
             } else {
                 let start = max_fname - fname.len() as isize;
-
                 if start < 0 {
                     &fname[(-start as usize)..]
                 } else {
@@ -113,7 +109,6 @@ impl<'l> Line<'l> for FileLine<'l> {
                 }
             });
 
-        // Truncate line if needed
         let line = if width < line.len() {
             &line[..width]
         } else {
@@ -128,19 +123,10 @@ impl<'l> Line<'l> for FileLine<'l> {
     }
 
     fn action_type(&self) -> Option<&ActionType<'l>> {
-        if let Some(ref at) = self.action {
-            Some(at)
-        } else {
-            None
-        }
+        self.action.as_ref()
     }
 
     fn action_type_mut(&mut self) -> Option<&mut ActionType<'l>> {
-        if let Some(ref mut at) = self.action {
-            Some(at)
-        } else {
-            None
-        }
+        self.action.as_mut()
     }
-
 }

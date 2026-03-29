@@ -1,120 +1,93 @@
 //!
 //! Popup windows
-//! 
+//!
 
 use anyhow::Error;
-
-use pancurses::{
-    init_pair,
-    newwin, 
-    COLOR_PAIR,
+use crossterm::{
+    cursor::MoveTo,
+    event::{self, Event},
+    execute, queue,
+    style::{Color, Colors, Print, ResetColor, SetColors},
+    terminal,
 };
-
-use crate::screens::terminal::TERMWIN;
+use std::io::{self, Write};
 
 // ------------------------------------------------------------------------
 
-pub fn error_window(
-    error: &Error
-) {
-
+pub fn error_window(error: &Error) {
     let mut lines = vec![];
     for cause in error.chain() {
-
         match lines.len() {
             0 => lines.push(format!("Error: {}", cause)),
             1 => {
                 lines.push("Cause:".into());
                 lines.push(format!("    {}", cause))
-            },
-            _ => lines.push(format!("    {}", cause))
+            }
+            _ => lines.push(format!("    {}", cause)),
         }
-
     }
-
-    window(
-        "Error", 
-        lines, 
-        (pancurses::COLOR_WHITE, pancurses::COLOR_RED),
-    );
-
+    window("Error", lines, (Color::White, Color::Red));
 }
 
 // ------------------------------------------------------------------------
+/// Draw a popup window using crossterm directly.
+///
+/// NOTE: Must NOT be called from within a ratatui `terminal.draw()` closure,
+/// as the direct crossterm writes would be overwritten when draw() flushes.
+/// Call from event loop handlers only; the next draw() cycle will redraw cleanly.
 
-pub fn window(
-    title: &str,
-    lines: Vec<String>,
-    attr: (i16, i16),
-) {
+pub fn window(title: &str, lines: Vec<String>, colors: (Color, Color)) {
 
-    let cp = 2;
-    init_pair(cp, attr.0, attr.1);
-    
-    let max_line_len = lines
-        .iter()
-        .fold(0, | ml, line | std::cmp::max(ml, line.len()) );
+    let (term_width, term_height) = terminal::size().unwrap_or((80, 24));
 
-    let width: i32 = 4 + max_line_len as i32;
-    let height: i32 = 4 + lines.len() as i32;
-    let ypos: i32 = (TERMWIN.win.get_max_y() - height) / 2;
-    let xpos: i32 = (TERMWIN.win.get_max_x() - width) / 2;
+    let max_line_len = lines.iter().fold(0, |ml, line| ml.max(line.len()));
+    let inner_width = max_line_len.max(title.len());
+    let width = (4 + inner_width) as u16;
+    let height = (4 + lines.len()) as u16;
+    let ypos = term_height.saturating_sub(height) / 2;
+    let xpos = term_width.saturating_sub(width) / 2;
 
-    let pw = newwin(height, width, ypos, xpos);
+    let mut stdout = io::stdout();
 
-    let a = COLOR_PAIR(cp as u32);
+    let _ = execute!(
+        stdout,
+        SetColors(Colors::new(colors.0, colors.1)),
+    );
 
-    pw.attrset(a);
-    pw.bkgd(a);
-
-    // This will draw a single line border
-    pw.border(0,0,0,0,0,0,0,0);
-
-    let title_y: i32 = 0;
-    let title_x: i32 = (width - title.len() as i32) / 2;
-    pw.mvaddstr(title_y, title_x, title);
-    pw.mvchgat(title_y, title_x, title.len() as i32, 0, cp);
-
-    let mut msg_y: i32 = 2;
-    let msg_x: i32 = 2;
-    for ref line in lines {
-        pw.mvaddstr(msg_y, msg_x, line);
-        msg_y += 1;
+    // Draw box
+    for row in 0..height {
+        for col in 0..width {
+            let top_bottom = row == 0 || row == height - 1;
+            let left_right = col == 0 || col == width - 1;
+            let ch = if top_bottom && left_right {
+                '+'
+            } else if top_bottom {
+                '-'
+            } else if left_right {
+                '|'
+            } else {
+                ' '
+            };
+            let _ = queue!(stdout, MoveTo(xpos + col, ypos + row), Print(ch));
+        }
     }
 
-    pw.getch();    
+    // Title centered on top border
+    let title_x = xpos + (width.saturating_sub(title.len() as u16)) / 2;
+    let _ = queue!(stdout, MoveTo(title_x, ypos), Print(title));
 
-}
+    // Message lines
+    for (i, line) in lines.iter().enumerate() {
+        let _ = queue!(stdout, MoveTo(xpos + 2, ypos + 2 + i as u16), Print(line));
+    }
 
-#[test]
-pub fn popup_test_1() {
+    let _ = execute!(stdout, ResetColor);
+    let _ = stdout.flush();
 
-    use once_cell::sync::Lazy;
-    use crate::screens::terminal::TERMWIN;
-
-    Lazy::force(&TERMWIN);
-
-    pancurses::start_color();
-
-    let pair_no: u32 = 10;
-
-    pancurses::init_pair(
-        pair_no as i16, 
-        pancurses::COLOR_BLACK, 
-        pancurses::COLOR_RED
-    );
-
-    window(
-        "The Title", 
-        vec!["The".to_string(), "Message".to_string()],
-        (pancurses::COLOR_WHITE, pancurses::COLOR_RED)
-    );
-
-    TERMWIN.win.touch();
-    pancurses::doupdate();
-
-    TERMWIN.term();
-
-    assert!(true);
-
+    // Wait for any key
+    loop {
+        if let Ok(Event::Key(_)) = event::read() {
+            break;
+        }
+    }
 }
